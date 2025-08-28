@@ -1,0 +1,73 @@
+{% extends 'components/Layout/base.html' %}
+{% load static %}
+{% load tailwind_filters %}
+{% load i18n %}
+{% load allauth account %}
+
+{% block head_title %}
+{% trans 'Sign In' %}
+{% endblock %}
+
+{% block content %}
+<div class="flex min-h-fullScreen gap-x-1 flex-row justify-center py-0\.5 px-2"> 
+  <div class="hidden md:flex mt-1 sm:w-full sm:max-w-[480px] bg-white panel-izquierdo rounded-md flex-col items-center justify-center">
+    <div class="texto-destacado">
+      <h1 class="texto-destacado-h1">BENCi<span class="texto-destacado-span">DATA</span></h1>
+      <h2 class="texto-destacado-h2">Gestión Inteligente para Bencineras</h2>
+    </div>
+
+    <svg class="ilustracion" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 500 500">
+      <defs>
+        <linearGradient id="gradient" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stop-color="#2E8B57" />
+          <stop offset="100%" stop-color="#FFD700" />
+        </linearGradient>
+      </defs>
+      <path fill="url(#gradient)"
+        d="M250,50 C350,50 450,150 450,250 C450,350 350,450 250,450 C150,450 50,350 50,250 C50,150 150,50 250,50 Z" />
+      <circle cx="250" cy="250" r="150" fill="white" />
+      <path fill="#2E8B57" d="M220,300 L220,200 L280,200 L280,300 L250,330 Z" />
+      <circle cx="250" cy="180" r="20" fill="#FFD700" />
+      <rect x="230" y="220" width="40" height="30" fill="#2E8B57" />
+    </svg>
+
+
+  </div>
+  <div class="mt-1 sm:w-full sm:max-w-[480px] bg-white rounded-md">
+    <div class="px-6 py-12 sm:px-12 mx-4 min-h-fullScreen">
+      <h1 class="h1-title-login">Iniciar Sesión</h1>
+      {% if not SOCIALACCOUNT_ONLY %}
+      {% url 'account_login' as login_url %}
+      {% element form form=form method="post" action=login_url tags="entrance,login" %}
+      {% slot body %}
+      {% csrf_token %}
+      {{ form|crispy }}
+      {{ redirect_field }}
+      {% endslot %}
+      {% slot actions %}
+      {% include "components/btn/button.html" with button_text="Iniciar sesión" button_class="prominent login" %}
+      {% endslot %}
+      {% endelement %}
+      {% endif %}
+
+      {% if LOGIN_BY_CODE_ENABLED %}
+      {% element hr %}
+      {% endelement %}
+      {% element h2 %}
+      <div
+        class="flex w-full justify-center rounded-md bg-gradient-to-br px-3 py-1.5 text-sm font-semibold leading-6 text-white shadow-sm hover:bg-gradient-to-br focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600">
+        {% element button href=request_login_code_url tags='prominent,login,secondary' %}
+        {% trans 'Mail me a sign-in code' %}
+        {% endelement %}
+      </div>
+      {% endelement %}
+      {% endif %}
+
+      {% if SOCIALACCOUNT_ENABLED %}
+      {% include 'socialaccount/snippets/login.html' with page_layout='entrance' %}
+      {% endif %}
+
+    </div>
+  </div>
+</div>
+{% endblock %}
