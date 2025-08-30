@@ -4,6 +4,13 @@ from django.contrib.auth.forms import UserCreationForm
 from .models import Profile, Position
 from django.core.exceptions import ValidationError
 from django.contrib.auth.password_validation import validate_password
+from allauth.account.forms import LoginForm
+
+class CustomLoginForm(LoginForm):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["login"].label = "Correo electrónico"
+        self.fields["password"].label = "Contraseña"
 
 
 class UserUpdateForm(forms.ModelForm):

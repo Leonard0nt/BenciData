@@ -186,6 +186,7 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
 # else: EMAIL_BACKEND = [Configuración de correo]
 
+ACCOUNT_FORMS = {"login": "UsuarioApp.forms.CustomLoginForm"}
 ACCOUNT_ALLOW_REGISTRATION = True
 
 ACCOUNT_AUTHENTICATED_LOGIN_REDIRECTS = False

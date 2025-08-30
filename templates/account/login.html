@@ -9,8 +9,9 @@
 {% endblock %}
 
 {% block content %}
-<div class="flex min-h-fullScreen gap-x-1 flex-row justify-center py-0\.5 px-2"> 
-  <div class="hidden md:flex mt-1 sm:w-full sm:max-w-[480px] bg-white panel-izquierdo rounded-md flex-col items-center justify-center">
+<div class="flex min-h-fullScreen mt-1 gap-x-1 flex-row justify-center py-0\.5 px-2">
+  <div
+    class="hidden md:flex mt-1 sm:w-full sm:max-w-[480px] bg-white panel-izquierdo rounded-md flex-col items-center justify-center">
     <div class="texto-destacado">
       <h1 class="texto-destacado-h1">BENCi<span class="texto-destacado-span">DATA</span></h1>
       <h2 class="texto-destacado-h2">Gestión Inteligente para Bencineras</h2>
@@ -33,7 +34,7 @@
 
 
   </div>
-  <div class="mt-1 sm:w-full sm:max-w-[480px] bg-white rounded-md">
+  <div class="mt-1 sm:w-full sm:max-w-[480px] bg-white-base rounded-md">
     <div class="px-6 py-12 sm:px-12 mx-4 min-h-fullScreen">
       <h1 class="h1-title-login">Iniciar Sesión</h1>
       {% if not SOCIALACCOUNT_ONLY %}
@@ -66,7 +67,19 @@
       {% if SOCIALACCOUNT_ENABLED %}
       {% include 'socialaccount/snippets/login.html' with page_layout='entrance' %}
       {% endif %}
-
+      <div class="flex items-center mt-2">
+        <input id="show-password" type="checkbox" class="mr-2">
+        <label for="show-password" class="text-sm pl-4 text-gray-900 texto-destacado-p"> Mostrar contraseña</label>
+      </div>
+      <script>
+        document.addEventListener("DOMContentLoaded", () => {
+          const toggle = document.getElementById("show-password");
+          const pwd = document.querySelector('input[name="password"]');
+          toggle.addEventListener("change", () => {
+            pwd.type = toggle.checked ? "text" : "password";
+          });
+        });
+      </script>
     </div>
   </div>
 </div>
