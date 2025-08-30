@@ -1688,6 +1688,10 @@ select {
   padding-bottom: 1.25rem;
 }
 
+.py-auto{
+  padding-top: auto;
+  padding-bottom: auto;
+}
 .pb-3 {
   padding-bottom: 0.75rem;
 }

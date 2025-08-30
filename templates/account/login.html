@@ -9,7 +9,7 @@
 {% endblock %}
 
 {% block content %}
-<div class="flex min-h-fullScreen mt-1 gap-x-1 flex-row justify-center py-0\.5 px-2">
+<div class="flex min-h-fullScreen mt-7 gap-x-1 flex-row justify-center py-auto px-2">
   <div
     class="hidden md:flex mt-1 sm:w-full sm:max-w-[480px] bg-white panel-izquierdo rounded-md flex-col items-center justify-center">
     <div class="texto-destacado">
@@ -71,6 +71,8 @@
         <input id="show-password" type="checkbox" class="mr-2">
         <label for="show-password" class="text-sm pl-4 text-gray-900 texto-destacado-p"> Mostrar contraseña</label>
       </div>
+            {% url 'account_reset_password' as reset_url %}
+      <a href="{{ reset_url }}" class="text-indigo-500 text-sm">¿Olvidaste tu contraseña?</a>
       <script>
         document.addEventListener("DOMContentLoaded", () => {
           const toggle = document.getElementById("show-password");
