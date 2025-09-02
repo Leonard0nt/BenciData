@@ -71,7 +71,7 @@ class ProfileUpdateForm(forms.ModelForm):
 class ProfileCreateForm(ProfileUpdateForm):
     position_FK = forms.ModelChoiceField(
         label="Cargo",
-        queryset=Position.objects.exclude(pk=1),
+        queryset=Position.objects.none(),
         widget=forms.Select(
             attrs={
                 "class": "bg-white focus:outline-none border border-gray-300 rounded-lg py-2 px-4 block w-full appearance-none leading-normal text-gray-700 mb-3"
@@ -81,3 +81,44 @@ class ProfileCreateForm(ProfileUpdateForm):
 
     class Meta(ProfileUpdateForm.Meta):
         fields = ProfileUpdateForm.Meta.fields + ["position_FK"]
+
+    def __init__(self, *args, user=None, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        queryset = Position.objects.none()
+        profile = getattr(user, "profile", None)
+        if profile is not None:
+            if profile.is_owner():
+                queryset = Position.objects.all()
+            elif profile.is_admin():
+                queryset = Position.objects.exclude(
+                    permission_code__in=["OWNER", "ADMINISTRATOR"]
+                )
+            elif profile.is_accountant():
+                queryset = Position.objects.exclude(
+                    permission_code__in=[
+                        "OWNER",
+                        "ADMINISTRATOR",
+                        "ACCOUNTANT",
+                    ]
+                )
+            elif profile.is_head_ATTENDANT():
+                queryset = Position.objects.exclude(
+                    permission_code__in=[
+                        "OWNER",
+                        "ADMINISTRATOR",
+                        "ACCOUNTANT",
+                        "HEAD_ATTENDANT",
+                    ]
+                )
+            elif profile.is_ATTENDANT():
+                queryset = Position.objects.exclude(
+                    permission_code__in=[
+                        "OWNER",
+                        "ADMINISTRATOR",
+                        "ACCOUNTANT",
+                        "HEAD_ATTENDANT",
+                        "ATTENDANT",
+                    ]
+                )
+        self.fields["position_FK"].queryset = queryset

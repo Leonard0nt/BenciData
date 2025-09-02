@@ -92,10 +92,10 @@ class Profile(models.Model):
     def update_last_activity(self):
         self.save(update_last_activity=True)
 
-class Meta:
-    verbose_name = "Perfil"
-    verbose_name_plural = "Perfiles"
-    ordering = ["-id"]
+    class Meta:
+        verbose_name = "Perfil"
+        verbose_name_plural = "Perfiles"
+        ordering = ["-id"]
 
     def _has_permission(self, code: str) -> bool:
         """Return True if the profile has the given permission code."""

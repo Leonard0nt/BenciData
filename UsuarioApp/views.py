@@ -50,7 +50,7 @@ class UserCreateView(LoginRequiredMixin, PermitsPositionMixin, View):
 
     def get(self, request, *args, **kwargs):
         user_form = UserCreateForm()
-        profile_form = ProfileCreateForm()
+        profile_form = ProfileCreateForm(user=request.user)
 
         context = {"user_form": user_form, "profile_form": profile_form}
 
@@ -58,7 +58,7 @@ class UserCreateView(LoginRequiredMixin, PermitsPositionMixin, View):
 
     def post(self, request, *args, **kwargs):
         user_form = UserCreateForm(request.POST)
-        profile_form = ProfileCreateForm(request.POST, request.FILES)
+        profile_form = ProfileCreateForm(request.POST, request.FILES, user=request.user)
 
         if user_form.is_valid() and profile_form.is_valid():
             user = user_form.save()
