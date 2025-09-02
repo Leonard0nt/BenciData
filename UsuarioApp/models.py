@@ -20,7 +20,7 @@ def profile_picture_path(instance, filename):
 class Position(models.Model):
     user_position = models.CharField(max_length=45, unique=True)
     permission_code = models.CharField(
-        max_length=25, choices=PERMISOS, default="RESTRICTED"
+        max_length=25, choices=PERMISOS, default="ATTENDANT"
     )
 
     class Meta:
@@ -56,6 +56,28 @@ class Profile(models.Model):
             resize_image(self.image.path, 300)
             crop_image(self.image.path, 300)
 
+    def has_role(self, roles=None):
+        """Check if the profile's position matches the given roles.
+
+        Parameters
+        ----------
+        roles : Iterable[str] | str | None
+            Roles allowed for a view. If ``None`` the method returns ``True``
+            when the user has any role other than "RESTRICTED".
+        """
+
+        if not self.position_FK:
+            return False
+
+        code = self.position_FK.permission_code
+        if roles is None:
+            return code != "OWNER"
+
+        if isinstance(roles, str):
+            roles = [roles]
+
+        return code in roles
+
     def update_last_activity(self):
         self.save(update_last_activity=True)
 
@@ -63,6 +85,36 @@ class Profile(models.Model):
         verbose_name = "Perfil"
         verbose_name_plural = "Perfiles"
         ordering = ["-id"]
+
+    def __str__(self):
+        return self.user_FK.username
+
+    def update_last_activity(self):
+        self.save(update_last_activity=True)
+
+class Meta:
+    verbose_name = "Perfil"
+    verbose_name_plural = "Perfiles"
+    ordering = ["-id"]
+
+    def _has_permission(self, code: str) -> bool:
+        """Return True if the profile has the given permission code."""
+        return bool(self.position_FK and self.position_FK.permission_code == code)
+
+    def is_owner(self) -> bool:
+        return self._has_permission("OWNER")
+
+    def is_admin(self) -> bool:
+        return self._has_permission("ADMIN")
+
+    def is_accountant(self) -> bool:
+        return self._has_permission("ACCOUNTANT")
+
+    def is_head_ATTENDANT(self) -> bool:
+        return self._has_permission("HEAD_ATTENDANT")
+
+    def is_ATTENDANT(self) -> bool:
+        return self._has_permission("ATTENDANT")
 
     def __str__(self):
         return self.user_FK.username

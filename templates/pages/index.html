@@ -49,11 +49,11 @@
 
                 <div class="flex items-center justify-end gap-x-2 sm:justify-start">
                   <div class="hidden text-white sm:block">
-                    {% if user.profile.position_FK.permission_code != "RESTRICTED" %}
-                      <span class="inline-flex flex-shrink-0 items-center rounded-full bg-green-50 px-1.5 py-0.5 text-xs font-medium text-green-700 ring-1 ring-inset ring-green-600/20">
-                        {{ user.profile.position_FK.user_position }}
-                      </span>
-                    {% else %}
+                    {% if user.profile.is_owner or user.profile.is_admin or user.profile.is_accountant or user.profile.is_head_ATTENDANT or user.profile.is_ATTENDANT %}
+                      <span class="inline-flex flex-shrink-0 items-center rounded-full bg-green-50 px-1.5 py-0.5 text-xs font-medium text-green-700 ring-1 ring-inset ring-green-600/20">␊
+                        {{ user.profile.position_FK.user_position }}␊
+                      </span>␊
+                    {% else %}␊
                       <span class="inline-flex flex-shrink-0 items-center rounded-full bg-red-50 px-1.5 py-0.5 text-xs font-medium text-red-700 ring-1 ring-inset ring-green-600/20">
                           {{ user.profile.position_FK.user_position }}
                       </span> 
