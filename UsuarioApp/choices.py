@@ -3,5 +3,5 @@ PERMISOS = [
     ("ADMINISTRATOR", "Administrador"),
     ("ACCOUNTANT", "Contador"),
     ("HEAD_ATTENDANT", "Bombero encargado"),
-    ("ATTENDANT", "Bombero normal"),
+    ("ATTENDANT", "Bombero"),
 ]

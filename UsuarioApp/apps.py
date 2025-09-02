@@ -18,7 +18,7 @@ class UsuarioAppConfig(AppConfig):
                 return
             for code, name in PERMISOS:
                 Position.objects.get_or_create(
-                    user_position=name,             # ahora guarda el código (p.ej. "OWNER")
+                    user_position=name.strip,             # ahora guarda el código (p.ej. "OWNER")
                     defaults={"permission_code": code},  # y el permiso recibe el nombre (p.ej. "Dueño")
                 )
 

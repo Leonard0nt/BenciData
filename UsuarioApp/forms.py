@@ -89,36 +89,10 @@ class ProfileCreateForm(ProfileUpdateForm):
         profile = getattr(user, "profile", None)
         if profile is not None:
             if profile.is_owner():
-                queryset = Position.objects.all()
+                queryset = Position.objects.exclude(permission_code__in=["OWNER","HEAD_ATTENDANT"])
             elif profile.is_admin():
                 queryset = Position.objects.exclude(
-                    permission_code__in=["OWNER", "ADMINISTRATOR"]
+                    permission_code__in=["OWNER", "ADMINISTRATOR", "HEAD_ATTENDANT"]
                 )
-            elif profile.is_accountant():
-                queryset = Position.objects.exclude(
-                    permission_code__in=[
-                        "OWNER",
-                        "ADMINISTRATOR",
-                        "ACCOUNTANT",
-                    ]
-                )
-            elif profile.is_head_ATTENDANT():
-                queryset = Position.objects.exclude(
-                    permission_code__in=[
-                        "OWNER",
-                        "ADMINISTRATOR",
-                        "ACCOUNTANT",
-                        "HEAD_ATTENDANT",
-                    ]
-                )
-            elif profile.is_ATTENDANT():
-                queryset = Position.objects.exclude(
-                    permission_code__in=[
-                        "OWNER",
-                        "ADMINISTRATOR",
-                        "ACCOUNTANT",
-                        "HEAD_ATTENDANT",
-                        "ATTENDANT",
-                    ]
-                )
+
         self.fields["position_FK"].queryset = queryset
