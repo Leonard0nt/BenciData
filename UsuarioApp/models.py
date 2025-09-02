@@ -105,7 +105,7 @@ class Meta:
         return self._has_permission("OWNER")
 
     def is_admin(self) -> bool:
-        return self._has_permission("ADMIN")
+        return self._has_permission("ADMINISTRATOR")
 
     def is_accountant(self) -> bool:
         return self._has_permission("ACCOUNTANT")
