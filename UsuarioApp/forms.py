@@ -1,10 +1,13 @@
 from django import forms
 from django.contrib.auth.models import User
 from django.contrib.auth.forms import UserCreationForm
-from .models import Profile, Position
 from django.core.exceptions import ValidationError
 from django.contrib.auth.password_validation import validate_password
 from allauth.account.forms import LoginForm
+from crispy_forms.helper import FormHelper
+from crispy_forms.layout import Layout, Row, Column
+
+from .models import Profile, Position
 
 class CustomLoginForm(LoginForm):
     login = forms.EmailField(
@@ -16,6 +19,20 @@ class CustomLoginForm(LoginForm):
         self.fields["password"].label = "Contraseña"
 
 class UserUpdateForm(forms.ModelForm):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.helper = FormHelper()
+        self.helper.form_tag = False
+        self.helper.layout = Layout(
+            "username",
+            "email",
+            Row(
+                Column("first_name", css_class="w-auto md:w-1/2"),
+                Column("last_name", css_class="w-auto md:w-1/2"),
+                css_class="flex flex-col md:flex-row md:space-x-4",
+            ),
+        )
+
     class Meta:
         model = User
         fields = [
