@@ -30,6 +30,16 @@
         </li> 
         <div class="text-xs font-semibold leading-6 text-gray-400">Tus Configuraciones</div>
       <ul class="flex flex-1 flex-col space-y-1">
+        {% if user.is_authenticated %}
+        <li>
+          <a href="{% url 'configuracion' %}" class="menu-item {% if request.path == '/configuracion/' %} text-white bg-current {% else %} text-gray-400 hover:text-white hover:bg-gray-800 {% endif %}">
+              <svg class="h-6 w-6 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
+              </svg>
+            <span class="truncate">Configuración</span>
+          </a>
+        </li>
+        {% endif %}
         <li>
           <a href="{% url 'mfa_index' %}" class="menu-item {% if request.path == '/accounts/2fa/' %} text-white bg-current{% else %} text-gray-400 hover:text-white hover:bg-gray-800 {% endif %}">
               <svg class="h-6 w-6 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">

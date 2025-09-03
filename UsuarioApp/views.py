@@ -2,6 +2,8 @@ from .forms import UserCreateForm, ProfileCreateForm, UserUpdateForm, ProfileUpd
 from django.views.generic import ListView, View
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.auth.models import User
+from django.contrib.auth.forms import PasswordChangeForm
+from django.contrib.auth import update_session_auth_hash
 from django.shortcuts import redirect, render
 from django.db.models import Q
 from allauth.account.models import EmailAddress
@@ -105,5 +107,64 @@ class ProfileUpdateView(LoginRequiredMixin, View):
             return redirect("Profile")
 
         context = {"user_form": user_form, "profile_form": profile_form}
+
+        return render(request, self.template_name, context)
+
+
+class ConfigurationView(LoginRequiredMixin, View):
+    template_name = "pages/perfil/configuracion.html"
+
+    def get(self, request, *args, **kwargs):
+        user = request.user
+        profile = user.profile
+        user_form = UserUpdateForm(instance=user)
+        profile_form = ProfileUpdateForm(instance=profile)
+        password_form = PasswordChangeForm(user=user)
+
+        context = {
+            "user_form": user_form,
+            "profile_form": profile_form,
+            "password_form": password_form,
+        }
+
+        return render(request, self.template_name, context)
+
+    def post(self, request, *args, **kwargs):
+        user = request.user
+        profile = user.profile
+
+        if "change_password" in request.POST:
+            password_form = PasswordChangeForm(user, request.POST)
+            user_form = UserUpdateForm(instance=user)
+            profile_form = ProfileUpdateForm(instance=profile)
+
+            if password_form.is_valid():
+                password_form.save()
+                update_session_auth_hash(request, password_form.user)
+                messages.success(request, "Contraseña actualizada con éxito.")
+                return redirect("configuracion")
+        else:
+            user_form = UserUpdateForm(request.POST, instance=user)
+            profile_form = ProfileUpdateForm(
+                request.POST, request.FILES, instance=profile
+            )
+            password_form = PasswordChangeForm(user)
+
+            if user_form.is_valid() and profile_form.is_valid():
+                try:
+                    user_form.save()
+                    profile_form.save()
+                    messages.success(request, "Perfil actualizado con éxito.")
+                except Exception as e:
+                    print(e)
+                    print("*" * 30)
+                    messages.error(request, "Error al guardar la imagen")
+                return redirect("configuracion")
+
+        context = {
+            "user_form": user_form,
+            "profile_form": profile_form,
+            "password_form": password_form,
+        }
 
         return render(request, self.template_name, context)
