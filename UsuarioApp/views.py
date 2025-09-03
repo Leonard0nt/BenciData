@@ -136,26 +136,23 @@ class ConfigurationView(LoginRequiredMixin, View):
         user = request.user
         profile = user.profile
 
-        if "change_password" in request.POST:
-            password_form = PasswordChangeForm(user, request.POST)
-            password_form.helper = FormHelper()
-            password_form.helper.form_tag = False
-            user_form = UserUpdateForm(instance=user)
-            profile_form = ProfileUpdateForm(instance=profile)
+        user_form = UserUpdateForm(request.POST, instance=user)
+        profile_form = ProfileUpdateForm(
+            request.POST, request.FILES, instance=profile
+        )
+        password_form = PasswordChangeForm(user, request.POST)
+        password_form.helper = FormHelper()
+        password_form.helper.form_tag = False
 
+        if "change_password" in request.POST:
             if password_form.is_valid():
                 password_form.save()
                 update_session_auth_hash(request, password_form.user)
                 messages.success(request, "Contraseña actualizada con éxito.")
                 return redirect("configuracion")
-            else:
-                user_form = UserUpdateForm(request.POST, instance=user)
-                profile_form = ProfileUpdateForm(
-                request.POST, request.FILES, instance=profile)
-                password_form = PasswordChangeForm(user)
-                password_form.helper = FormHelper()
-                password_form.helper.form_tag = False
-
+            user_form = UserUpdateForm(instance=user)
+            profile_form = ProfileUpdateForm(instance=profile)
+        else:
             if user_form.is_valid() and profile_form.is_valid():
                 try:
                     user_form.save()
@@ -166,11 +163,14 @@ class ConfigurationView(LoginRequiredMixin, View):
                     print("*" * 30)
                     messages.error(request, "Error al guardar la imagen")
                 return redirect("configuracion")
+            password_form = PasswordChangeForm(user)
+            password_form.helper = FormHelper()
+            password_form.helper.form_tag = False
 
         context = {
             "user_form": user_form,
             "profile_form": profile_form,
-            "form": password_form,
+            "password_form": password_form,
         }
 
         return render(request, self.template_name, context)

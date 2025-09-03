@@ -25,7 +25,7 @@ Configuración
     </div>
 
     <div id="perfil" class="tab-content mt-6">
-        <h2 class="text-gray-700">Perfil de Usuario</h2>
+        <h2 class="h1-title-forms">Perfil de Usuario</h2>
         <section class="p-6 border rounded mt-4">
             <form method="post" enctype="multipart/form-data">
                 {% csrf_token %}
@@ -35,9 +35,9 @@ Configuración
             </form>
         </section>
 
-        <hr class="mt-4">
+       
 
-        <h1 class="text-gray-700">Cambiar Contraseña</h2>
+        <h1 class="mt-4 h1-title-forms">Cambiar Contraseña</h2>
         <section class="p-6 border rounded mt-4">
             {% if messages %}
             {% for message in messages %}
@@ -60,7 +60,7 @@ Configuración
             {{ password_form|crispy }}
             {% endslot %}
             {% slot actions %}
-            {% include "components/btn/button.html" with button_text="Cambiar Contraseña"%}
+            {% include "components/btn/button.html" with button_text="Cambiar Contraseña" button_name="change_password"%}
             {% endslot %}
             {% endelement %}
             {% include 'components/mensajes.html' %}
@@ -68,8 +68,8 @@ Configuración
     </div>
 
     <div id="seguridad" class="tab-content hidden mt-6">
-        {% include 'mfa/index.html' %}
-        {% include 'mfa/recovery_codes/index.html' %}
+        {% include 'mfa/_index_content.html' %}
+        {% include 'mfa/recovery_codes/_index_content.html' %}
     </div>
 </div>
 {% endblock content_pages %}
