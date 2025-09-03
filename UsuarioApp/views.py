@@ -3,6 +3,7 @@ from django.views.generic import ListView, View
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.auth.models import User
 from django.contrib.auth.forms import PasswordChangeForm
+from crispy_forms.helper import FormHelper
 from django.contrib.auth import update_session_auth_hash
 from django.shortcuts import redirect, render
 from django.db.models import Q
@@ -120,6 +121,8 @@ class ConfigurationView(LoginRequiredMixin, View):
         user_form = UserUpdateForm(instance=user)
         profile_form = ProfileUpdateForm(instance=profile)
         password_form = PasswordChangeForm(user=user)
+        password_form.helper = FormHelper()
+        password_form.helper.form_tag = False
 
         context = {
             "user_form": user_form,
@@ -135,6 +138,8 @@ class ConfigurationView(LoginRequiredMixin, View):
 
         if "change_password" in request.POST:
             password_form = PasswordChangeForm(user, request.POST)
+            password_form.helper = FormHelper()
+            password_form.helper.form_tag = False
             user_form = UserUpdateForm(instance=user)
             profile_form = ProfileUpdateForm(instance=profile)
 
@@ -143,12 +148,13 @@ class ConfigurationView(LoginRequiredMixin, View):
                 update_session_auth_hash(request, password_form.user)
                 messages.success(request, "Contraseña actualizada con éxito.")
                 return redirect("configuracion")
-        else:
-            user_form = UserUpdateForm(request.POST, instance=user)
-            profile_form = ProfileUpdateForm(
-                request.POST, request.FILES, instance=profile
-            )
-            password_form = PasswordChangeForm(user)
+            else:
+                user_form = UserUpdateForm(request.POST, instance=user)
+                profile_form = ProfileUpdateForm(
+                request.POST, request.FILES, instance=profile)
+                password_form = PasswordChangeForm(user)
+                password_form.helper = FormHelper()
+                password_form.helper.form_tag = False
 
             if user_form.is_valid() and profile_form.is_valid():
                 try:
@@ -164,7 +170,7 @@ class ConfigurationView(LoginRequiredMixin, View):
         context = {
             "user_form": user_form,
             "profile_form": profile_form,
-            "password_form": password_form,
+            "form": password_form,
         }
 
         return render(request, self.template_name, context)

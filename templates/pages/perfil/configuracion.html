@@ -4,68 +4,77 @@
 {% load allauth i18n %}
 
 {% block head_title %}
-  Configuración
+Configuración
 {% endblock head_title %}
 
 {% block content_pages %}
-  <h1 class="max-w-2xl font-bold tracking-tight text-gray-900 text-2xl mb-4">Configuración</h1>
+<h1 class="max-w-2xl font-bold tracking-tight text-gray-900 text-2xl mb-4">Configuración</h1>
 
-  <div>
+<div>
     <div class="border-b border-gray-200">
-      <nav class="-mb-px flex space-x-8" aria-label="Tabs">
-        <button type="button" data-tab-target="perfil" class="border-b-2 border-indigo-500 py-2 px-1 text-sm font-medium text-indigo-600">
-          Perfil de Usuario
-        </button>
-        <button type="button" data-tab-target="seguridad" class="border-b-2 border-transparent py-2 px-1 text-sm font-medium text-gray-500 hover:text-gray-700 hover:border-gray-300">
-          Seguridad
-        </button>
-      </nav>
+        <nav class="-mb-px flex space-x-8" aria-label="Tabs">
+            <button type="button" data-tab-target="perfil"
+                class="border-b-2 border-indigo-500 py-2 px-1 text-sm font-medium text-indigo-600">
+                Perfil de Usuario
+            </button>
+            <button type="button" data-tab-target="seguridad"
+                class="border-b-2 border-transparent py-2 px-1 text-sm font-medium text-gray-500 hover:text-gray-700 hover:border-gray-300">
+                Seguridad
+            </button>
+        </nav>
     </div>
 
     <div id="perfil" class="tab-content mt-6">
-      <form method="post" enctype="multipart/form-data">
-        {% csrf_token %}
-        {% include 'components/input_perfil.html' with img=request.user.profile.image.url %}
-        {{ user_form|crispy }}
-        {% include "components/btn/button.html" with button_text="Guardar cambios" %}
-      </form>
+        <h2 class="text-gray-700">Perfil de Usuario</h2>
+        <section class="p-6 border rounded mt-4">
+            <form method="post" enctype="multipart/form-data">
+                {% csrf_token %}
+                {% include 'components/input_perfil.html' with img=request.user.profile.image.url %}
+                {{ user_form|crispy }}
+                {% include "components/btn/button.html" with button_text="Guardar cambios" %}
+            </form>
+        </section>
 
-      <div class="mt-8">
-        {% if messages %}
-          {% for message in messages %}
+        <hr class="mt-4">
+
+        <h1 class="text-gray-700">Cambiar Contraseña</h2>
+        <section class="p-6 border rounded mt-4">
+            {% if messages %}
+            {% for message in messages %}
             {% if "success-password" in message.tags %}
-              <div class="rounded-md bg-green-50 p-4 mb-3">
+            <div class="rounded-md bg-green-50 p-4 mb-3">
                 <div class="flex">
-                  <div class="ml-3">
-                    <h3 class="text-sm font-medium text-green-800">{{ message }}</h3>
-                  </div>
+                    <div class="ml-3">
+                        <h3 class="text-sm font-medium text-green-800">{{ message }}</h3>
+                    </div>
                 </div>
-              </div>
+            </div>
             {% endif %}
-          {% endfor %}
-        {% endif %}
-        {% url 'account_change_password' as action_url %}
-        {% element form form=form method="post" action=action_url %}
-          {% slot body %}
+            {% endfor %}
+            {% endif %}
+            {% url 'account_change_password' as action_url %}
+            {% element form form=password_form method="post" action=action_url %}
+            {% slot body %}
             {% csrf_token %}
             {{ redirect_field }}
-            {{ form|crispy }}
-          {% endslot %}
-          {% slot actions %}
-            {% include "components/btn/button.html" with button_text="Cambiar Contraseña" %}
-          {% endslot %}
-        {% endelement %}
-        {% include 'components/mensajes.html' %}
-      </div>
+            {{ password_form|crispy }}
+            {% endslot %}
+            {% slot actions %}
+            {% include "components/btn/button.html" with button_text="Cambiar Contraseña"%}
+            {% endslot %}
+            {% endelement %}
+            {% include 'components/mensajes.html' %}
+        </section>
     </div>
 
     <div id="seguridad" class="tab-content hidden mt-6">
-      {% include 'mfa/index.html' %}
-      {% include 'mfa/recovery_codes/index.html' %}
+        {% include 'mfa/index.html' %}
+        {% include 'mfa/recovery_codes/index.html' %}
     </div>
-  </div>
+</div>
 {% endblock content_pages %}
 
 {% block javascript %}
-  <script defer src="{% static 'js/tabs.js' %}"></script>
+<script defer src="{% static 'js/tabs.js' %}"></script>
+<script defer src="{% static 'js/script.js' %}"></script>
 {% endblock javascript %}
