@@ -7,6 +7,7 @@
 
 module.exports = {
     content: [
+        '../../UsuarioApp/forms.py', // <--- ruta del formulario añadida
         /**
          * HTML. Paths to Django template files that will contain Tailwind CSS classes.
          */

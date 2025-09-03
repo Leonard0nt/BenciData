@@ -27,9 +27,9 @@ class UserUpdateForm(forms.ModelForm):
             "username",
             "email",
             Row(
-                Column("first_name", css_class="w-auto md:w-1/2"),
-                Column("last_name", css_class="w-auto md:w-1/2"),
-                css_class="flex flex-col md:flex-row md:space-x-4",
+                Column("first_name", css_class="w-1/2 md:w-1/2"),
+                Column("last_name", css_class="w-1/2 md:w-1/2"),
+                css_class="flex flex-row space-x-4",
             ),
         )
 
