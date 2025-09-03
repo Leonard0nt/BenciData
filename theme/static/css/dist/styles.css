@@ -583,10 +583,6 @@ select {
 
 [type=checkbox]:indeterminate:focus,
 
-[type=checkbox]: indeterminate:hover {
-  border-color: transparent;
-  background-color: currentColor
-}
 
 [type=file] {
   background: unset;
