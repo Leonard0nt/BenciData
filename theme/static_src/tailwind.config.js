@@ -54,5 +54,10 @@ module.exports = {
         require('@tailwindcss/forms'),
         require('@tailwindcss/typography'),
         require('@tailwindcss/aspect-ratio'),
+        require("tailwindcss"),
+        require("autoprefixer"),
+        require("cssnano")({
+        preset: "default", // incluye eliminación de duplicados
+        }),
     ],
 }

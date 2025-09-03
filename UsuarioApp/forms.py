@@ -23,13 +23,15 @@ class UserUpdateForm(forms.ModelForm):
         super().__init__(*args, **kwargs)
         self.helper = FormHelper()
         self.helper.form_tag = False
+        self.fields["first_name"].widget.attrs.update({"class": "w-1/2 flex md:w-1/2"})
+        self.fields["last_name"].widget.attrs.update({"class": "w-1/2 flex md:w-1/2"})
         self.helper.layout = Layout(
             "username",
             "email",
             Row(
-                Column("first_name", css_class="w-1/2 md:w-1/2"),
-                Column("last_name", css_class="w-1/2 md:w-1/2"),
-                css_class="flex flex-row space-x-4",
+                Column("first_name"),
+                Column("last_name"),
+                css_class="form-row"
             ),
         )
 

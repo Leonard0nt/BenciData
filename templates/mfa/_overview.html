@@ -1,6 +1,20 @@
 
 {% load i18n %}
 {% load allauth %}
+    
+<h1 class="max-w-2xl font-bold tracking-tight text-gray-900 text-2xl mb-4">Configuración</h1>
+   
+<div class="border-b border-gray-200 ">
+        <nav class="-mb-px flex space-x-8 mb-4" aria-label="Tabs">
+            <a href="{% url 'configuracion' %}" type="button" data-tab-target="perfil"
+                class="border-b-2 border-transparent py-2 px-1 text-sm font-medium text-gray-500">    
+                Perfil de Usuario
+            </a>
+            <a href="{% url 'mfa_index' %}" type="button" data-tab-target="seguridad"
+                class="border-b-2 border-indigo-500 py-2 px-1 text-sm font-medium text-indigo-600">
+                Seguridad
+            </a>
+        </nav>
 
 <h2 class="mx-auto max-w-2xl font-bold tracking-tight text-gray-900 text-2xl">Autentificación de dos Factores</h2>
 
@@ -76,4 +90,5 @@
     {% endelement %}
   {% endwith %}
 {% endif %}
+</div> 
 

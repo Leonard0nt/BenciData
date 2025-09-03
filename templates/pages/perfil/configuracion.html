@@ -11,16 +11,16 @@ Configuración
 <h1 class="max-w-2xl font-bold tracking-tight text-gray-900 text-2xl mb-4">Configuración</h1>
 
 <div>
-    <div class="border-b border-gray-200">
+    <div class="border-b px-4 min-w-[fill-available] shadow rounded-lg border-gray-200">
         <nav class="-mb-px flex space-x-8" aria-label="Tabs">
             <button type="button" data-tab-target="perfil"
                 class="border-b-2 border-indigo-500 py-2 px-1 text-sm font-medium text-indigo-600">
                 Perfil de Usuario
             </button>
-            <button type="button" data-tab-target="seguridad"
+            <a href="{% url 'mfa_index' %}" type="button" data-tab-target="seguridad"
                 class="border-b-2 border-transparent py-2 px-1 text-sm font-medium text-gray-500">
                 Seguridad
-            </button>
+            </a>
         </nav>
     </div>
 
@@ -67,15 +67,8 @@ Configuración
         </section>
     </div>
 
-<div id="seguridad" class="tab-content hidden flex flex-col justify-center sm:px-6 lg:px-8">
-  <div class="sm:mx-auto sm:w-full sm:max-w-[680px]">
-    <div class="bg-white px-6 py-12 shadow rounded-lg sm:px-12">
-        <a href="{% url 'mfa_index' %}"
-        class="flex w-full cursor-pointer justify-center rounded-md bg-gradient-to-br px-3 py-1.5 text-sm font-semibold leading-6 text-white shadow-sm hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600">
-        Configurar autenticación en dos pasos
-        </a>
-    </div>
-  </div>
+
+  
 </div>
 </div>
 {% endblock content_pages %}
