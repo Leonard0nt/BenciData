@@ -6,10 +6,8 @@ from django.db.models.signals import post_migrate
 class UsuarioAppConfig(AppConfig):
     name = "UsuarioApp"
 
-class UsuarioAppConfig(AppConfig):
-    name = "UsuarioApp"
-
     def ready(self):
+        from . import signals 
         from .models import Position
         from .choices import PERMISOS
 

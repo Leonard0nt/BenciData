@@ -7,11 +7,13 @@ from django.contrib.auth.password_validation import validate_password
 from allauth.account.forms import LoginForm
 
 class CustomLoginForm(LoginForm):
+    login = forms.EmailField(
+        label="Correo electrónico",
+        widget=forms.EmailInput(attrs={"autofocus": "autofocus"})
+    )
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.fields["login"].label = "Correo electrónico"
         self.fields["password"].label = "Contraseña"
-
 
 class UserUpdateForm(forms.ModelForm):
     class Meta:
