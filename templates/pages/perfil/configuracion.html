@@ -29,9 +29,38 @@ Configuración
         <section class="p-6 border rounded mt-4">
             <form method="post" enctype="multipart/form-data">
                 {% csrf_token %}
-                {% include 'components/input_perfil.html' with img=request.user.profile.image.url %}
-                {{ user_form|crispy }}
-                {% include "components/btn/button.html" with button_text="Guardar cambios" %}
+                 <div class="flex gap-6">
+                    <div>
+                        {% include 'components/input_perfil.html' with img=request.user.profile.image.url %}
+                    </div>
+                    <div class="flex-1">
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <label for="{{ user_form.first_name.id_for_label }}" class="block text-gray-700 text-sm font-bold mb-2">Nombre</label>
+                                {{ user_form.first_name }}
+                            </div>
+                            <div>
+                                <label for="{{ user_form.last_name.id_for_label }}" class="block text-gray-700 text-sm font-bold mb-2">Apellido</label>
+                                {{ user_form.last_name }}
+                            </div>
+                            <div>
+                                <label for="{{ user_form.username.id_for_label }}" class="block text-gray-700 text-sm font-bold mb-2">Teléfono</label>
+                                {{ user_form.username }}
+                            </div>
+                            <div>
+                                <label for="{{ profile_form.position_FK.id_for_label }}" class="block text-gray-700 text-sm font-bold mb-2">Cargo</label>
+                                {{ profile_form.position_FK }}
+                            </div>
+                        </div>
+                        <div class="mt-4">
+                            <label for="{{ user_form.email.id_for_label }}" class="block text-gray-700 text-sm font-bold mb-2">Email</label>
+                            {{ user_form.email }}
+                        </div>
+                    </div>
+                </div>
+                <div class="mt-6">
+                    <button type="submit" class="bg-green-500 hover:bg-green-600 text-white font-semibold py-2 px-4 rounded">Guardar Cambios</button>
+                </div>
             </form>
         </section>
 
