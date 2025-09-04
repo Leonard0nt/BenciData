@@ -34,9 +34,9 @@ class UserUpdateForm(forms.ModelForm):
             "username",
             "email",
             Div(
-                Div("first_name", css_class="w-full md:w-1/2"),
-                Div("last_name",  css_class="w-full md:w-1/2"),
-                css_class="flex flex-col md:flex-row gap-4",
+                Div("first_name", css_class="flex-1"),
+                Div("last_name",  css_class="flex-1"),
+                css_class="flex gap-4",
             ),
         )
 
