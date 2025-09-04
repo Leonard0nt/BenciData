@@ -40,6 +40,7 @@ THIRD_APPS = [
     "theme",
     "allauth",
     "allauth.account",
+    "widget_tweaks",
     "allauth.mfa",
     "crispy_forms",
     "crispy_tailwind",

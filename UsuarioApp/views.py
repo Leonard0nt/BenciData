@@ -125,6 +125,7 @@ class ConfigurationView(LoginRequiredMixin, View):
         profile = user.profile
         user_form = UserUpdateForm(instance=user)
         profile_form = ProfileUpdateForm(instance=profile)
+        
         password_form = CustomPasswordChangeForm(user=user)
         password_form.helper = FormHelper()
         password_form.helper.form_tag = False
@@ -145,6 +146,7 @@ class ConfigurationView(LoginRequiredMixin, View):
         profile_form = ProfileUpdateForm(
             request.POST, request.FILES, instance=profile
         )
+        
         password_form = CustomPasswordChangeForm(user, request.POST)
         password_form.helper = FormHelper()
         password_form.helper.form_tag = False
@@ -168,6 +170,7 @@ class ConfigurationView(LoginRequiredMixin, View):
                     print("*" * 30)
                     messages.error(request, "Error al guardar la imagen")
                 return redirect("configuracion")
+            
             password_form = CustomPasswordChangeForm(user)
             password_form.helper = FormHelper()
             password_form.helper.form_tag = False
