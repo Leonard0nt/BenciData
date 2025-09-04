@@ -1,8 +1,13 @@
-from .forms import UserCreateForm, ProfileCreateForm, UserUpdateForm, ProfileUpdateForm
+from .forms import (
+    UserCreateForm,
+    ProfileCreateForm,
+    UserUpdateForm,
+    ProfileUpdateForm,
+    CustomPasswordChangeForm,
+)
 from django.views.generic import ListView, View
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.auth.models import User
-from django.contrib.auth.forms import PasswordChangeForm
 from crispy_forms.helper import FormHelper
 from django.contrib.auth import update_session_auth_hash
 from django.shortcuts import redirect, render
@@ -120,7 +125,7 @@ class ConfigurationView(LoginRequiredMixin, View):
         profile = user.profile
         user_form = UserUpdateForm(instance=user)
         profile_form = ProfileUpdateForm(instance=profile)
-        password_form = PasswordChangeForm(user=user)
+        password_form = CustomPasswordChangeForm(user=user)
         password_form.helper = FormHelper()
         password_form.helper.form_tag = False
 
@@ -140,7 +145,7 @@ class ConfigurationView(LoginRequiredMixin, View):
         profile_form = ProfileUpdateForm(
             request.POST, request.FILES, instance=profile
         )
-        password_form = PasswordChangeForm(user, request.POST)
+        password_form = CustomPasswordChangeForm(user, request.POST)
         password_form.helper = FormHelper()
         password_form.helper.form_tag = False
 
@@ -163,7 +168,7 @@ class ConfigurationView(LoginRequiredMixin, View):
                     print("*" * 30)
                     messages.error(request, "Error al guardar la imagen")
                 return redirect("configuracion")
-            password_form = PasswordChangeForm(user)
+            password_form = CustomPasswordChangeForm(user)
             password_form.helper = FormHelper()
             password_form.helper.form_tag = False
 

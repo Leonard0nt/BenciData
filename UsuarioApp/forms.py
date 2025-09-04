@@ -1,13 +1,19 @@
 from django import forms
 from django.contrib.auth.models import User
-from django.contrib.auth.forms import UserCreationForm
+from django.contrib.auth.forms import UserCreationForm,  PasswordChangeForm
 from django.core.exceptions import ValidationError
 from django.contrib.auth.password_validation import validate_password
 from allauth.account.forms import LoginForm
 from crispy_forms.helper import FormHelper
-from crispy_forms.layout import Layout, Row, Column
+from crispy_forms.layout import Layout, Div
 
 from .models import Profile, Position
+
+
+class CustomPasswordChangeForm(PasswordChangeForm):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["old_password"].widget.attrs.pop("autofocus", None)
 
 class CustomLoginForm(LoginForm):
     login = forms.EmailField(
@@ -23,15 +29,14 @@ class UserUpdateForm(forms.ModelForm):
         super().__init__(*args, **kwargs)
         self.helper = FormHelper()
         self.helper.form_tag = False
-        self.fields["first_name"].widget.attrs.update({"class": "w-1/2 flex md:w-1/2"})
-        self.fields["last_name"].widget.attrs.update({"class": "w-1/2 flex md:w-1/2"})
+
         self.helper.layout = Layout(
             "username",
             "email",
-            Row(
-                Column("first_name"),
-                Column("last_name"),
-                css_class="form-row"
+            Div(
+                Div("first_name", css_class="w-full md:w-1/2"),
+                Div("last_name",  css_class="w-full md:w-1/2"),
+                css_class="flex flex-col md:flex-row gap-4",
             ),
         )
 
