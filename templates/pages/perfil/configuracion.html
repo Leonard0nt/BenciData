@@ -30,46 +30,59 @@ Configuración
         <section class="p-6 rounded mt-4">
             <form method="post" enctype="multipart/form-data">
                 {% csrf_token %}
-                <div class="flex gap-6">
+                <div class="flex gap-6 flex-1">
                     <div>
                         {% include 'components/input_perfil.html' with img=request.user.profile.image.url %}
                     </div>
+                </div>
+                <div class="flex gap-6 w-1">
+                    <div class="flex-1">
+                        <div>
+                            <label for="{{ user_form.first_name.id_for_label }}"
+                                class="block text-gray-700 text-sm font-bold mb-2">Nombre</label>
+                            {{ user_form.first_name|add_class:"py-3 px-4 text-base w-full" }}
+                        </div>
+                        <div>
+                            <label for="{{ user_form.username.id_for_label }}"
+                                class="block text-gray-700 text-sm font-bold mb-2">Teléfono</label>
+                            {{ user_form.username|add_class:"py-3 px-4 text-base w-full" }}
+                        </div>
+                        <div class="mt-4">
+                            <label for="{{ user_form.email.id_for_label }}"
+                                class="block text-gray-700 text-sm font-bold mb-2">Email</label>
+                            {{ user_form.email|add_class:"py-3 px-4 text-base w-full" }}
+                        </div>
+                        <div class="mt-4">
+                            <label class="block text-gray-700 text-sm font-bold mb-2">Cargo</label>
+                            <input type="text"
+                                value="{{ user.profile.position_FK.user_position }}"
+                                class="py-3 px-4 text-base w-full bg-gray-100"
+                                disabled>
+                        </div>
+                        <div class="mt-6">
+                            <button type="submit"
+                                class="bg-gradient-to-br hover:bg-green-600 text-white font-semibold py-2 px-4 rounded">
+                                Guardar Cambios
+                            </button>
+                        </div>
+                    </div>
+                    <div class="flex-1">
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <label for="{{ user_form.last_name.id_for_label }}"
+                                    class="block text-gray-700 text-sm font-bold mb-2">Apellido</label>
+                                {{ user_form.last_name|add_class:"py-3 px-4 text-base w-full" }}
+                            </div>
+                            <div>
+                                <label for="{{ profile_form.position_FK.id_for_label }}"
+                                    class="block text-gray-700 text-sm font-bold mb-2">Cargo</label>
+                                {{ profile_form.position_FK|add_class:"py-3 px-4 text-base w-full" }}
+                            </div>
+                        </div>
+                    </div>
+                </div>
 
-                </div>
-    </div>
-    <div class="flex gap-6">
-        <div>
-            <div>
-                <label for="{{ user_form.first_name.id_for_label }}"
-                    class="block text-gray-700 text-sm font-bold mb-2">Nombre</label>
-                {{ user_form.first_name|add_class:"py-3 px-4 text-base w-full"}}
-            </div>
-            <div>
-                <label for="{{ user_form.username.id_for_label }}"
-                    class="block text-gray-700 text-sm font-bold mb-2">Teléfono</label>
-                {{ user_form.username|add_class:"py-3 px-4 text-base w-full" }}
-            </div>
-            <div class="mt-4">
-                <label for="{{ user_form.email.id_for_label }}"
-                    class="block text-gray-700 text-sm font-bold mb-2">Email</label>
-                {{ user_form.email|add_class:"py-3 px-4 text-base w-full" }}
-            </div>
-            <div class="mt-6">
-                <button type="submit" class="bg-green-500 hover:bg-green-600 text-white font-semibold py-2 px-4 rounded">
-                    Guardar Cambios
-                </button>
-            </div>
-        </div>
-        <div class="flex-1">
-            <div class="grid grid-cols-2 gap-4">
-                <div>
-                    <label for="{{ user_form.last_name.id_for_label }}"
-                        class="block text-gray-700 text-sm font-bold mb-2">Apellido</label>
-                    {{ user_form.last_name|add_class:"py-3 px-4 text-base w-full" }}
-                </div>
-            </div>
-        </div>
-        </form>
+            </form>
         </section>
     </div>
 
@@ -99,8 +112,7 @@ Configuración
                 {{ password_form|crispy }}
                 {% endslot %}
                 {% slot actions %}
-                {% include "components/btn/button.html" with button_text="Cambiar Contraseña"
-                button_name="change_password"%}
+                {% include "components/btn/button.html" with button_text="Cambiar Contraseña" button_name="change_password"%}
                 {% endslot %}
                 {% endelement %}
                 {% include 'components/mensajes.html' %}
@@ -111,7 +123,7 @@ Configuración
 
 
 
-</div>
+
 </div>
 {% endblock content_pages %}
 
