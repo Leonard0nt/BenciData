@@ -613,6 +613,9 @@ select {
   .container {
     max-width: 768px
   }
+  .hidden {
+    display: none
+  }
 }
 
 @media (min-width:1024px) {
@@ -2027,10 +2030,6 @@ select {
   }
 
   .lg\:hidden {
-    display: none
-  }
-
-  .hidden {
     display: none
   }
 

@@ -15,9 +15,10 @@
     {% include 'components/input_perfil.html' with img=request.user.profile.image.url %}
 
     {{ user_form|crispy }}
-    
-    {% include "components/btn/button.html" with button_text="Guardar cambios" %}              
+    <label for="id_phone" class="block text-gray-700 text-sm font-bold mb-2">Teléfono</label>
+    {{ profile_form.phone }}
 
+    {% include "components/btn/button.html" with button_text="Guardar cambios" %}
     {% if messages %}
       {% for message in messages %}
         {% if "error" in message.tags %}

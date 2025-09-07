@@ -36,9 +36,11 @@ class Profile(models.Model):
     user_FK = models.OneToOneField(
         User, on_delete=models.CASCADE, related_name="profile"
     )
+    phone = models.CharField(max_length=20, blank=True)
     position_FK = models.ForeignKey(
         Position, on_delete=models.SET_NULL, null=True, blank=True
     )
+    phone = models.CharField(max_length=20, blank=True, verbose_name="Teléfono")
 
     def save(self, *args, **kwargs):
         update_last_activity = kwargs.pop("update_last_activity", False)

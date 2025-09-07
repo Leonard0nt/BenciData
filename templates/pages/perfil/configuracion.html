@@ -73,6 +73,10 @@ Configuración
                                     class="py-3 px-4 text-base w-full bg-gray-100"
                                     disabled>
                             </div>
+                            <div class="">
+                                <label for="{{ profile_form.phone.id_for_label }}" class="block text-gray-700 text-sm font-bold mb-2">Teléfono</label>
+                                {{ profile_form.phone|add_class:"py-3 px-4 text-base w-full" }}
+                            </div>
                         </div>
                     </div>
                 </div>

@@ -80,6 +80,7 @@ class ProfileUpdateForm(forms.ModelForm):
         widget=forms.FileInput(attrs={"class": "hidden", "id": "id_image"}),
         required=False,
     )
+    phone = forms.CharField(max_length=20, required=False, label="Teléfono")
 
     class Meta:
         model = Profile

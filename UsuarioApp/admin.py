@@ -10,6 +10,8 @@ from .models import Profile, Position
 class ProfileAdmin(admin.ModelAdmin):
     list_display = ("user_FK",)
 
+    def phone(self, obj):
+        return getattr(obj, "phone", "")
 
 admin.site.register(Profile, ProfileAdmin)
 
