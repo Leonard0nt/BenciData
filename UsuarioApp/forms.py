@@ -75,16 +75,38 @@ class UserCreateForm(UserCreationForm, UserUpdateForm):
 
 
 class ProfileUpdateForm(forms.ModelForm):
-    image = forms.ImageField(
+       image = forms.ImageField(
         label="Imagen",
         widget=forms.FileInput(attrs={"class": "hidden", "id": "id_image"}),
         required=False,
     )
-    phone = forms.CharField(max_length=20, required=False, label="Teléfono")
+    phone = forms.CharField(
+        max_length=20,
+        required=False,
+        label="Teléfono",
+        widget=forms.TextInput(
+            attrs={
+                "class": "bg-white focus:outline-none border border-gray-300 rounded-lg py-2 px-4 block w-full leading-normal text-gray-700 mb-3"
+            }
+        ),
+    )
+    def clean_phone(self):
+        phone = self.cleaned_data.get("phone")
+        api_key = os.getenv("PHONE_API_KEY")
+
+        params = {"access_key": api_key, "number": phone}
+        try:
+            resp = requests.get("http://apilayer.net/api/validate", params=params, timeout=5)
+            data = resp.json()
+            if not data.get("valid"):
+                raise forms.ValidationError("Número telefónico inválido.")
+        except Exception:
+            raise forms.ValidationError("Error al validar el número.")
+        return phone
 
     class Meta:
         model = Profile
-        fields = ["image"]
+        fields = ["image", "phone"]
 
     def clean_image(self):
         image = self.cleaned_data.get("image")

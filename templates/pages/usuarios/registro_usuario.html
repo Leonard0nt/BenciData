@@ -22,6 +22,7 @@
         Teléfono
       </label>
       {{ profile_form.phone }}
+      {{ form.phone.errors }}
       {{ user_form|crispy }}
 
       {% include "components/btn/button.html" with button_text="Guardar cambios" %}

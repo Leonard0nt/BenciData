@@ -36,7 +36,6 @@ class Profile(models.Model):
     user_FK = models.OneToOneField(
         User, on_delete=models.CASCADE, related_name="profile"
     )
-    phone = models.CharField(max_length=20, blank=True)
     position_FK = models.ForeignKey(
         Position, on_delete=models.SET_NULL, null=True, blank=True
     )
