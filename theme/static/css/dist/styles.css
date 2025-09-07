@@ -4601,10 +4601,9 @@ select {
 
 
 .panel-izquierdo {
-  flex: 1;
+  flex: none;
   background: var(--degradado-verde);
   padding: 40px;
-  display: flex;
   flex-direction: column;
   justify-content: center;
   align-items: center;
