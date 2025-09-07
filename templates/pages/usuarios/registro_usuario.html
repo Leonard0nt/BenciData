@@ -21,9 +21,9 @@
       <label for="id_phone" class="block text-gray-700 text-sm font-bold mb-2">
         Teléfono
       </label>
-      {{ profile_form.phone }}
-      {{ form.phone.errors }}
-      {{ user_form|crispy }}
+      {{ profile_form.phone }}␊
+      {{ profile_form.phone.errors }}
+      {{ user_form|crispy }}␊
 
       {% include "components/btn/button.html" with button_text="Guardar cambios" %}
       
