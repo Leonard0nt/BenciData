@@ -42,22 +42,15 @@ Configuración
                                 class="block text-gray-700 text-sm font-bold mb-2">Nombre</label>
                             {{ user_form.first_name|add_class:"py-3 px-4 text-base w-full" }}
                         </div>
-                        <div>
+                        <div class="mt-4">
                             <label for="{{ user_form.username.id_for_label }}"
-                                class="block text-gray-700 text-sm font-bold mb-2">Teléfono</label>
+                                class="block text-gray-700 text-sm font-bold mb-2">Nombre de Usuario</label>
                             {{ user_form.username|add_class:"py-3 px-4 text-base w-full" }}
                         </div>
                         <div class="mt-4">
                             <label for="{{ user_form.email.id_for_label }}"
                                 class="block text-gray-700 text-sm font-bold mb-2">Email</label>
                             {{ user_form.email|add_class:"py-3 px-4 text-base w-full" }}
-                        </div>
-                        <div class="mt-4">
-                            <label class="block text-gray-700 text-sm font-bold mb-2">Cargo</label>
-                            <input type="text"
-                                value="{{ user.profile.position_FK.user_position }}"
-                                class="py-3 px-4 text-base w-full bg-gray-100"
-                                disabled>
                         </div>
                         <div class="mt-6">
                             <button type="submit"
@@ -74,9 +67,11 @@ Configuración
                                 {{ user_form.last_name|add_class:"py-3 px-4 text-base w-full" }}
                             </div>
                             <div>
-                                <label for="{{ profile_form.position_FK.id_for_label }}"
-                                    class="block text-gray-700 text-sm font-bold mb-2">Cargo</label>
-                                {{ profile_form.position_FK|add_class:"py-3 px-4 text-base w-full" }}
+                                <label class="block text-gray-700 text-sm font-bold mb-2">Cargo</label>
+                                <input type="text"
+                                    value="{{ user.profile.position_FK.user_position }}"
+                                    class="py-3 px-4 text-base w-full bg-gray-100"
+                                    disabled>
                             </div>
                         </div>
                     </div>

@@ -4604,6 +4604,7 @@ select {
   flex: 1;
   background: var(--degradado-verde);
   padding: 40px;
+  display: flex;
   flex-direction: column;
   justify-content: center;
   align-items: center;
