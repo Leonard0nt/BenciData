@@ -75,7 +75,7 @@ class UserCreateForm(UserCreationForm, UserUpdateForm):
 
 
 class ProfileUpdateForm(forms.ModelForm):
-       image = forms.ImageField(
+    image = forms.ImageField(
         label="Imagen",
         widget=forms.FileInput(attrs={"class": "hidden", "id": "id_image"}),
         required=False,
