@@ -40,7 +40,29 @@ class Profile(models.Model):
         Position, on_delete=models.SET_NULL, null=True, blank=True
     )
     phone = models.CharField(max_length=20, blank=True, verbose_name="Teléfono")
-
+    salario = models.DecimalField(
+        max_digits=10, decimal_places=2, null=True, blank=True, verbose_name="Salario"
+    )
+    address = models.CharField(max_length=255, blank=True, verbose_name="Dirección")
+    date_of_hire = models.DateField(null=True, blank=True, verbose_name="Fecha de contratación")
+    is_partime = models.BooleanField(
+    default=False,
+    choices=[(True, "Tiempo completo"), (False, "Medio tiempo")],
+    verbose_name="Tipo de jornada"
+    )
+        # Documentos
+    examen_medico = models.FileField(
+        upload_to="documentos/examenes/",
+        null=True,
+        blank=True,
+        verbose_name="Examen médico"
+    )
+    contrato = models.FileField(
+        upload_to="documentos/contratos/",
+        null=True,
+        blank=True,
+        verbose_name="Contrato"
+    )
     def save(self, *args, **kwargs):
         update_last_activity = kwargs.pop("update_last_activity", False)
 
@@ -119,3 +141,4 @@ class Profile(models.Model):
 
     def __str__(self):
         return self.user_FK.username
+
