@@ -93,6 +93,14 @@ class ProfileUpdateForm(forms.ModelForm):
             }
         ),
     )
+    examen_medico = forms.FileField(
+        label="Examen médico",
+        required=False,
+    )
+    contrato = forms.FileField(
+        label="Contrato",
+        required=False,
+    )
     def clean_phone(self):
         phone = self.cleaned_data.get("phone")
         api_key = os.getenv("PHONE_API_KEY")
@@ -109,7 +117,7 @@ class ProfileUpdateForm(forms.ModelForm):
 
     class Meta:
         model = Profile
-        fields = ["image", "phone"]
+        fields = ["image", "phone", "examen_medico", "contrato"]
 
     def clean_image(self):
         image = self.cleaned_data.get("image")
@@ -118,6 +126,28 @@ class ProfileUpdateForm(forms.ModelForm):
                 "El tamaño del archivo de imagen no debe exceder los 5 MB."
             )
         return image
+
+    def clean_examen_medico(self):
+        examen = self.cleaned_data.get("examen_medico")
+        if examen and examen.size > 5 * 1024 * 1024:
+            raise forms.ValidationError(
+                "El tamaño del archivo no debe exceder los 5 MB."
+            )
+        allowed_types = ["application/pdf"]
+        if examen and getattr(examen, "content_type", None) not in allowed_types:
+            raise forms.ValidationError("Solo se permiten archivos PDF.")
+        return examen
+
+    def clean_contrato(self):
+        contrato = self.cleaned_data.get("contrato")
+        if contrato and contrato.size > 5 * 1024 * 1024:
+            raise forms.ValidationError(
+                "El tamaño del archivo no debe exceder los 5 MB."
+            )
+        allowed_types = ["application/pdf"]
+        if contrato and getattr(contrato, "content_type", None) not in allowed_types:
+            raise forms.ValidationError("Solo se permiten archivos PDF.")
+        return contrato
 
 
 class ProfileCreateForm(ProfileUpdateForm):
@@ -132,7 +162,7 @@ class ProfileCreateForm(ProfileUpdateForm):
     )
 
     class Meta(ProfileUpdateForm.Meta):
-        fields = ProfileUpdateForm.Meta.fields + ["position_FK"]
+        fields = ProfileUpdateForm.Meta.fields + ["position_FK"]  # incluye documentos
 
     def __init__(self, *args, user=None, **kwargs):
         super().__init__(*args, **kwargs)
