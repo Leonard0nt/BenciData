@@ -18,6 +18,18 @@
     <label for="id_phone" class="block text-gray-700 text-sm font-bold mb-2">Teléfono</label>
     {{ profile_form.phone }}
 
+    <label for="{{ profile_form.examen_medico.id_for_label }}" class="block text-gray-700 text-sm font-bold mb-2">Examen Médico</label>
+    {{ profile_form.examen_medico }}
+    {% if request.user.profile.examen_medico %}
+      <a href="{{ request.user.profile.examen_medico.url }}" class="text-indigo-600 text-sm" download>Descargar examen médico</a>
+    {% endif %}
+
+    <label for="{{ profile_form.contrato.id_for_label }}" class="block text-gray-700 text-sm font-bold mb-2 mt-4">Contrato</label>
+    {{ profile_form.contrato }}
+    {% if request.user.profile.contrato %}
+      <a href="{{ request.user.profile.contrato.url }}" class="text-indigo-600 text-sm" download>Descargar contrato</a>
+    {% endif %}
+
     {% include "components/btn/button.html" with button_text="Guardar cambios" %}
     {% if messages %}
       {% for message in messages %}

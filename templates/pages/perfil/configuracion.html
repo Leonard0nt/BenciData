@@ -52,6 +52,20 @@ Configuración
                                 class="block text-gray-700 text-sm font-bold mb-2">Email</label>
                             {{ user_form.email|add_class:"py-3 px-4 text-base w-full" }}
                         </div>
+                        <div>
+                            <label for="{{ profile_form.examen_medico.id_for_label }}" class="block text-gray-700 text-sm font-bold mb-2">Examen Médico</label>
+                            {{ profile_form.examen_medico|add_class:"py-3 px-4 text-base w-full" }}
+                            {% if request.user.profile.examen_medico %}
+                            <a href="{{ request.user.profile.examen_medico.url }}" class="text-indigo-600 text-sm" download>Descargar examen médico</a>
+                            {% endif %}
+                        </div>
+                        <div>
+                            <label for="{{ profile_form.contrato.id_for_label }}" class="block text-gray-700 text-sm font-bold mb-2">Contrato</label>
+                            {{ profile_form.contrato|add_class:"py-3 px-4 text-base w-full" }}
+                            {% if request.user.profile.contrato %}
+                            <a href="{{ request.user.profile.contrato.url }}" class="text-indigo-600 text-sm" download>Descargar contrato</a>
+                            {% endif %}
+                        </div>
                         <div class="mt-6">
                             <button type="submit"
                                 class="bg-gradient-to-br hover:bg-green-600 text-white font-semibold py-2 px-4 rounded">

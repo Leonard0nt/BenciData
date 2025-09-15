@@ -34,34 +34,34 @@ class Profile(models.Model):
     last_activity = models.DateTimeField(null=True, blank=True)
     image = models.ImageField(upload_to=profile_picture_path, default="profile.webp")
     user_FK = models.OneToOneField(
-        User, on_delete=models.CASCADE, related_name="profile"
+        User, on_delete=models.CASCADE, related_name="profile",
     )
     position_FK = models.ForeignKey(
         Position, on_delete=models.SET_NULL, null=True, blank=True
     )
     phone = models.CharField(max_length=20, blank=True, verbose_name="Teléfono")
     salario = models.DecimalField(
-        max_digits=10, decimal_places=2, null=True, blank=True, verbose_name="Salario"
+        max_digits=10, decimal_places=2, null=True, blank=True, verbose_name="Salario",
     )
     address = models.CharField(max_length=255, blank=True, verbose_name="Dirección")
     date_of_hire = models.DateField(null=True, blank=True, verbose_name="Fecha de contratación")
     is_partime = models.BooleanField(
-    default=False,
-    choices=[(True, "Tiempo completo"), (False, "Medio tiempo")],
-    verbose_name="Tipo de jornada"
+        default=False,
+        choices=[(True, "Tiempo completo"), (False, "Medio tiempo")],
+        verbose_name="Tipo de jornada",
     )
-        # Documentos
+    # Documentos
     examen_medico = models.FileField(
         upload_to="documentos/examenes/",
         null=True,
         blank=True,
-        verbose_name="Examen médico"
+        verbose_name="Examen médico",
     )
     contrato = models.FileField(
         upload_to="documentos/contratos/",
         null=True,
         blank=True,
-        verbose_name="Contrato"
+        verbose_name="Contrato",
     )
     def save(self, *args, **kwargs):
         update_last_activity = kwargs.pop("update_last_activity", False)
@@ -104,22 +104,6 @@ class Profile(models.Model):
     def update_last_activity(self):
         self.save(update_last_activity=True)
 
-    class Meta:
-        verbose_name = "Perfil"
-        verbose_name_plural = "Perfiles"
-        ordering = ["-id"]
-
-    def __str__(self):
-        return self.user_FK.username
-
-    def update_last_activity(self):
-        self.save(update_last_activity=True)
-
-    class Meta:
-        verbose_name = "Perfil"
-        verbose_name_plural = "Perfiles"
-        ordering = ["-id"]
-
     def _has_permission(self, code: str) -> bool:
         """Return True if the profile has the given permission code."""
         return bool(self.position_FK and self.position_FK.permission_code == code)
@@ -142,3 +126,7 @@ class Profile(models.Model):
     def __str__(self):
         return self.user_FK.username
 
+    class Meta:
+        verbose_name = "Perfil"
+        verbose_name_plural = "Perfiles"
+        ordering = ["-id"]
