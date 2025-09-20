@@ -1,0 +1,45 @@
+{% extends "components/Layout/base_pages.html" %}
+{% load widget_tweaks %}
+
+{% block head_title %}
+Datos de la empresa
+{% endblock head_title %}
+
+{% block content_pages %}
+<h1 class="max-w-2xl font-bold tracking-tight text-gray-900 text-2xl mb-4">
+    Datos de la empresa
+</h1>
+<section class="p-6 rounded mt-4 bg-white shadow">
+    <form method="post" novalidate>
+        {% csrf_token %}
+        {{ form.non_field_errors }}
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div>
+                <label for="{{ form.rut.id_for_label }}" class="block text-gray-700 text-sm font-bold mb-2">RUT</label>
+                {{ form.rut|add_error_class:"border-red-500" }}
+                {% if form.rut.errors %}
+                <p class="text-sm text-red-600 mt-1">{{ form.rut.errors|striptags }}</p>
+                {% endif %}
+            </div>
+            <div>
+                <label for="{{ form.business_name.id_for_label }}" class="block text-gray-700 text-sm font-bold mb-2">Razón social</label>
+                {{ form.business_name|add_error_class:"border-red-500" }}
+                {% if form.business_name.errors %}
+                <p class="text-sm text-red-600 mt-1">{{ form.business_name.errors|striptags }}</p>
+                {% endif %}
+            </div>
+        </div>
+        <div class="mt-6">
+            <label for="{{ form.tax_address.id_for_label }}" class="block text-gray-700 text-sm font-bold mb-2">Dirección tributaria</label>
+            {{ form.tax_address|add_error_class:"border-red-500" }}
+            {% if form.tax_address.errors %}
+            <p class="text-sm text-red-600 mt-1">{{ form.tax_address.errors|striptags }}</p>
+            {% endif %}
+        </div>
+        <div class="mt-6 flex justify-end">
+            {% include "components/btn/button.html" with button_text="Guardar" button_class="px-6" %}
+        </div>
+    </form>
+</section>
+{% include "components/mensajes.html" %}
+{% endblock content_pages %}

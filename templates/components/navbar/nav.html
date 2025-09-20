@@ -19,6 +19,18 @@
               Registro de Usuarios
             </a>
           </li>
+          {% if user.profile.is_owner %}
+          <li>
+            <a href="{% url 'company_edit' %}" class=" menu-item {% if request.path == '/empresa/' %}text-white bg-current {% else %} text-gray-400 hover:text-white hover:bg-gray-800 {% endif %}">
+              <svg class="h-6 w-6 shrink-0" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" aria-hidden="true">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M3 7.5l9-4.5 9 4.5-9 4.5-9-4.5z" />
+                <path stroke-linecap="round" stroke-linejoin="round" d="M3 12l9 4.5 9-4.5" />
+                <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5l9 4.5 9-4.5" />
+              </svg>
+              Datos de la empresa
+            </a>
+          </li>
+          {% endif %}
         {% endif %}
         <li>
           <a href="{% url "User" %}" class=" menu-item {% if request.path == '/usuarios/' %}text-white bg-current {% else %}  text-gray-400 hover:text-white hover:bg-gray-800 {% endif %}">
