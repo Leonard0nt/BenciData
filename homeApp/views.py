@@ -40,5 +40,9 @@ class HomeView(LoginRequiredMixin, ListView):
             except Company.DoesNotExist:
                 company = None
 
+            if not company and profile.company_rut:
+                normalized_rut = Company.normalize_rut(profile.company_rut)
+                company = Company.objects.filter(rut=normalized_rut).first()
+
         context["company"] = company
         return context
