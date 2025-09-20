@@ -108,11 +108,13 @@ class ProfileUpdateForm(forms.ModelForm):
         required=False,
         label="Fecha de nacimiento",
         widget=forms.DateInput(
+            format="%Y-%m-%d",
             attrs={
                 "type": "date",
                 "class": "bg-white focus:outline-none border border-gray-300 rounded-lg py-2 px-4 block w-full leading-normal text-gray-700 mb-3",
             }
         ),
+        input_formats=["%Y-%m-%d"],
     )
     salario = forms.DecimalField(
         max_digits=10,
