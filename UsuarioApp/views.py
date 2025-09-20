@@ -76,6 +76,21 @@ class UserCreateView(LoginRequiredMixin, PermitsPositionMixin, View):
             user = user_form.save()
             profile = profile_form.save(commit=False)
             profile.user_FK = user
+            owner_profile = getattr(request.user, "profile", None)
+            if owner_profile is not None:
+                company = getattr(owner_profile, "company", None)
+                if company is not None:
+                    profile.company_rut = company.rut
+                else:
+                    messages.warning(
+                        request,
+                        "No se encontró una empresa asociada al usuario actual.",
+                    )
+            else:
+                messages.warning(
+                    request,
+                    "No se encontró un perfil asociado al usuario actual.",
+                )
             profile.save()
             messages.success(request, "Usuario creado con Éxito.")
             return redirect("Register")

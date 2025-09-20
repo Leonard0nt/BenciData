@@ -41,6 +41,18 @@ class Profile(models.Model):
     position_FK = models.ForeignKey(
         Position, on_delete=models.SET_NULL, null=True, blank=True
     )
+    company_rut = models.CharField(
+        max_length=12,
+        blank=True,
+        null=True,
+        validators=[
+            RegexValidator(
+                regex=r"^[0-9.]+-[0-9kK]{1}$",
+                message="Ingrese un RUT válido en el formato 12.345.678-9",
+            )
+        ],
+        verbose_name="RUT Empresa",
+    )
     phone = models.CharField(max_length=20, blank=True, verbose_name="Teléfono")
     gender = models.CharField(
         max_length=1,
