@@ -3,7 +3,7 @@ from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.auth.models import User
 from django.db.models import Q
 from django.utils import timezone
-from UsuarioApp.models import Profile
+from UsuarioApp.models import Profile, Company
 
 # Create your views here.
 
@@ -27,4 +27,18 @@ class HomeView(LoginRequiredMixin, ListView):
             last_activity__gte=recent_activity_cutoff
         ).values_list("user_FK_id", flat=True)
         context["active_users"] = active_users
+
+        company = None
+        try:
+            profile = self.request.user.profile
+        except Profile.DoesNotExist:
+            profile = None
+
+        if profile:
+            try:
+                company = profile.company
+            except Company.DoesNotExist:
+                company = None
+
+        context["company"] = company
         return context

@@ -6,6 +6,27 @@
           
   <div class="sm:h-dvh">
       <h2 class="text-gray-900 text-center pb-3 text-2xl" >Grafico Lindo</h2>
+      {% if company %}
+      <div class="mb-6">
+        <div class="bg-white-base border border-gray-200 rounded-2xl shadow-sm px-6 py-5">
+          <p class="text-xs font-semibold uppercase tracking-wide text-gray-500">Información de la empresa</p>
+          <div class="mt-4 grid gap-4 sm:grid-cols-3">
+            <div>
+              <p class="text-sm font-medium text-gray-500">Nombre</p>
+              <p class="mt-1 text-lg font-semibold text-gray-900">{{ company.business_name }}</p>
+            </div>
+            <div>
+              <p class="text-sm font-medium text-gray-500">RUT</p>
+              <p class="mt-1 text-base font-semibold text-gray-900">{{ company.rut }}</p>
+            </div>
+            <div>
+              <p class="text-sm font-medium text-gray-500">Dirección tributaria</p>
+              <p class="mt-1 text-base font-semibold text-gray-900">{{ company.tax_address }}</p>
+            </div>
+          </div>
+        </div>
+      </div>
+      {% endif %}
       <div class="bg-white-base border-gray-700 w-full h-[600px]" id="chart_home">
   </div>
 
