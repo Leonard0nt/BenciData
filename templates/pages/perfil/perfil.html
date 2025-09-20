@@ -17,6 +17,14 @@
     {{ user_form|crispy }}
     <label for="id_phone" class="block text-gray-700 text-sm font-bold mb-2">Teléfono</label>
     {{ profile_form.phone }}
+    <label for="id_gender" class="block text-gray-700 text-sm font-bold mb-2">Sexo</label>
+    {{ profile_form.gender }}
+    <label for="id_date_of_birth" class="block text-gray-700 text-sm font-bold mb-2">Fecha de nacimiento</label>
+    {{ profile_form.date_of_birth }}
+    <label for="id_salario" class="block text-gray-700 text-sm font-bold mb-2">Salario</label>
+    {{ profile_form.salario }}
+    <label for="id_is_partime" class="block text-gray-700 text-sm font-bold mb-2">Tipo de jornada</label>
+    {{ profile_form.is_partime }}
 
     <label for="{{ profile_form.examen_medico.id_for_label }}" class="block text-gray-700 text-sm font-bold mb-2">Examen Médico</label>
     {{ profile_form.examen_medico }}

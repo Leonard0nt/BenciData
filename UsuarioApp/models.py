@@ -1,5 +1,6 @@
 from django.db import models
-from .choices import PERMISOS
+from .choices import PERMISOS, GENDER_CHOICES
+
 
 # Create your models here.
 
@@ -40,6 +41,18 @@ class Profile(models.Model):
         Position, on_delete=models.SET_NULL, null=True, blank=True
     )
     phone = models.CharField(max_length=20, blank=True, verbose_name="Teléfono")
+    gender = models.CharField(
+        max_length=1,
+        choices=GENDER_CHOICES,
+        null=True,
+        blank=True,
+        verbose_name="Sexo",
+    )
+    date_of_birth = models.DateField(
+        null=True,
+        blank=True,
+        verbose_name="Fecha de nacimiento",
+    )
     salario = models.DecimalField(
         max_digits=10, decimal_places=2, null=True, blank=True, verbose_name="Salario",
     )
@@ -130,3 +143,20 @@ class Profile(models.Model):
         verbose_name = "Perfil"
         verbose_name_plural = "Perfiles"
         ordering = ["-id"]
+
+
+class Statistics(models.Model):
+    user = models.OneToOneField(
+        User,
+        on_delete=models.CASCADE,
+        related_name="statistics",
+    )
+    asistencia = models.PositiveIntegerField(default=0, verbose_name="Asistencia")
+    vacaciones = models.PositiveIntegerField(default=0, verbose_name="Vacaciones")
+    permisos = models.PositiveIntegerField(default=0, verbose_name="Permisos")
+
+    class Meta:
+        db_table = "statistics"
+
+    def __str__(self):
+        return f"Estadísticas de {self.user.username}"

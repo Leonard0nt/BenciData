@@ -2,7 +2,7 @@ from django.contrib import admin
 
 # Register your models here.
 from django.contrib import admin
-from .models import Profile, Position
+from .models import Profile, Position, Statistics
 
 # Register your models here.
 
@@ -21,3 +21,10 @@ class PositionAdmin(admin.ModelAdmin):
 
 
 admin.site.register(Position, PositionAdmin)
+
+
+class StatisticsAdmin(admin.ModelAdmin):
+    list_display = ("user", "asistencia", "vacaciones", "permisos")
+
+
+admin.site.register(Statistics, StatisticsAdmin)

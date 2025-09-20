@@ -11,6 +11,7 @@ from crispy_forms.helper import FormHelper
 from crispy_forms.layout import Layout, Div
 
 from .models import Profile, Position
+from .choices import GENDER_CHOICES
 
 
 class CustomPasswordChangeForm(PasswordChangeForm):
@@ -84,10 +85,52 @@ class ProfileUpdateForm(forms.ModelForm):
         required=False,
     )
     phone = forms.CharField(
-        max_length=20,
+    max_length=20,
+    required=False,
+    label="Teléfono",
+    widget=forms.TextInput(
+        attrs={
+            "class": "bg-white focus:outline-none border border-gray-300 rounded-lg py-2 px-4 block w-full leading-normal text-gray-700 mb-3"
+        }
+    ),
+    )
+    gender = forms.ChoiceField(
+        choices=GENDER_CHOICES,
         required=False,
-        label="Teléfono",
-        widget=forms.TextInput(
+        label="Sexo",
+        widget=forms.Select(
+            attrs={
+                "class": "bg-white focus:outline-none border border-gray-300 rounded-lg py-2 px-4 block w-full leading-normal text-gray-700 mb-3"
+            }
+        ),
+    )
+    date_of_birth = forms.DateField(
+        required=False,
+        label="Fecha de nacimiento",
+        widget=forms.DateInput(
+            attrs={
+                "type": "date",
+                "class": "bg-white focus:outline-none border border-gray-300 rounded-lg py-2 px-4 block w-full leading-normal text-gray-700 mb-3",
+            }
+        ),
+    )
+    salario = forms.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        required=False,
+        label="Salario",
+        widget=forms.NumberInput(
+            attrs={
+                "class": "bg-white focus:outline-none border border-gray-300 rounded-lg py-2 px-4 block w-full leading-normal text-gray-700 mb-3"
+            }
+        ),
+    )
+    is_partime = forms.TypedChoiceField(
+        choices=[(True, "Tiempo completo"), (False, "Medio tiempo")],
+        coerce=lambda x: x == "True",
+        required=False,
+        label="Tipo de jornada",
+        widget=forms.Select(
             attrs={
                 "class": "bg-white focus:outline-none border border-gray-300 rounded-lg py-2 px-4 block w-full leading-normal text-gray-700 mb-3"
             }
@@ -117,7 +160,16 @@ class ProfileUpdateForm(forms.ModelForm):
 
     class Meta:
         model = Profile
-        fields = ["image", "phone", "examen_medico", "contrato"]
+        fields = [
+            "image",
+            "phone",
+            "gender",
+            "date_of_birth",
+            "salario",
+            "is_partime",
+            "examen_medico",
+            "contrato",
+        ]
 
     def clean_image(self):
         image = self.cleaned_data.get("image")

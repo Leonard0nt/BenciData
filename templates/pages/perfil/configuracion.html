@@ -92,6 +92,22 @@ Configuración
                                 {{ profile_form.phone|add_class:"py-3 px-4 text-base w-full" }}
                                 {{ profile_form.phone.errors }}
                             </div>
+                                                       <div class="">
+                                <label for="{{ profile_form.gender.id_for_label }}" class="block text-gray-700 text-sm font-bold mb-2">Sexo</label>
+                                {{ profile_form.gender|add_class:"py-3 px-4 text-base w-full" }}
+                            </div>
+                            <div class="">
+                                <label for="{{ profile_form.date_of_birth.id_for_label }}" class="block text-gray-700 text-sm font-bold mb-2">Fecha de nacimiento</label>
+                                {{ profile_form.date_of_birth|add_class:"py-3 px-4 text-base w-full" }}
+                            </div>
+                            <div class="">
+                                <label for="{{ profile_form.salario.id_for_label }}" class="block text-gray-700 text-sm font-bold mb-2">Salario</label>
+                                {{ profile_form.salario|add_class:"py-3 px-4 text-base w-full" }}
+                            </div>
+                            <div class="">
+                                <label for="{{ profile_form.is_partime.id_for_label }}" class="block text-gray-700 text-sm font-bold mb-2">Tipo de jornada</label>
+                                {{ profile_form.is_partime|add_class:"py-3 px-4 text-base w-full" }}
+                            </div>
                         </div>
                     </div>
                 </div>
