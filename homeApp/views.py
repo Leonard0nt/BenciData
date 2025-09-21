@@ -3,7 +3,8 @@ from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.auth.models import User
 from django.db.models import Q
 from django.utils import timezone
-from UsuarioApp.models import Profile, Company
+from UsuarioApp.models import Profile
+from homeApp.models import Company
 
 # Create your views here.
 

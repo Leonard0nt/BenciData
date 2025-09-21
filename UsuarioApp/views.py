@@ -4,8 +4,9 @@ from .forms import (
     UserUpdateForm,
     ProfileUpdateForm,
     CustomPasswordChangeForm,
-    CompanyForm,
+    
 )
+from homeApp.forms import CompanyForm
 from django.views.generic import ListView, View
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.auth.models import User
@@ -18,7 +19,8 @@ from django.contrib import messages
 from django.urls import reverse_lazy
 from core.mixins import PermitsPositionMixin, RoleRequiredMixin
 
-from .models import Company, Profile
+from .models import Profile
+from homeApp.models import Company
 
 # Create your views here.
 
