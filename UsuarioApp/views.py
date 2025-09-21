@@ -102,14 +102,49 @@ class UserCreateView(LoginRequiredMixin, PermitsPositionMixin, View):
         return render(request, self.template_name, context)
 
 
-class ProfileUpdateView(LoginRequiredMixin, View):
+class ProfileFormProcessingMixin:
+    """Mixin to handle the shared logic for updating user/profile forms."""
+
+    success_redirect_name = "Profile"
+    success_message = "Perfil actualizado con éxito."
+    error_message = None
+    save_error_message = "Error al guardar la imagen"
+
+    def get_success_url(self):
+        return self.success_redirect_name
+
+    def process_forms(self, request, user_form, profile_form, extra_context=None):
+        if user_form.is_valid() and profile_form.is_valid():
+            try:
+                user_form.save()
+                profile_form.save()
+                messages.success(request, self.success_message)
+            except Exception as e:
+                print(e)
+                print("*" * 30)
+                messages.error(request, self.save_error_message)
+
+            return redirect(self.get_success_url())
+
+        if self.error_message:
+            messages.error(request, self.error_message)
+
+        context = {"user_form": user_form, "profile_form": profile_form}
+
+        if extra_context:
+            context.update(extra_context)
+
+        return render(request, self.template_name, context)
+
+
+class ProfileUpdateView(LoginRequiredMixin, ProfileFormProcessingMixin, View):
     template_name = "pages/perfil/perfil.html"
 
     def get(self, request, *args, **kwargs):
         user = request.user
         profile = user.profile
         user_form = UserUpdateForm(instance=user)
-        profile_form = ProfileUpdateForm(instance=profile)
+        profile_form = ProfileUpdateForm(instance=profile, user=request.user)
 
         context = {"user_form": user_form, "profile_form": profile_form}
 
@@ -119,33 +154,26 @@ class ProfileUpdateView(LoginRequiredMixin, View):
         user = request.user
         profile = user.profile
         user_form = UserUpdateForm(request.POST, instance=user)
-        profile_form = ProfileUpdateForm(request.POST, request.FILES, instance=profile)
+        profile_form = ProfileUpdateForm(
+            request.POST,
+            request.FILES,
+            instance=profile,
+            user=request.user,
+        )
 
-        if user_form.is_valid() and profile_form.is_valid():
-            try:
-                user_form.save()
-                profile_form.save()
-                messages.success(request, "Perfil actualizado con éxito.")
-            except Exception as e:
-                print(e)
-                print("*" * 30)
-                messages.error(request, "Error al guardar la imagen")
-
-            return redirect("Profile")
-
-        context = {"user_form": user_form, "profile_form": profile_form}
-
-        return render(request, self.template_name, context)
+        return self.process_forms(request, user_form, profile_form)
 
 
-class ConfigurationView(LoginRequiredMixin, View):
+class ConfigurationView(LoginRequiredMixin, ProfileFormProcessingMixin, View):
     template_name = "pages/perfil/configuracion.html"
+    success_redirect_name = "configuracion"
+    error_message = "Corrige los errores para continuar."
 
     def get(self, request, *args, **kwargs):
         user = request.user
         profile = user.profile
         user_form = UserUpdateForm(instance=user)
-        profile_form = ProfileUpdateForm(instance=profile)
+        profile_form = ProfileUpdateForm(instance=profile, user=user)
         
         password_form = CustomPasswordChangeForm(user=user)
         password_form.helper = FormHelper()
@@ -159,6 +187,24 @@ class ConfigurationView(LoginRequiredMixin, View):
 
         return render(request, self.template_name, context)
 
+    def post(self, request, *args, **kwargs):
+        user = request.user
+        profile = user.profile
+        user_form = UserUpdateForm(request.POST, instance=user)
+        profile_form = ProfileUpdateForm(request.POST, request.FILES, instance=profile)
+
+        password_form = CustomPasswordChangeForm(user=user)
+        password_form.helper = FormHelper()
+        password_form.helper.form_tag = False
+
+        extra_context = {"password_form": password_form}
+
+        return self.process_forms(
+            request,
+            user_form,
+            profile_form,
+            extra_context=extra_context,
+        )
 
 class CompanyUpdateView(LoginRequiredMixin, RoleRequiredMixin, View):
     template_name = "pages/empresa/empresa_form.html"

@@ -1,0 +1,46 @@
+{% extends 'components/Layout/base_extendido.html' %}
+
+{% block content_main %}
+  <div class="flex items-center justify-between mb-6">
+    <h1 class="text-2xl font-semibold text-gray-900">Sucursales</h1>
+    <a
+      href="{% url 'sucursal_create' %}"
+      class="inline-flex items-center rounded-md bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-blue-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600"
+    >
+      Nueva sucursal
+    </a>
+  </div>
+
+  {% if sucursales %}
+    <div class="overflow-hidden rounded-lg shadow ring-1 ring-black ring-opacity-5">
+      <table class="min-w-full divide-y divide-gray-300">
+        <thead class="bg-gray-50">
+          <tr>
+            <th scope="col" class="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Nombre</th>
+            <th scope="col" class="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Dirección</th>
+            <th scope="col" class="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Ciudad</th>
+            <th scope="col" class="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Región</th>
+            <th scope="col" class="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Islas</th>
+            <th scope="col" class="relative py-3.5 pl-3 pr-4 sm:pr-6"><span class="sr-only">Editar</span></th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-gray-200 bg-white">
+          {% for sucursal in sucursales %}
+            <tr>
+              <td class="whitespace-nowrap px-3 py-4 text-sm text-gray-900 font-medium">{{ sucursal.name }}</td>
+              <td class="whitespace-nowrap px-3 py-4 text-sm text-gray-500">{{ sucursal.address }}</td>
+              <td class="whitespace-nowrap px-3 py-4 text-sm text-gray-500">{{ sucursal.city }}</td>
+              <td class="whitespace-nowrap px-3 py-4 text-sm text-gray-500">{{ sucursal.region }}</td>
+              <td class="whitespace-nowrap px-3 py-4 text-sm text-gray-500">{{ sucursal.islands }}</td>
+              <td class="whitespace-nowrap py-4 pl-3 pr-4 text-right text-sm font-medium sm:pr-6">
+                <a href="{% url 'sucursal_update' sucursal.pk %}" class="text-blue-600 hover:text-blue-900">Editar</a>
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  {% else %}
+    <p class="text-sm text-gray-500">Aún no has creado sucursales.</p>
+  {% endif %}
+{% endblock content_main %}

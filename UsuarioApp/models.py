@@ -32,6 +32,30 @@ class Position(models.Model):
         return f"{self.user_position}"
 
 
+class Sucursal(models.Model):
+    name = models.CharField(max_length=255, verbose_name="Nombre")
+    company = models.ForeignKey(
+        "homeApp.Company",
+        on_delete=models.CASCADE,
+        related_name="branches",
+        verbose_name="Empresa",
+    )
+    users = models.ManyToManyField(
+        "Profile",
+        related_name="branches",
+        blank=True,
+        verbose_name="Usuarios",
+    )
+
+    class Meta:
+        verbose_name = "Sucursal"
+        verbose_name_plural = "Sucursales"
+        unique_together = ("company", "name")
+
+    def __str__(self):
+        return f"{self.name} - {self.company}"
+
+
 class Profile(models.Model):
     last_activity = models.DateTimeField(null=True, blank=True)
     image = models.ImageField(upload_to=profile_picture_path, default="profile.webp")
@@ -89,8 +113,24 @@ class Profile(models.Model):
         blank=True,
         verbose_name="Contrato",
     )
+    current_branch = models.ForeignKey(
+        "Sucursal",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="current_profiles",
+        verbose_name="Sucursal actual",
+    )
+
     def save(self, *args, **kwargs):
         update_last_activity = kwargs.pop("update_last_activity", False)
+        previous_branch_id = None
+        if self.pk:
+            previous_branch_id = (
+                Profile.objects.filter(pk=self.pk)
+                .values_list("current_branch_id", flat=True)
+                .first()
+            )
 
         if update_last_activity:
             self.last_activity = timezone.now()
@@ -104,6 +144,14 @@ class Profile(models.Model):
         if self.image and os.path.exists(self.image.path):
             resize_image(self.image.path, 300)
             crop_image(self.image.path, 300)
+
+        if previous_branch_id and previous_branch_id != self.current_branch_id:
+            previous_branch = Sucursal.objects.filter(pk=previous_branch_id).first()
+            if previous_branch:
+                previous_branch.users.remove(self)
+
+        if self.current_branch_id:
+            self.current_branch.users.add(self)
 
     def has_role(self, roles=None):
         """Check if the profile's position matches the given roles.

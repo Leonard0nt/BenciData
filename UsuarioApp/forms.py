@@ -10,7 +10,8 @@ from allauth.account.forms import LoginForm
 from crispy_forms.helper import FormHelper
 from crispy_forms.layout import Layout, Div
 
-from .models import Profile, Position
+from homeApp.models import Company
+from .models import Profile, Position, Sucursal
 from .choices import GENDER_CHOICES
 
 
@@ -85,14 +86,14 @@ class ProfileUpdateForm(forms.ModelForm):
         required=False,
     )
     phone = forms.CharField(
-    max_length=20,
-    required=False,
-    label="Teléfono",
-    widget=forms.TextInput(
-        attrs={
-            "class": "bg-white focus:outline-none border border-gray-300 rounded-lg py-2 px-4 block w-full leading-normal text-gray-700 mb-3"
-        }
-    ),
+        max_length=20,
+        required=False,
+        label="Teléfono",
+        widget=forms.TextInput(
+            attrs={
+                "class": "bg-white focus:outline-none border border-gray-300 rounded-lg py-2 px-4 block w-full leading-normal text-gray-700 mb-3"
+            }
+        ),
     )
     gender = forms.ChoiceField(
         choices=GENDER_CHOICES,
@@ -138,6 +139,16 @@ class ProfileUpdateForm(forms.ModelForm):
             }
         ),
     )
+    current_branch = forms.ModelChoiceField(
+        label="Sucursal",
+        queryset=Sucursal.objects.none(),
+        required=False,
+        widget=forms.Select(
+            attrs={
+                "class": "bg-white focus:outline-none border border-gray-300 rounded-lg py-2 px-4 block w-full leading-normal text-gray-700 mb-3"
+            }
+        ),
+    )
     examen_medico = forms.FileField(
         label="Examen médico",
         required=False,
@@ -146,6 +157,13 @@ class ProfileUpdateForm(forms.ModelForm):
         label="Contrato",
         required=False,
     )
+
+    def __init__(self, *args, user=None, **kwargs):
+        self.request_user = user
+        super().__init__(*args, **kwargs)
+
+        self.fields["current_branch"].queryset = self._get_branch_queryset(user)
+
     def clean_phone(self):
         phone = self.cleaned_data.get("phone")
         api_key = os.getenv("PHONE_API_KEY")
@@ -168,6 +186,7 @@ class ProfileUpdateForm(forms.ModelForm):
             "gender",
             "date_of_birth",
             "salario",
+            "current_branch",
             "is_partime",
             "examen_medico",
             "contrato",
@@ -203,6 +222,31 @@ class ProfileUpdateForm(forms.ModelForm):
             raise forms.ValidationError("Solo se permiten archivos PDF.")
         return contrato
 
+    def _get_branch_queryset(self, user):
+        if not user:
+            return Sucursal.objects.none()
+
+        profile = getattr(user, "profile", None)
+        if profile is None:
+            return Sucursal.objects.none()
+
+        company = None
+        try:
+            company = profile.company
+        except Company.DoesNotExist:
+            company = None
+
+        queryset = Sucursal.objects.none()
+        if company is not None:
+            queryset = Sucursal.objects.filter(company=company)
+        elif getattr(profile, "company_rut", None):
+            queryset = Sucursal.objects.filter(company__rut=profile.company_rut)
+
+        if self.instance and self.instance.current_branch_id:
+            queryset = queryset | Sucursal.objects.filter(pk=self.instance.current_branch_id)
+
+        return queryset
+
 
 class ProfileCreateForm(ProfileUpdateForm):
     position_FK = forms.ModelChoiceField(
@@ -219,13 +263,15 @@ class ProfileCreateForm(ProfileUpdateForm):
         fields = ProfileUpdateForm.Meta.fields + ["position_FK"]  # incluye documentos
 
     def __init__(self, *args, user=None, **kwargs):
-        super().__init__(*args, **kwargs)
+        super().__init__(*args, user=user, **kwargs)
 
         queryset = Position.objects.none()
         profile = getattr(user, "profile", None)
         if profile is not None:
             if profile.is_owner():
-                queryset = Position.objects.exclude(permission_code__in=["OWNER","HEAD_ATTENDANT"])
+                queryset = Position.objects.exclude(
+                    permission_code__in=["OWNER", "HEAD_ATTENDANT"]
+                )
             elif profile.is_admin():
                 queryset = Position.objects.exclude(
                     permission_code__in=["OWNER", "ADMINISTRATOR", "HEAD_ATTENDANT"]

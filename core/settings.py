@@ -33,6 +33,7 @@ DEFAULT_DJANGO_APPS = [
 LOCAL_APPS = [
     "homeApp",
     "UsuarioApp",
+    "sucursalApp",
 ]
 
 THIRD_APPS = [

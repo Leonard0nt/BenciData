@@ -97,6 +97,10 @@ Configuración
                                 {{ profile_form.phone.errors }}
                             </div>
                             <div class="">
+                                <label for="{{ profile_form.current_branch.id_for_label }}" class="block text-gray-700 text-sm font-bold mb-2">Sucursal</label>
+                                {{ profile_form.current_branch|add_class:"py-3 px-4 text-base w-full" }}
+                            </div>
+                            <div class="">
                                 <label for="{{ profile_form.gender.id_for_label }}" class="block text-gray-700 text-sm font-bold mb-2">Sexo</label>
                                 {{ profile_form.gender|add_class:"py-3 px-4 text-base w-full" }}
                             </div>
