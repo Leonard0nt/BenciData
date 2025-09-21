@@ -1,7 +1,9 @@
 from typing import Any, Dict
 
 from django.contrib.auth.mixins import LoginRequiredMixin
+from django.core.exceptions import PermissionDenied
 from django.db.models import Prefetch, QuerySet
+from django.http import HttpResponseRedirect
 from django.urls import reverse_lazy
 from django.views.generic import CreateView, ListView, UpdateView
 
@@ -24,11 +26,12 @@ class OwnerCompanyMixin(LoginRequiredMixin, RoleRequiredMixin):
         except Company.DoesNotExist:
             return None
 
-
-class SucursalListView(OwnerCompanyMixin, ListView):
+class SucursalListView(OwnerCompanyMixin, FormMixin, ListView):
     model = Sucursal
     template_name = "pages/sucursales/sucursal_list.html"
     context_object_name = "sucursales"
+    form_class = SucursalForm
+    success_url = reverse_lazy("sucursal_list")
 
     def get_queryset(self) -> QuerySet[Sucursal]:
         company = self.get_company()
