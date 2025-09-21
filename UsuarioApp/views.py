@@ -18,7 +18,7 @@ from django.contrib import messages
 from django.urls import reverse_lazy
 from core.mixins import PermitsPositionMixin, RoleRequiredMixin
 
-from .models import Company
+from .models import Company, Profile
 
 # Create your views here.
 
@@ -184,9 +184,16 @@ class CompanyUpdateView(LoginRequiredMixin, RoleRequiredMixin, View):
         return render(request, self.template_name, {"form": form})
 
     def post(self, request, *args, **kwargs):
+        old_rut = Company.normalize_rut(getattr(self.company_obj, "rut", None))
         form = self.get_form(request.POST)
         if form.is_valid():
             form.save()
+            self.company_obj.refresh_from_db()
+            new_rut = self.company_obj.rut
+            if old_rut:
+                Profile.objects.filter(company_rut=old_rut).update(
+                    company_rut=new_rut
+                )
             messages.success(request, "Información de la empresa actualizada con éxito.")
             return redirect(self.success_url)
 
