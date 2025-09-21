@@ -11,7 +11,8 @@ from crispy_forms.helper import FormHelper
 from crispy_forms.layout import Layout, Div
 
 from homeApp.models import Company
-from .models import Profile, Position, Sucursal
+from .models import Profile, Position
+from sucursalApp.models import Sucursal
 from .choices import GENDER_CHOICES
 
 

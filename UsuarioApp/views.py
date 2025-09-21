@@ -191,8 +191,9 @@ class ConfigurationView(LoginRequiredMixin, ProfileFormProcessingMixin, View):
         user = request.user
         profile = user.profile
         user_form = UserUpdateForm(request.POST, instance=user)
-        profile_form = ProfileUpdateForm(request.POST, request.FILES, instance=profile)
-
+        profile_form = ProfileUpdateForm(
+            request.POST, request.FILES, instance=profile, user=request.user
+        )
         password_form = CustomPasswordChangeForm(user=user)
         password_form.helper = FormHelper()
         password_form.helper.form_tag = False

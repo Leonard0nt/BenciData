@@ -7,6 +7,7 @@ from .choices import PERMISOS, GENDER_CHOICES
 
 from django.contrib.auth.models import User
 from django.utils import timezone
+from sucursalApp.models import Sucursal
 import uuid
 import os
 from utils.customer_img import resize_image, crop_image, handle_old_image
@@ -30,31 +31,6 @@ class Position(models.Model):
 
     def __str__(self):
         return f"{self.user_position}"
-
-
-class Sucursal(models.Model):
-    name = models.CharField(max_length=255, verbose_name="Nombre")
-    company = models.ForeignKey(
-        "homeApp.Company",
-        on_delete=models.CASCADE,
-        related_name="branches",
-        verbose_name="Empresa",
-    )
-    users = models.ManyToManyField(
-        "Profile",
-        related_name="branches",
-        blank=True,
-        verbose_name="Usuarios",
-    )
-
-    class Meta:
-        verbose_name = "Sucursal"
-        verbose_name_plural = "Sucursales"
-        unique_together = ("company", "name")
-
-    def __str__(self):
-        return f"{self.name} - {self.company}"
-
 
 class Profile(models.Model):
     last_activity = models.DateTimeField(null=True, blank=True)
