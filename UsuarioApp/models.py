@@ -90,7 +90,7 @@ class Profile(models.Model):
         verbose_name="Contrato",
     )
     current_branch = models.ForeignKey(
-        "Sucursal",
+        Sucursal,
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
