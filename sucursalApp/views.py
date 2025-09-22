@@ -6,6 +6,7 @@ from django.db.models import Prefetch, QuerySet
 from django.http import HttpResponseRedirect
 from django.urls import reverse_lazy
 from django.views.generic import CreateView, ListView, UpdateView
+from django.views.generic.edit import FormMixin
 
 from core.mixins import RoleRequiredMixin
 from homeApp.models import Company
