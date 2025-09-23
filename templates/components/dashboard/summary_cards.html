@@ -9,7 +9,7 @@
     - items (opcional): Lista de diccionarios con ``label``, ``value`` y ``total``.
 {% endcomment %}
 {% if cards %}
-  <div class="summary-card-grid"></div>
+  <div class="summary-card-grid">
     {% for card in cards %}
       {% with bg_class=card.bg_class|default:'bg-white' ring_class=card.ring_class|default:'ring-1 ring-gray-900/5' value_class=card.text_class|default:'text-gray-900' suffix_class=card.suffix_class|default:'text-gray-500' title_class=card.title_class|default:'text-gray-500' description_class=card.description_class|default:'text-gray-500' detail_class=card.detail_class|default:'text-gray-500' items_border_class=card.items_border_class|default:'border-gray-100' items_value_class=card.items_value_class|default:'text-gray-900' accent_class=card.accent_class|default:'bg-gray-300' %}
         <article class="summary-card {{ bg_class }} {{ ring_class }}">

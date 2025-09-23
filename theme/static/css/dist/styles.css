@@ -4819,3 +4819,4 @@ select {
 .ring-purple-100 { border-color: #f3e8ff; }
 .ring-gray-200 { border-color: #e5e7eb; }
 .ring-gray-900\/5 { border-color: rgba(17, 24, 39, 0.05); }
+.resumen-cards { grid-template-columns: 1fr;}
