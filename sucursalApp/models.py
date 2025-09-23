@@ -39,9 +39,12 @@ class Sucursal(models.Model):
 
     @property
     def machines_count(self) -> int:
-        islands = self._get_related_items(self, "islands")
+        islands = SucursalStaff._get_related_items(self, "branch_islands")
         return sum(
-            island.machines.count() for island in self.branch_islands.all()
+            SucursalStaff._count_items(
+                SucursalStaff._get_related_items(island, "machines")
+            )
+            for island in islands
         )
 
     @property
