@@ -9,9 +9,6 @@
       <p class="text-sm font-semibold uppercase tracking-wide text-indigo-600">Panel de control</p>
       <div>
         <h1 class="text-2xl font-semibold text-gray-900">Gestión de Usuarios</h1>
-        <p class="mt-1 text-sm text-gray-500">
-          Revisa el estado general de tus colaboradores, distribuye turnos y administra sus perfiles desde un solo lugar.
-        </p>
       </div>
     </header>
 
@@ -22,28 +19,8 @@
         <div class="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
           <div>
             <h2 class="text-lg font-semibold text-gray-900">Usuarios registrados</h2>
-            <p class="mt-1 text-sm text-gray-500">Utiliza el buscador o las pestañas por turno para filtrar la información.</p>
-          </div>
-          <form method="get" class="w-full md:w-auto">
-            <label for="user-search" class="sr-only">{{ placeholder }}</label>
-            <div class="relative flex rounded-md shadow-sm">
-              <div class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3 text-gray-400">
-                <svg class="h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" aria-hidden="true">
-                  <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-4.35-4.35M4.5 10.5a6 6 0 1112 0 6 6 0 01-12 0z" />
-                </svg>
-              </div>
-              <input
-                type="search"
-                name="search"
-                id="user-search"
-                value="{{ search_query }}"
-                placeholder="{{ placeholder }}"
-                class="block w-full rounded-md border border-gray-300 py-2 pl-10 pr-3 text-sm text-gray-900 placeholder:text-gray-400 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
-              >
-            </div>
-          </form>
+          </div> 
         </div>
-
         {% include 'components/tabs/tab_nav.html' with tabs=tab_navigation group='user-management-tabs' %}
       </div>
 
