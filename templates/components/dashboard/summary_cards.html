@@ -1,0 +1,45 @@
+{% comment %}
+  Renderiza un conjunto de tarjetas resumen.
+  Espera una lista ``cards`` con las claves:
+    - title: Título de la tarjeta.
+    - value: Valor principal.
+    - description (opcional): Texto auxiliar.
+    - items (opcional): Lista de diccionarios con ``label``, ``value`` y ``total``.
+{% endcomment %}
+{% if cards %}
+  <dl class="grid gap-5 sm:grid-cols-2 xl:grid-cols-3">
+    {% for card in cards %}
+      <div class="flex h-full flex-col justify-between rounded-xl bg-white p-5 shadow ring-1 ring-gray-900/5">
+        <div>
+          <dt class="text-sm font-medium text-gray-500">{{ card.title }}</dt>
+          <dd class="mt-2 flex items-baseline gap-2">
+            <span class="text-3xl font-semibold tracking-tight text-gray-900">{{ card.value|default:0 }}</span>
+            {% if card.suffix %}
+              <span class="text-sm text-gray-500">{{ card.suffix }}</span>
+            {% endif %}
+          </dd>
+          {% if card.description %}
+            <p class="mt-3 text-sm text-gray-500">{{ card.description }}</p>
+          {% endif %}
+        </div>
+        {% if card.items %}
+          <div class="mt-5 border-t border-gray-100 pt-4">
+            <ul class="space-y-2 text-sm text-gray-500">
+              {% for item in card.items %}
+                <li class="flex items-center justify-between">
+                  <span>{{ item.label }}</span>
+                  <span class="font-semibold text-gray-900">
+                    {{ item.value|default:0 }}
+                    {% if item.total is not None %}
+                      <span class="ml-1 text-xs font-normal text-gray-500">/ {{ item.total }}</span>
+                    {% endif %}
+                  </span>
+                </li>
+              {% endfor %}
+            </ul>
+          </div>
+        {% endif %}
+      </div>
+    {% endfor %}
+  </dl>
+{% endif %}

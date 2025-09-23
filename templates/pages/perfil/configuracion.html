@@ -14,14 +14,14 @@ Configuración
 <div>
     <div class="border-b rounded-lg border-gray-200">
         <nav class="-mb-px flex space-x-8" aria-label="Tabs">
-            <button type="button" data-tab-target="perfil"
-                class="border-b-2 border-indigo-500 py-2 px-1 text-sm font-medium text-indigo-600">
+            <button type="button" data-tab-target="perfil" data-tab-group="profile-settings"
+                class="border-b-2 border-indigo-500 py-2 px-1 text-sm font-medium text-indigo-600"
+                aria-selected="true">
                 Perfil de Usuario
             </button>
-            <a href="{% url 'mfa_index' %}" type="button" data-tab-target="seguridad"
-                class="border-b-2 border-transparent py-2 px-1 text-sm font-medium text-gray-500">
-                Seguridad
-            </a>
+            <a href="{% url 'mfa_index' %}" type="button" data-tab-target="seguridad" data-tab-group="profile-settings"
+                class="border-b-2 border-transparent py-2 px-1 text-sm font-medium text-gray-500 hover:border-gray-300 hover:text-gray-700"
+                aria-selected="false">
         </nav>
     </div>
 

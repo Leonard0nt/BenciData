@@ -3,9 +3,9 @@ from .forms import (
     ProfileCreateForm,
     UserUpdateForm,
     ProfileUpdateForm,
-    CustomPasswordChangeForm,
-    
+    CustomPasswordChangeForm,    
 )
+
 from homeApp.forms import CompanyForm
 from django.views.generic import ListView, View
 from django.contrib.auth.mixins import LoginRequiredMixin
@@ -14,6 +14,8 @@ from crispy_forms.helper import FormHelper
 from django.contrib.auth import update_session_auth_hash
 from django.shortcuts import redirect, render
 from django.db.models import Q
+from django.utils import timezone
+from django.templatetags.static import static
 from allauth.account.models import EmailAddress
 from django.contrib import messages
 from django.urls import reverse_lazy
@@ -45,14 +47,181 @@ class UserListView(LoginRequiredMixin, ListView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        verification_users = []
-        for user in context["users"]:
-            verification = EmailAddress.objects.filter(
-                user=user, verified=True
-            ).exists()
-            verification_users.append((user, verification))
+
+        base_queryset = getattr(self, "object_list", self.get_queryset())
+        filtered_users = list(
+            base_queryset.select_related(
+                "profile__position_FK", "profile__current_branch"
+            )
+        )
+
+        total_filtered = len(filtered_users)
+        active_filtered = sum(1 for user in filtered_users if user.is_active)
+        inactive_filtered = total_filtered - active_filtered
+
+        user_ids = [user.id for user in filtered_users]
+        verified_user_ids = set(
+            EmailAddress.objects.filter(
+                user_id__in=user_ids, verified=True
+            ).values_list("user_id", flat=True)
+        )
+
+        cutoff_date = timezone.now() - timezone.timedelta(days=7)
+        recent_new_users = sum(
+            1 for user in filtered_users if user.date_joined >= cutoff_date
+        )
+
+        shift_definitions = {
+            True: {"slug": "tiempo-completo", "label": "Tiempo completo"},
+            False: {"slug": "medio-tiempo", "label": "Medio tiempo"},
+            None: {"slug": "sin-turno", "label": "Sin turno definido"},
+        }
+        shift_order = [True, False, None]
+        shift_buckets = {key: [] for key in shift_definitions}
+        user_data_map = {}
+
+        for user in filtered_users:
+            try:
+                profile = user.profile
+            except Profile.DoesNotExist:
+                profile = None
+
+            shift_key = None
+            if profile is not None and profile.is_partime in shift_definitions:
+                shift_key = profile.is_partime
+
+            if shift_key not in shift_definitions:
+                shift_key = None
+
+            avatar_url = static("img/profile.webp")
+            if profile is not None and getattr(profile, "image", None):
+                image_field = profile.image
+                if getattr(image_field, "url", None):
+                    avatar_url = image_field.url
+
+            user_entry = {
+                "id": user.id,
+                "username": user.username,
+                "full_name": user.get_full_name() or user.username,
+                "email": user.email,
+                "role": (
+                    profile.position_FK.user_position
+                    if profile and profile.position_FK
+                    else "Sin cargo"
+                ),
+                "branch": (
+                    profile.current_branch.name
+                    if profile and profile.current_branch
+                    else None
+                ),
+                "is_active": user.is_active,
+                "is_verified": user.id in verified_user_ids,
+                "shift_label": shift_definitions[shift_key]["label"],
+                "shift_key": shift_key,
+                "profile_image": avatar_url,
+                "last_login": user.last_login,
+                "last_activity": getattr(profile, "last_activity", None),
+            }
+
+            user_data_map[user.id] = user_entry
+            shift_buckets[shift_key].append(user_entry)
+
+        for bucket in shift_buckets.values():
+            bucket.sort(key=lambda item: item["full_name"].lower())
+
+        shift_tabs = []
+        for key in shift_order:
+            bucket = shift_buckets.get(key, [])
+            if not bucket:
+                continue
+
+            definition = shift_definitions[key]
+            active_count = sum(1 for item in bucket if item["is_active"])
+            inactive_count = len(bucket) - active_count
+            tab_id = f"tab-turno-{definition['slug']}"
+            shift_tabs.append(
+                {
+                    "id": tab_id,
+                    "label": definition["label"],
+                    "count": len(bucket),
+                    "active_count": active_count,
+                    "inactive_count": inactive_count,
+                    "users": bucket,
+                }
+            )
+
+        active_shifts = sum(1 for shift in shift_tabs if shift["active_count"] > 0)
+
+        global_total_users = User.objects.count()
+        global_active_users = User.objects.filter(is_active=True).count()
+
+        summary_cards = [
+            {
+                "title": "Usuarios registrados",
+                "value": global_total_users,
+                "description": (
+                    f"{recent_new_users} nuevos en los últimos 7 días · "
+                    f"{total_filtered} en la vista"
+                ),
+            },
+            {
+                "title": "Usuarios activos",
+                "value": global_active_users,
+                "description": (
+                    f"{active_filtered} activos visibles · "
+                    f"{inactive_filtered} inactivos"
+                ),
+            },
+            {
+                "title": "Turnos activos",
+                "value": active_shifts,
+                "description": "Usuarios activos por turno (filtros actuales)",
+                "items": [
+                    {
+                        "label": shift["label"],
+                        "value": shift["active_count"],
+                        "total": shift["count"],
+                    }
+                    for shift in shift_tabs
+                ],
+            },
+        ]
+
+        tab_navigation = [
+            {
+                "id": "tab-usuarios-todos",
+                "label": "Todos",
+                "count": total_filtered,
+                "is_active": True,
+            }
+        ]
+        tab_navigation.extend(
+            {
+                "id": shift["id"],
+                "label": shift["label"],
+                "count": shift["count"],
+                "is_active": False,
+            }
+            for shift in shift_tabs
+        )
+
+        page_users = list(context["users"])
+        context["user_rows"] = [
+            user_data_map[user.id]
+            for user in page_users
+            if user.id in user_data_map
+        ]
+
+        verification_users = [
+            (user, user_data_map[user.id]["is_verified"])
+            for user in page_users
+            if user.id in user_data_map
+        ]
 
         context["verification_users"] = verification_users
+        context["summary_cards"] = summary_cards
+        context["shift_tabs"] = shift_tabs
+        context["tab_navigation"] = tab_navigation
         context["placeholder"] = "Buscar por usuario, nombre o apellido "
         # Para mantener el texto en el campo de búsqueda
         context["search_query"] = self.request.GET.get("search", "")

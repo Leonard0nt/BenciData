@@ -1,0 +1,30 @@
+{% comment %}
+  Barra de pestañas reutilizable.
+  Requiere una lista ``tabs`` con las claves:
+    - id: identificador del contenido asociado.
+    - label: texto a mostrar.
+    - count (opcional): número para mostrar como badge.
+    - is_active (opcional): si es la pestaña activa inicial.
+  Puede recibir ``group`` para agrupar varias barras en la misma página.
+{% endcomment %}
+{% if tabs %}
+  <div class="mt-6 border-b border-gray-200">
+    <nav class="-mb-px flex flex-wrap gap-4" aria-label="Tabs">
+      {% for tab in tabs %}
+        <button
+          type="button"
+          data-tab-target="{{ tab.id }}"
+          data-tab-group="{{ group|default:'default' }}"
+          class="whitespace-nowrap border-b-2 px-1 py-3 text-sm font-medium {% if tab.is_active %}border-indigo-500 text-indigo-600{% else %}border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700{% endif %}"
+          aria-controls="{{ tab.id }}"
+          aria-selected="{{ tab.is_active|yesno:'true,false' }}"
+        >
+          <span>{{ tab.label }}</span>
+          {% if tab.count is not None %}
+            <span class="ml-2 rounded-full bg-gray-100 px-2.5 py-0.5 text-xs font-medium text-gray-600">{{ tab.count }}</span>
+          {% endif %}
+        </button>
+      {% endfor %}
+    </nav>
+  </div>
+{% endif %}
