@@ -11,135 +11,145 @@
       </div>
     </header>
 
-    {% include 'components/dashboard/summary_cards.html' with cards=summary_cards %}
-
-    <section class="rounded-2xl bg-white shadow ring-1 ring-gray-900/5">
-      <div class="border-b border-gray-100 px-6 py-6 sm:px-8">
-        <div class="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-          <div>
-            <h2 class="text-lg font-semibold text-gray-900">Usuarios registrados</h2>
-          </div> 
-        </div>
-        {% include 'components/tabs/tab_nav.html' with tabs=tab_navigation group='user-management-tabs' %}
-      </div>
-
-      <div class="px-6 py-6 sm:px-8">
-        <div id="tab-usuarios-todos" class="tab-content">
-          {% if user_rows %}
-            <div class="-mx-6 -my-2 overflow-x-auto sm:-mx-8">
-              <div class="inline-block min-w-full py-2 align-middle">
-                <table id="pagtable" class="min-w-full divide-y divide-gray-200">
-                  <thead class="bg-gray-50">
-                    <tr>
-                      <th scope="col" class="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Usuario</th>
-                      <th scope="col" class="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Contacto</th>
-                      <th scope="col" class="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Rol y sucursal</th>
-                      <th scope="col" class="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Turno</th>
-                      <th scope="col" class="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Estado</th>
-                      <th scope="col" class="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Última actividad</th>
-                    </tr>
-                  </thead>
-                  <tbody class="divide-y divide-gray-100 bg-white">
-                    {% for row in user_rows %}
-                      <tr class="hover:bg-gray-50">
-                        <td class="whitespace-nowrap px-3 py-4 text-sm text-gray-900">
-                          <div class="flex items-center gap-3">
-                            <img class="h-10 w-10 flex-shrink-0 rounded-full object-cover" src="{{ row.profile_image }}" alt="Avatar de {{ row.full_name }}">
-                            <div>
-                              <p class="font-semibold text-gray-900">{{ row.full_name }}</p>
-                              <p class="text-xs text-gray-500">@{{ row.username }}</p>
-                            </div>
-                          </div>
-                        </td>
-                        <td class="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
-                          {% if row.email %}
-                            <a href="mailto:{{ row.email }}" class="text-indigo-600 hover:text-indigo-500">{{ row.email }}</a>
-                          {% else %}
-                            <span class="text-gray-400">Sin correo</span>
-                          {% endif %}
-                        </td>
-                        <td class="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
-                          <p class="font-medium text-gray-900">{{ row.role }}</p>
-                          <p class="text-xs text-gray-500">{{ row.branch|default:'Sin sucursal' }}</p>
-                        </td>
-                        <td class="whitespace-nowrap px-3 py-4 text-sm">
-                          <span class="inline-flex items-center rounded-full bg-indigo-50 px-2.5 py-1 text-xs font-medium text-indigo-700">{{ row.shift_label }}</span>
-                        </td>
-                        <td class="whitespace-nowrap px-3 py-4 text-sm">
-                          <div class="flex flex-wrap gap-2">
-                            <span class="inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium {{ row.is_active|yesno:'bg-green-50 text-green-700, bg-red-50 text-red-700' }}">
-                              {{ row.is_active|yesno:'Activo,Inactivo' }}
-                            </span>
-                            <span class="inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium {{ row.is_verified|yesno:'bg-emerald-50 text-emerald-700, bg-yellow-50 text-yellow-700' }}">
-                              {{ row.is_verified|yesno:'Verificado,Pendiente' }}
-                            </span>
-                          </div>
-                        </td>
-                        <td class="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
-                          {% with last=row.last_activity|default:row.last_login %}
-                            {% if last %}
-                              {{ last|date:'d/m/Y H:i' }}
-                            {% else %}
-                              <span class="text-gray-400">Sin registro</span>
-                            {% endif %}
-                          {% endwith %}
-                        </td>
-                      </tr>
-                    {% endfor %}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-
-            {% include 'components/paginador.html' %}
-          {% else %}
-            <div class="rounded-lg border border-dashed border-gray-300 p-8 text-center">
-              <h3 class="text-base font-semibold text-gray-900">No encontramos resultados</h3>
-              <p class="mt-1 text-sm text-gray-500">Ajusta los filtros de búsqueda o revisa los turnos para explorar otros usuarios.</p>
-            </div>
-          {% endif %}
-        </div>
-
-        {% for shift in shift_tabs %}
-          <div id="{{ shift.id }}" class="tab-content hidden">
-            <div class="flex flex-wrap items-center justify-between gap-4">
+    {% if branch_groups %}
+      {% for group in branch_groups %}
+        <section class="rounded-2xl bg-white shadow ring-1 ring-gray-900/5">
+          <div class="border-b border-gray-100 px-6 py-6 sm:px-8">
+            <div class="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
               <div>
-                <h3 class="text-base font-semibold text-gray-900">{{ shift.label }}</h3>
-                <p class="text-sm text-gray-500">{{ shift.active_count }} activos · {{ shift.count }} usuarios en este turno</p>
+                <h2 class="mt-4 font-semibold text-gray-900">Usuarios registrados · {{ group.branch.name }}</h2>
               </div>
-              <span class="inline-flex items-center rounded-full bg-indigo-50 px-3 py-1 text-xs font-medium text-indigo-700">
-                Cobertura: {{ shift.active_count }} / {{ shift.count }}
-              </span>
+            </div>
+            {% include 'components/dashboard/summary_cards.html' with cards=group.summary_cards %}
+            {% include 'components/tabs/tab_nav.html' with tabs=group.tab_navigation group=group.tab_group_id %}
+          </div>
+
+          <div class="px-6 py-6 sm:px-8">
+            <div id="{{ group.tab_navigation.0.id }}" class="tab-content">
+              {% if group.user_rows %}
+                <div class="-mx-6 -my-2 overflow-x-auto sm:-mx-8">
+                  <div class="inline-block min-w-full py-2 align-middle">
+                    <table class="min-w-full divide-y divide-gray-200">
+                      <thead class="bg-gray-50">
+                        <tr>
+                          <th scope="col" class="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Usuario</th>
+                          <th scope="col" class="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Contacto</th>
+                          <th scope="col" class="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Rol y sucursal</th>
+                          <th scope="col" class="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Turno</th>
+                          <th scope="col" class="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Estado</th>
+                          <th scope="col" class="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Última actividad</th>
+                        </tr>
+                      </thead>
+                      <tbody class="divide-y divide-gray-100 bg-white">
+                        {% for row in group.user_rows %}
+                          <tr class="hover:bg-gray-50">
+                            <td class="whitespace-nowrap px-3 py-4 text-sm text-gray-900">
+                              <div class="flex items-center gap-3">
+                                <img class="h-10 w-10 flex-shrink-0 rounded-full object-cover" src="{{ row.profile_image }}" alt="Avatar de {{ row.full_name }}">
+                                <div>
+                                  <p class="font-semibold text-gray-900">{{ row.full_name }}</p>
+                                  <p class="text-xs text-gray-500">@{{ row.username }}</p>
+                                </div>
+                              </div>
+                            </td>
+                            <td class="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
+                              {% if row.email %}
+                                <a href="mailto:{{ row.email }}" class="text-indigo-600 hover:text-indigo-500">{{ row.email }}</a>
+                              {% else %}
+                                <span class="text-gray-400">Sin correo</span>
+                              {% endif %}
+                            </td>
+                            <td class="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
+                              <p class="font-medium text-gray-900">{{ row.role }}</p>
+                              <p class="text-xs text-gray-500">{{ row.branch|default:'Sin sucursal' }}</p>
+                            </td>
+                            <td class="whitespace-nowrap px-3 py-4 text-sm">
+                              <span class="inline-flex items-center rounded-full bg-indigo-50 px-2.5 py-1 text-xs font-medium text-indigo-700">{{ row.shift_label }}</span>
+                            </td>
+                            <td class="whitespace-nowrap px-3 py-4 text-sm">
+                              <div class="flex flex-wrap gap-2">
+                                <span class="inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium {{ row.is_active|yesno:'bg-green-50 text-green-700, bg-red-50 text-red-700' }}">
+                                  {{ row.is_active|yesno:'Activo,Inactivo' }}
+                                </span>
+                                <span class="inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium {{ row.is_verified|yesno:'bg-emerald-50 text-emerald-700, bg-yellow-50 text-yellow-700' }}">
+                                  {{ row.is_verified|yesno:'Verificado,Pendiente' }}
+                                </span>
+                              </div>
+                            </td>
+                            <td class="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
+                              {% with last=row.last_activity|default:row.last_login %}
+                                {% if last %}
+                                  {{ last|date:'d/m/Y H:i' }}
+                                {% else %}
+                                  <span class="text-gray-400">Sin registro</span>
+                                {% endif %}
+                              {% endwith %}
+                            </td>
+                          </tr>
+                        {% endfor %}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+
+                {% if forloop.first %}
+                  {% include 'components/paginador.html' %}
+                {% endif %}
+              {% else %}
+                <div class="rounded-lg border border-dashed border-gray-300 p-8 text-center">
+                  <h3 class="text-base font-semibold text-gray-900">No encontramos resultados</h3>
+                  <p class="mt-1 text-sm text-gray-500">Ajusta los filtros de búsqueda o revisa los turnos para explorar otros usuarios.</p>
+                </div>
+              {% endif %}
             </div>
 
-            {% if shift.users %}
-              <ul class="mt-5 divide-y divide-gray-100 overflow-hidden rounded-xl border border-gray-200">
-                {% for user in shift.users %}
-                  <li class="flex flex-col gap-3 px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-6">
-                    <div class="flex items-center gap-3">
-                      <img class="h-10 w-10 flex-shrink-0 rounded-full object-cover" src="{{ user.profile_image }}" alt="Avatar de {{ user.full_name }}">
-                      <div>
-                        <p class="font-medium text-gray-900">{{ user.full_name }}</p>
-                        <p class="text-xs text-gray-500">@{{ user.username }} · {{ user.email|default:'sin correo' }}</p>
-                      </div>
-                    </div>
-                    <div class="flex flex-wrap items-center gap-2">
-                      <span class="inline-flex items-center rounded-full bg-gray-100 px-2.5 py-1 text-xs font-medium text-gray-600">{{ user.role }}</span>
-                      <span class="inline-flex items-center rounded-full bg-indigo-50 px-2.5 py-1 text-xs font-medium text-indigo-700">{{ user.shift_label }}</span>
-                      <span class="inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium {{ user.is_active|yesno:'bg-green-50 text-green-700, bg-red-50 text-red-700' }}">
-                        {{ user.is_active|yesno:'Activo,Inactivo' }}
-                      </span>
-                    </div>
-                  </li>
-                {% endfor %}
-              </ul>
-            {% else %}
-              <p class="mt-5 text-sm text-gray-500">No hay usuarios asignados a este turno con los filtros seleccionados.</p>
-            {% endif %}
+            {% for shift in group.shift_tabs %}
+              <div id="{{ shift.id }}" class="tab-content hidden">
+                <div class="flex flex-wrap items-center justify-between gap-4">
+                  <div>
+                    <h3 class="text-base font-semibold text-gray-900">{{ shift.label }}</h3>
+                    <p class="text-sm text-gray-500">{{ shift.active_count }} activos · {{ shift.count }} usuarios en este turno</p>
+                  </div>
+                  <span class="inline-flex items-center rounded-full bg-indigo-50 px-3 py-1 text-xs font-medium text-indigo-700">
+                    Cobertura: {{ shift.active_count }} / {{ shift.count }}
+                  </span>
+                </div>
+
+                {% if shift.users %}
+                  <ul class="mt-5 divide-y divide-gray-100 overflow-hidden rounded-xl border border-gray-200">
+                    {% for user in shift.users %}
+                      <li class="flex flex-col gap-3 px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-6">
+                        <div class="flex items-center gap-3">
+                          <img class="h-10 w-10 flex-shrink-0 rounded-full object-cover" src="{{ user.profile_image }}" alt="Avatar de {{ user.full_name }}">
+                          <div>
+                            <p class="font-medium text-gray-900">{{ user.full_name }}</p>
+                            <p class="text-xs text-gray-500">@{{ user.username }} · {{ user.email|default:'sin correo' }}</p>
+                          </div>
+                        </div>
+                        <div class="flex flex-wrap items-center gap-2">
+                          <span class="inline-flex items-center rounded-full bg-gray-100 px-2.5 py-1 text-xs font-medium text-gray-600">{{ user.role }}</span>
+                          <span class="inline-flex items-center rounded-full bg-indigo-50 px-2.5 py-1 text-xs font-medium text-indigo-700">{{ user.shift_label }}</span>
+                          <span class="inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium {{ user.is_active|yesno:'bg-green-50 text-green-700, bg-red-50 text-red-700' }}">
+                            {{ user.is_active|yesno:'Activo,Inactivo' }}
+                          </span>
+                        </div>
+                      </li>
+                    {% endfor %}
+                  </ul>
+                {% else %}
+                  <p class="mt-5 text-sm text-gray-500">No hay usuarios asignados a este turno con los filtros seleccionados.</p>
+                {% endif %}
+              </div>
+            {% endfor %}
           </div>
-        {% endfor %}
-      </div>
-    </section>
+        </section>
+      {% endfor %}
+    {% else %}
+      <section class="rounded-2xl bg-white p-8 text-center shadow ring-1 ring-gray-900/5">
+        <h2 class="text-lg font-semibold text-gray-900">No encontramos resultados</h2>
+        <p class="mt-1 text-sm text-gray-500">Ajusta los filtros de búsqueda o revisa los turnos para explorar otros usuarios.</p>
+      </section>
+    {% endif %}
   </div>
 
   <script defer src="{% static 'js/tabs.js' %}"></script>
