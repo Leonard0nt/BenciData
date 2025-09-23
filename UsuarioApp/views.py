@@ -628,6 +628,66 @@ class UserShiftManagementView(LoginRequiredMixin, View):
             )
         )
 
+        request_profile = getattr(request.user, "profile", None)
+        company_rut: str | None = None
+        allowed_branch_ids: set[int] = set()
+        allowed_branches_qs = Sucursal.objects.none()
+
+        if request_profile is None:
+            profiles = profiles.none()
+        else:
+            if request_profile.is_owner():
+                company = getattr(request_profile, "company", None)
+                if company is not None:
+                    company_rut = company.rut
+                    allowed_branches_qs = company.branches.all()
+                elif request_profile.company_rut:
+                    company_rut = Company.normalize_rut(request_profile.company_rut)
+                    allowed_branches_qs = Sucursal.objects.filter(
+                        company__rut=company_rut
+                    )
+                allowed_branch_ids = set(
+                    allowed_branches_qs.values_list("id", flat=True)
+                )
+                if company_rut:
+                    profiles = profiles.filter(company_rut=company_rut)
+                else:
+                    profiles = profiles.none()
+            elif request_profile.is_admin():
+                allowed_branch_ids = set(
+                    SucursalStaff.objects.filter(profile=request_profile)
+                    .values_list("sucursal_id", flat=True)
+                )
+                if request_profile.current_branch_id:
+                    allowed_branch_ids.add(request_profile.current_branch_id)
+                if allowed_branch_ids:
+                    allowed_branches_qs = Sucursal.objects.filter(
+                        id__in=allowed_branch_ids
+                    )
+                    profiles = profiles.filter(
+                        Q(current_branch_id__in=allowed_branch_ids)
+                        | Q(
+                            shift_assignments__shift__sucursal_id__in=allowed_branch_ids
+                        )
+                        | Q(sucursal_staff__sucursal_id__in=allowed_branch_ids)
+                    )
+                else:
+                    profiles = profiles.filter(pk=request_profile.pk)
+            else:
+                if request_profile.current_branch_id:
+                    allowed_branch_ids = {request_profile.current_branch_id}
+                    allowed_branches_qs = Sucursal.objects.filter(
+                        id__in=allowed_branch_ids
+                    )
+                profiles = profiles.filter(pk=request_profile.pk)
+
+        profiles = profiles.distinct()
+
+        allowed_branches = list(allowed_branches_qs.order_by("name"))
+        allowed_branch_ids = set(
+            branch.id for branch in allowed_branches if branch is not None
+        )
+
         employees: list[dict[str, Any]] = []
         assigned_employees = 0
         total_assignments = 0
@@ -645,6 +705,8 @@ class UserShiftManagementView(LoginRequiredMixin, View):
 
             for assignment in profile.shift_assignments.all():
                 shift = assignment.shift
+                if allowed_branch_ids and shift.sucursal_id not in allowed_branch_ids:
+                    continue
                 schedule_summary = shift.get_schedule_summary()
                 assignments.append(
                     {
@@ -670,6 +732,13 @@ class UserShiftManagementView(LoginRequiredMixin, View):
                 assigned_employees += 1
                 total_assignments += len(assignments)
 
+            current_branch_name = None
+            if profile.current_branch and (
+                not allowed_branch_ids
+                or profile.current_branch_id in allowed_branch_ids
+            ):
+                current_branch_name = profile.current_branch.name
+
             employees.append(
                 {
                     "id": user.id,
@@ -682,9 +751,7 @@ class UserShiftManagementView(LoginRequiredMixin, View):
                         if profile.position_FK
                         else "Sin cargo"
                     ),
-                    "branch": profile.current_branch.name
-                    if profile.current_branch
-                    else None,
+                    "branch": current_branch_name,
                     "is_active": user.is_active,
                     "assignments": assignments,
                 }
@@ -696,7 +763,26 @@ class UserShiftManagementView(LoginRequiredMixin, View):
             .order_by("sucursal__name", "name")
         )
 
+        if allowed_branch_ids:
+            shift_queryset = shift_queryset.filter(sucursal_id__in=allowed_branch_ids)
+        elif company_rut:
+            shift_queryset = shift_queryset.filter(sucursal__company__rut=company_rut)
+        else:
+            shift_queryset = shift_queryset.none()
+
         branch_map: dict[int, dict[str, Any]] = {}
+        for branch in allowed_branches:
+            create_url = reverse(
+                "shift_assignment_create",
+                kwargs={"branch_pk": branch.id},
+            )
+            branch_map[branch.id] = {
+                "id": branch.id,
+                "name": branch.name,
+                "create_url": create_url,
+                "shifts": [],
+            }
+
         shift_choices: list[dict[str, Any]] = []
 
         for shift in shift_queryset:
@@ -705,15 +791,9 @@ class UserShiftManagementView(LoginRequiredMixin, View):
                 "shift_assignment_create",
                 kwargs={"branch_pk": shift.sucursal_id},
             )
-            branch_entry = branch_map.setdefault(
-                shift.sucursal_id,
-                {
-                    "id": shift.sucursal_id,
-                    "name": shift.sucursal.name,
-                    "create_url": create_url,
-                    "shifts": [],
-                },
-            )
+            branch_entry = branch_map.get(shift.sucursal_id)
+            if branch_entry is None:
+                continue
             shift_entry = {
                 "id": shift.id,
                 "name": shift.name,
