@@ -533,7 +533,7 @@ class UserListView(LoginRequiredMixin, ListView):
                 if assignment_options is None:
                     assignment_options = {
                         "branch_id": getattr(branch_obj, "id", branch_id),
-                        "branch_name": branch_name if branch_obj else None,
+                        "branch_name": branch_name,
                         "create_url": (
                             reverse(
                                 "shift_assignment_create",
@@ -544,6 +544,10 @@ class UserListView(LoginRequiredMixin, ListView):
                         ),
                         "shifts": [],
                     }
+                else:
+                    assignment_options.setdefault("branch_id", getattr(branch_obj, "id", branch_id))
+                    assignment_options.setdefault("branch_name", branch_name)
+                    assignment_options.setdefault("shifts", [])
                 shift_tabs.append(
                     {
                         "id": f"{tab_prefix}-sin-asignacion",

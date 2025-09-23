@@ -132,44 +132,48 @@
                           </div>
                           <div class="space-y-3 text-sm text-gray-600">
                             <p class="text-xs font-semibold uppercase tracking-wide text-indigo-600">{{ user.branch|default:'Sin sucursal' }}</p>
-                            {% with options=shift.assignment_options|default:{} %}
+                            {% with options=shift.assignment_options %}
                               {% if user.branch_id %}
-                                {% if options.shifts %}
-                                  {% with counter=forloop.counter|stringformat:'s' %}
-                                    {% with select_id='assign-'|add:shift.id|add:'-'|add:counter %}
-                                      <div>
-                                        <label for="{{ select_id }}" class="text-xs font-semibold text-gray-700">Selecciona un turno</label>
-                                        <select
-                                          id="{{ select_id }}"
-                                          name="shift"
-                                          class="mt-1 block w-full rounded-md border-gray-300 text-sm focus:border-indigo-500 focus:ring-indigo-500"
-                                          required
-                                          data-shift-select
-                                        >
-                                          {% for option in options.shifts %}
-                                            <option value="{{ option.id }}" data-create-url="{{ option.create_url }}">
-                                              {{ option.name }} · {{ option.branch_name }}{% if option.schedule_display %} · {{ option.schedule_display }}{% endif %}
-                                            </option>
-                                          {% endfor %}
-                                        </select>
-                                      </div>
+                                {% if options %}
+                                  {% if options.shifts %}
+                                    {% with counter=forloop.counter|stringformat:'s' %}
+                                      {% with select_id='assign-'|add:shift.id|add:'-'|add:counter %}
+                                        <div>
+                                          <label for="{{ select_id }}" class="text-xs font-semibold text-gray-700">Selecciona un turno</label>
+                                          <select
+                                            id="{{ select_id }}"
+                                            name="shift"
+                                            class="mt-1 block w-full rounded-md border-gray-300 text-sm focus:border-indigo-500 focus:ring-indigo-500"
+                                            required
+                                            data-shift-select
+                                          >
+                                            {% for option in options.shifts %}
+                                              <option value="{{ option.id }}" data-create-url="{{ option.create_url }}">
+                                                {{ option.name }} · {{ option.branch_name }}{% if option.schedule_display %} · {{ option.schedule_display }}{% endif %}
+                                              </option>
+                                            {% endfor %}
+                                          </select>
+                                        </div>
+                                      {% endwith %}
                                     {% endwith %}
-                                  {% endwith %}
-                                  <div class="grid gap-3 sm:grid-cols-2">
-                                    <label class="block text-xs text-gray-600">
-                                      Fecha de inicio
-                                      <input type="date" name="start_date" class="mt-1 block w-full rounded-md border-gray-300 text-sm focus:border-indigo-500 focus:ring-indigo-500">
-                                    </label>
-                                    <label class="block text-xs text-gray-600">
-                                      Fecha de término
-                                      <input type="date" name="end_date" class="mt-1 block w-full rounded-md border-gray-300 text-sm focus:border-indigo-500 focus:ring-indigo-500">
-                                    </label>
-                                  </div>
-                                  <div class="flex justify-end">
-                                    <button type="submit" class="inline-flex items-center rounded-md bg-indigo-600 px-3 py-1.5 text-xs font-semibold text-white shadow-sm hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600">Asignar turno</button>
-                                  </div>
+                                    <div class="grid gap-3 sm:grid-cols-2">
+                                      <label class="block text-xs text-gray-600">
+                                        Fecha de inicio
+                                        <input type="date" name="start_date" class="mt-1 block w-full rounded-md border-gray-300 text-sm focus:border-indigo-500 focus:ring-indigo-500">
+                                      </label>
+                                      <label class="block text-xs text-gray-600">
+                                        Fecha de término
+                                        <input type="date" name="end_date" class="mt-1 block w-full rounded-md border-gray-300 text-sm focus:border-indigo-500 focus:ring-indigo-500">
+                                      </label>
+                                    </div>
+                                    <div class="flex justify-end">
+                                      <button type="submit" class="inline-flex items-center rounded-md bg-indigo-600 px-3 py-1.5 text-xs font-semibold text-white shadow-sm hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600">Asignar turno</button>
+                                    </div>
+                                  {% else %}
+                                    <p class="text-sm text-gray-500">No hay turnos disponibles para asignar en {{ options.branch_name|default:'esta sucursal' }}.</p>
+                                  {% endif %}
                                 {% else %}
-                                  <p class="text-sm text-gray-500">No hay turnos disponibles para asignar en {{ options.branch_name|default:'esta sucursal' }}.</p>
+                                  <p class="text-sm text-gray-500">No hay información de turnos disponible para esta sucursal.</p>
                                 {% endif %}
                               {% else %}
                                 <p class="text-sm text-gray-500">Asigna una sucursal al usuario para habilitar los turnos disponibles.</p>
