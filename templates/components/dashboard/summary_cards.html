@@ -9,37 +9,48 @@
 {% if cards %}
   <dl class="grid gap-5 sm:grid-cols-2 xl:grid-cols-3">
     {% for card in cards %}
-      <div class="flex h-full flex-col justify-between rounded-xl bg-white p-5 shadow ring-1 ring-gray-900/5">
-        <div>
-          <dt class="text-sm font-medium text-gray-500">{{ card.title }}</dt>
-          <dd class="mt-2 flex items-baseline gap-2">
-            <span class="text-3xl font-semibold tracking-tight text-gray-900">{{ card.value|default:0 }}</span>
-            {% if card.suffix %}
-              <span class="text-sm text-gray-500">{{ card.suffix }}</span>
+    {% with
+        bg_class=card.bg_class|default:'bg-white'
+        ring_class=card.ring_class|default:'ring-1 ring-gray-900/5'
+        value_class=card.text_class|default:'text-gray-900'
+        suffix_class=card.suffix_class|default:'text-gray-500'
+        title_class=card.title_class|default:'text-gray-500'
+        description_class=card.description_class|default:'text-gray-500'
+        items_value_class=card.items_value_class|default:value_class
+        items_border_class=card.items_border_class|default:'border-gray-100'
+    %}
+        <div class="flex h-full flex-col justify-between rounded-xl p-5 shadow {{ bg_class }} {{ ring_class }}">
+          <div>
+            <dt class="text-sm font-medium {{ title_class }}">{{ card.title }}</dt>
+            <dd class="mt-2 flex items-baseline gap-2">
+              <span class="text-3xl font-semibold tracking-tight {{ value_class }}">{{ card.value|default:0 }}</span>
+              {% if card.suffix %}
+                <span class="text-sm {{ suffix_class }}">{{ card.suffix }}</span>
+              {% endif %}
+            </dd>
+            {% if card.description %}
+              <p class="mt-3 text-sm {{ description_class }}">{{ card.description }}</p>
             {% endif %}
-          </dd>
-          {% if card.description %}
-            <p class="mt-3 text-sm text-gray-500">{{ card.description }}</p>
-          {% endif %}
-        </div>
-        {% if card.items %}
-          <div class="mt-5 border-t border-gray-100 pt-4">
-            <ul class="space-y-2 text-sm text-gray-500">
-              {% for item in card.items %}
-                <li class="flex items-center justify-between">
-                  <span>{{ item.label }}</span>
-                  <span class="font-semibold text-gray-900">
-                    {{ item.value|default:0 }}
-                    {% if item.total is not None %}
-                      <span class="ml-1 text-xs font-normal text-gray-500">/ {{ item.total }}</span>
-                    {% endif %}
-                  </span>
-                </li>
-              {% endfor %}
-            </ul>
           </div>
-        {% endif %}
-      </div>
+          {% if card.items %}
+            <div class="mt-5 border-t {{ items_border_class }} pt-4">
+              <ul class="space-y-2 text-sm text-gray-500">
+                {% for item in card.items %}
+                  <li class="flex items-center justify-between">
+                    <span>{{ item.label }}</span>
+                    <span class="font-semibold {{ items_value_class }}">
+                      {{ item.value|default:0 }}
+                      {% if item.total is not None %}
+                        <span class="ml-1 text-xs font-normal text-gray-500">/ {{ item.total }}</span>
+                      {% endif %}
+                    </span>
+                  </li>
+                {% endfor %}
+              </ul>
+            </div>
+          {% endif %}
+        </div>      
+      {% endwith %}
     {% endfor %}
   </dl>
 {% endif %}

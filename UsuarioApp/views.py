@@ -251,20 +251,132 @@ class UserListView(LoginRequiredMixin, ListView):
                     f"{inactive_filtered} inactivos"
                 ),
             },
+        ]
+
+        day_order = [
+            "Lunes",
+            "Martes",
+            "Miércoles",
+            "Jueves",
+            "Viernes",
+            "Sábado",
+            "Domingo",
+        ]
+        day_sort_index = {day: index for index, day in enumerate(day_order)}
+
+        def summarize_schedule(schedule: list[dict[str, str]]) -> str:
+            if not schedule:
+                return "Sin horario configurado"
+
+            unique_ranges = {(item["start"], item["end"]) for item in schedule}
+            if len(unique_ranges) == 1:
+                start_time, end_time = unique_ranges.pop()
+                unique_days = {item["day"] for item in schedule}
+                weekday_map = set(day_order[:5])
+                if unique_days == weekday_map:
+                    day_label = "Lunes a Viernes"
+                elif len(unique_days) == 7:
+                    day_label = "Todos los días"
+                else:
+                    ordered_days = sorted(
+                        unique_days, key=lambda day: day_sort_index.get(day, 99)
+                    )
+                    day_label = ", ".join(ordered_days)
+                return f"{day_label} · {start_time} - {end_time}"
+
+            return " · ".join(
+                f"{item['day']} {item['start']} - {item['end']}" for item in schedule
+            )
+
+        shift_palette = [
             {
-                "title": "Turnos activos",
-                "value": active_shifts,
-                "description": "Usuarios activos por turno (filtros actuales)",
-                "items": [
-                    {
-                        "label": shift["label"],
-                        "value": shift["active_count"],
-                        "total": shift["count"],
-                    }
-                    for shift in shift_tabs
-                ],
+                "bg_class": "bg-sky-50",
+                "ring_class": "ring-1 ring-inset ring-sky-100",
+                "title_class": "text-sky-700",
+                "text_class": "text-sky-700",
+                "suffix_class": "text-sky-600",
+                "description_class": "text-sky-600",
+                "items_value_class": "text-sky-700",
+                "items_border_class": "border-sky-100",
+            },
+            {
+                "bg_class": "bg-amber-50",
+                "ring_class": "ring-1 ring-inset ring-amber-100",
+                "title_class": "text-amber-700",
+                "text_class": "text-amber-700",
+                "suffix_class": "text-amber-600",
+                "description_class": "text-amber-600",
+                "items_value_class": "text-amber-700",
+                "items_border_class": "border-amber-100",
+            },
+            {
+                "bg_class": "bg-emerald-50",
+                "ring_class": "ring-1 ring-inset ring-emerald-100",
+                "title_class": "text-emerald-700",
+                "text_class": "text-emerald-700",
+                "suffix_class": "text-emerald-600",
+                "description_class": "text-emerald-600",
+                "items_value_class": "text-emerald-700",
+                "items_border_class": "border-emerald-100",
+            },
+            {
+                "bg_class": "bg-purple-50",
+                "ring_class": "ring-1 ring-inset ring-purple-100",
+                "title_class": "text-purple-700",
+                "text_class": "text-purple-700",
+                "suffix_class": "text-purple-600",
+                "description_class": "text-purple-600",
+                "items_value_class": "text-purple-700",
+                "items_border_class": "border-purple-100",
             },
         ]
+
+        unassigned_palette = {
+            "bg_class": "bg-gray-50",
+            "ring_class": "ring-1 ring-inset ring-gray-200",
+            "title_class": "text-gray-700",
+            "text_class": "text-gray-700",
+            "suffix_class": "text-gray-600",
+            "description_class": "text-gray-600",
+            "items_value_class": "text-gray-700",
+            "items_border_class": "border-gray-200",
+        }
+
+        for index, shift in enumerate(shift_tabs):
+            schedule_summary = shift.get("schedule", [])
+            if schedule_summary:
+                description = summarize_schedule(schedule_summary)
+            elif shift.get("id") == "tab-turno-sin-asignacion":
+                description = "Usuarios sin turno asignado"
+            else:
+                description = "Sin horario configurado"
+
+            card_entry = {
+                "title": shift["label"],
+                "value": shift["active_count"],
+                "suffix": f"de {shift['count']} usuarios",
+                "description": description,
+                "items": [
+                    {
+                        "label": "Cobertura",
+                        "value": shift["active_count"],
+                        "total": shift["count"],
+                    },
+                    {
+                        "label": "Inactivos",
+                        "value": shift["inactive_count"],
+                        "total": None,
+                    },
+                ],
+            }
+
+            if shift.get("id") == "tab-turno-sin-asignacion":
+                card_entry.update(unassigned_palette)
+            else:
+                palette = shift_palette[index % len(shift_palette)] if shift_palette else {}
+                card_entry.update(palette)
+
+            summary_cards.append(card_entry)
 
         tab_navigation = [
             {
