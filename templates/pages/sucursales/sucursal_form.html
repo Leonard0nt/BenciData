@@ -34,4 +34,71 @@
       </button>
     </div>
   </form>
+
+  {% if form.instance.pk %}
+    <section class="mt-10">
+      <h2 class="text-xl font-semibold text-gray-900 mb-4">Islas y equipos</h2>
+      {% if islands %}
+        <div class="space-y-6">
+          {% for island in islands %}
+            <div class="rounded-lg border border-gray-200 p-4">
+              <h3 class="text-lg font-medium text-gray-800">Isla {{ island.number }}</h3>
+              {% if island.description %}
+                <p class="text-sm text-gray-500 mt-1">{{ island.description }}</p>
+              {% endif %}
+              <p class="text-sm text-gray-500 mt-2">Máquinas: {{ island.machines.count }}</p>
+              {% if island.machines.all %}
+                <div class="mt-4 space-y-4">
+                  {% for machine in island.machines.all %}
+                    <div class="rounded-md bg-gray-50 p-4">
+                      <div class="flex items-center justify-between">
+                        <h4 class="text-base font-semibold text-gray-800">Máquina {{ machine.number }}</h4>
+                        <span class="text-sm text-gray-500">{{ machine.fuel_type }}</span>
+                      </div>
+                      <dl class="mt-2 grid grid-cols-1 gap-x-4 gap-y-2 text-sm text-gray-600 sm:grid-cols-2">
+                        <div>
+                          <dt class="font-medium text-gray-700">Numeral inicial</dt>
+                          <dd>{{ machine.initial_numeral }}</dd>
+                        </div>
+                        <div>
+                          <dt class="font-medium text-gray-700">Numeral final</dt>
+                          <dd>{{ machine.final_numeral }}</dd>
+                        </div>
+                      </dl>
+                      <p class="text-sm text-gray-500 mt-2">Pistolas: {{ machine.nozzles.count }}</p>
+                      {% if machine.nozzles.all %}
+                        <ul class="mt-2 space-y-2">
+                          {% for nozzle in machine.nozzles.all %}
+                            <li class="rounded border border-gray-200 bg-white p-3">
+                              <div class="flex items-center justify-between">
+                                <span class="text-sm font-medium text-gray-800">Pistola {{ nozzle.number }}</span>
+                                <span class="text-xs text-gray-500">{{ nozzle.fuel_type }}</span>
+                              </div>
+                              <div class="mt-1 grid grid-cols-2 gap-2 text-xs text-gray-600">
+                                <span>Inicial: {{ nozzle.initial_numeral }}</span>
+                                <span>Final: {{ nozzle.final_numeral }}</span>
+                              </div>
+                              {% if nozzle.description %}
+                                <p class="mt-1 text-xs text-gray-500">{{ nozzle.description }}</p>
+                              {% endif %}
+                            </li>
+                          {% endfor %}
+                        </ul>
+                      {% else %}
+                        <p class="mt-2 text-sm text-gray-500">Aún no hay pistolas asociadas.</p>
+                      {% endif %}
+                    </div>
+                  {% endfor %}
+                </div>
+              {% else %}
+                <p class="mt-2 text-sm text-gray-500">Aún no hay máquinas asociadas a esta isla.</p>
+              {% endif %}
+            </div>
+          {% endfor %}
+        </div>
+      {% else %}
+        <p class="text-sm text-gray-500">Aún no se han registrado islas para esta sucursal.</p>
+      {% endif %}
+    </section>
+  {% endif %}
 {% endblock content_pages %}

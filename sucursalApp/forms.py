@@ -4,7 +4,7 @@ from django import forms
 
 from UsuarioApp.models import Profile
 
-from .models import Sucursal
+from .models import Island, Machine, Nozzle, Sucursal
 
 
 class SucursalForm(forms.ModelForm):
@@ -24,7 +24,6 @@ class SucursalForm(forms.ModelForm):
             "region",
             "phone",
             "email",
-            "islands",
             "users",
         ]
         widgets = {
@@ -34,7 +33,6 @@ class SucursalForm(forms.ModelForm):
             "region": forms.TextInput(attrs={"class": "w-full border rounded p-2"}),
             "phone": forms.TextInput(attrs={"class": "w-full border rounded p-2"}),
             "email": forms.EmailInput(attrs={"class": "w-full border rounded p-2"}),
-            "islands": forms.NumberInput(attrs={"class": "w-full border rounded p-2"}),
         }
 
     def __init__(self, *args, company: Optional["homeApp.models.Company"] = None, **kwargs):
@@ -53,3 +51,56 @@ class SucursalForm(forms.ModelForm):
             instance.save()
             self.save_m2m()
         return instance
+
+
+class IslandForm(forms.ModelForm):
+    class Meta:
+        model = Island
+        fields = ["sucursal", "number", "description"]
+        widgets = {
+            "sucursal": forms.HiddenInput(),
+            "number": forms.NumberInput(attrs={"class": "w-full border rounded p-2"}),
+            "description": forms.TextInput(attrs={"class": "w-full border rounded p-2"}),
+        }
+
+
+class MachineForm(forms.ModelForm):
+    class Meta:
+        model = Machine
+        fields = [
+            "island",
+            "number",
+            "initial_numeral",
+            "final_numeral",
+            "fuel_type",
+            "description",
+        ]
+        widgets = {
+            "island": forms.HiddenInput(),
+            "number": forms.NumberInput(attrs={"class": "w-full border rounded p-2"}),
+            "initial_numeral": forms.NumberInput(attrs={"class": "w-full border rounded p-2"}),
+            "final_numeral": forms.NumberInput(attrs={"class": "w-full border rounded p-2"}),
+            "fuel_type": forms.TextInput(attrs={"class": "w-full border rounded p-2"}),
+            "description": forms.TextInput(attrs={"class": "w-full border rounded p-2"}),
+        }
+
+
+class NozzleForm(forms.ModelForm):
+    class Meta:
+        model = Nozzle
+        fields = [
+            "machine",
+            "number",
+            "initial_numeral",
+            "final_numeral",
+            "fuel_type",
+            "description",
+        ]
+        widgets = {
+            "machine": forms.HiddenInput(),
+            "number": forms.NumberInput(attrs={"class": "w-full border rounded p-2"}),
+            "initial_numeral": forms.NumberInput(attrs={"class": "w-full border rounded p-2"}),
+            "final_numeral": forms.NumberInput(attrs={"class": "w-full border rounded p-2"}),
+            "fuel_type": forms.TextInput(attrs={"class": "w-full border rounded p-2"}),
+            "description": forms.TextInput(attrs={"class": "w-full border rounded p-2"}),
+        }

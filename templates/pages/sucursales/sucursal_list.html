@@ -21,6 +21,8 @@
             <th scope="col" class="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Ciudad</th>
             <th scope="col" class="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Región</th>
             <th scope="col" class="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Islas</th>
+            <th scope="col" class="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Máquinas</th>
+            <th scope="col" class="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Pistolas</th>
             <th scope="col" class="relative py-3.5 pl-3 pr-4 sm:pr-6"><span class="sr-only">Editar</span></th>
           </tr>
         </thead>
@@ -31,7 +33,9 @@
               <td class="whitespace-nowrap px-3 py-4 text-sm text-gray-500">{{ sucursal.address }}</td>
               <td class="whitespace-nowrap px-3 py-4 text-sm text-gray-500">{{ sucursal.city }}</td>
               <td class="whitespace-nowrap px-3 py-4 text-sm text-gray-500">{{ sucursal.region }}</td>
-              <td class="whitespace-nowrap px-3 py-4 text-sm text-gray-500">{{ sucursal.islands }}</td>
+              <td class="whitespace-nowrap px-3 py-4 text-sm text-gray-500">{{ sucursal.islands.count }}</td>
+              <td class="whitespace-nowrap px-3 py-4 text-sm text-gray-500">{{ sucursal.machines_count }}</td>
+              <td class="whitespace-nowrap px-3 py-4 text-sm text-gray-500">{{ sucursal.nozzles_count }}</td>
               <td class="whitespace-nowrap py-4 pl-3 pr-4 text-right text-sm font-medium sm:pr-6">
                 <a href="{% url 'sucursal_update' sucursal.pk %}" class="text-blue-600 hover:text-blue-900">Editar</a>
               </td>
