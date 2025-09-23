@@ -1,5 +1,12 @@
-from django.db import models
 from __future__ import annotations
+from typing import Iterable, Sequence
+
+from django.db import models
+
+from UsuarioApp.choices import PERMISOS
+
+from django.db.models import QuerySet
+
 
 
 class Sucursal(models.Model):
@@ -18,12 +25,7 @@ class Sucursal(models.Model):
     phone = models.CharField("Teléfono", max_length=30, blank=True)
     email = models.EmailField("Correo electrónico", blank=True)
     islands = models.PositiveIntegerField("Islas", default=0)
-    users = models.ManyToManyField(
-        "UsuarioApp.Profile",
-        related_name="branches",
-        blank=True,
-        verbose_name="Usuarios asociados",
-    )
+
     created_at = models.DateTimeField("Fecha de creación", auto_now_add=True)
     updated_at = models.DateTimeField("Fecha de actualización", auto_now=True)
 
@@ -37,15 +39,108 @@ class Sucursal(models.Model):
 
     @property
     def machines_count(self) -> int:
-        return sum(island.machines.count() for island in self.islands.all())
+        islands = self._get_related_items(self, "islands")
+        return sum(
+            island.machines.count() for island in self.branch_islands.all()
+        )
 
     @property
     def nozzles_count(self) -> int:
         return sum(
             machine.nozzles.count()
-            for island in self.islands.all()
+            for island in self.branch_islands.all()
             for machine in island.machines.all()
         )
+
+
+    def get_staff_for_role(self, role: str | Iterable[str]):
+        """Return the profiles assigned to the sucursal for the given role or roles."""
+
+        if isinstance(role, str):
+            roles: Sequence[str | None] = (role,)
+        else:
+            roles = tuple(role)
+        assignments = [
+            assignment
+            for assignment in self.staff.all()
+            if assignment.role in roles
+        ]
+        return [assignment.profile for assignment in assignments]
+
+    @property
+    def administrators(self):
+        return self.get_staff_for_role("ADMINISTRATOR")
+
+    @property
+    def accountants(self):
+        return self.get_staff_for_role("ACCOUNTANT")
+
+    @property
+    def firefighters(self):
+        return self.get_staff_for_role(("ATTENDANT", "HEAD_ATTENDANT"))
+
+
+class SucursalStaff(models.Model):
+    """Relaciona una sucursal con los perfiles asignados y su rol."""
+
+    sucursal = models.ForeignKey(
+        Sucursal,
+        on_delete=models.CASCADE,
+        related_name="staff",
+        verbose_name="Sucursal",
+    )
+    profile = models.ForeignKey(
+        "UsuarioApp.Profile",
+        on_delete=models.CASCADE,
+        related_name="sucursal_staff",
+        verbose_name="Perfil",
+    )
+    role = models.CharField(
+        "Rol",
+        max_length=25,
+        choices=PERMISOS,
+        blank=True,
+        null=True,
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = "Personal de sucursal"
+        verbose_name_plural = "Personal de sucursal"
+        constraints = [
+            models.UniqueConstraint(
+                fields=["sucursal", "profile"],
+                name="unique_sucursal_profile",
+            )
+        ]
+
+    def save(self, *args, **kwargs):
+        if self.role is None and getattr(self.profile, "position_FK", None):
+            self.role = self.profile.position_FK.permission_code
+        super().save(*args, **kwargs)
+
+    def __str__(self) -> str:
+        profile_name = getattr(self.profile, "user_FK", None)
+        if profile_name:
+            profile_name = profile_name.get_full_name() or profile_name.username
+        else:
+            profile_name = str(self.profile)
+        return f"{profile_name} - {self.sucursal.name} ({self.role})"
+
+    @staticmethod
+    def _get_related_items(instance: models.Model, related_name: str):
+        cache = getattr(instance, "_prefetched_objects_cache", {}) or {}
+        if related_name in cache:
+            return cache[related_name]
+        manager = getattr(instance, related_name)
+        return manager.all()
+
+    @staticmethod
+    def _count_items(items) -> int:
+        if isinstance(items, QuerySet):
+            return items.count()
+        return len(items)
 
 
 class Island(models.Model):
@@ -54,7 +149,7 @@ class Island(models.Model):
     sucursal = models.ForeignKey(
         Sucursal,
         on_delete=models.CASCADE,
-        related_name="islands",
+        related_name="branch_islands",
         verbose_name="Sucursal",
     )
     number = models.PositiveIntegerField("Número")

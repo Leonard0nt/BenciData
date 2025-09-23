@@ -4,16 +4,35 @@ from django import forms
 
 from UsuarioApp.models import Profile
 
-from .models import Island, Machine, Nozzle, Sucursal
+from .models import Island, Machine, Nozzle, Sucursal, SucursalStaff
 
 
 class SucursalForm(forms.ModelForm):
-    users = forms.ModelMultipleChoiceField(
+    administrators = forms.ModelMultipleChoiceField(
         queryset=Profile.objects.none(),
         required=False,
         widget=forms.SelectMultiple(attrs={"class": "w-full border rounded p-2"}),
-        label="Usuarios asociados",
+        label="Administradores",
     )
+    accountants = forms.ModelMultipleChoiceField(
+        queryset=Profile.objects.none(),
+        required=False,
+        widget=forms.SelectMultiple(attrs={"class": "w-full border rounded p-2"}),
+        label="Contadores",
+    )
+    firefighters = forms.ModelMultipleChoiceField(
+        queryset=Profile.objects.none(),
+        required=False,
+        widget=forms.SelectMultiple(attrs={"class": "w-full border rounded p-2"}),
+        label="Bomberos",
+        help_text="Incluye perfiles con rol de bombero.",
+    )
+
+    STAFF_ROLE_FIELDS = {
+        "administrators": ("ADMINISTRATOR",),
+        "accountants": ("ACCOUNTANT",),
+        "firefighters": ("ATTENDANT", "HEAD_ATTENDANT"),
+    }
 
     class Meta:
         model = Sucursal
@@ -24,7 +43,6 @@ class SucursalForm(forms.ModelForm):
             "region",
             "phone",
             "email",
-            "users",
         ]
         widgets = {
             "name": forms.TextInput(attrs={"class": "w-full border rounded p-2"}),
@@ -38,10 +56,17 @@ class SucursalForm(forms.ModelForm):
     def __init__(self, *args, company: Optional["homeApp.models.Company"] = None, **kwargs):
         self.company = company
         super().__init__(*args, **kwargs)
-        queryset = Profile.objects.all()
+        queryset = Profile.objects.select_related("position_FK", "user_FK")
         if company is not None:
             queryset = queryset.filter(company_rut=company.rut)
-        self.fields["users"].queryset = queryset.order_by("user_FK__username")
+        for field_name, roles in self.STAFF_ROLE_FIELDS.items():
+            field_queryset = queryset.filter(position_FK__permission_code__in=roles)
+            self.fields[field_name].queryset = field_queryset.order_by("user_FK__username")
+            if self.instance.pk:
+                initial_ids = self.instance.staff.filter(role__in=roles).values_list(
+                    "profile_id", flat=True
+                )
+                self.fields[field_name].initial = list(initial_ids)
 
     def save(self, commit: bool = True):
         instance = super().save(commit=False)
@@ -49,9 +74,35 @@ class SucursalForm(forms.ModelForm):
             instance.company = self.company
         if commit:
             instance.save()
-            self.save_m2m()
+            self._save_staff_assignments(instance)
+        else:
+            self._pending_staff_assignment = True
         return instance
 
+    def save_m2m(self):
+        super().save_m2m()
+        if getattr(self, "_pending_staff_assignment", False):
+            self._save_staff_assignments(self.instance)
+            self._pending_staff_assignment = False
+
+    def _save_staff_assignments(self, instance: Sucursal) -> None:
+        for field_name, roles in self.STAFF_ROLE_FIELDS.items():
+            selected_profiles = self.cleaned_data.get(field_name)
+            if selected_profiles is None:
+                continue
+            selected_ids = [profile.pk for profile in selected_profiles]
+            instance.staff.filter(role__in=roles).exclude(
+                profile_id__in=selected_ids
+            ).delete()
+            for profile in selected_profiles:
+                role = None
+                if getattr(profile, "position_FK", None):
+                    role = profile.position_FK.permission_code
+                SucursalStaff.objects.update_or_create(
+                    sucursal=instance,
+                    profile=profile,
+                    defaults={"role": role},
+                )
 
 class IslandForm(forms.ModelForm):
     class Meta:

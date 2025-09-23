@@ -100,14 +100,6 @@ class Profile(models.Model):
 
     def save(self, *args, **kwargs):
         update_last_activity = kwargs.pop("update_last_activity", False)
-        previous_branch_id = None
-        if self.pk:
-            previous_branch_id = (
-                Profile.objects.filter(pk=self.pk)
-                .values_list("current_branch_id", flat=True)
-                .first()
-            )
-
         if update_last_activity:
             self.last_activity = timezone.now()
             kwargs["update_fields"] = ["last_activity"]
@@ -120,14 +112,6 @@ class Profile(models.Model):
         if self.image and os.path.exists(self.image.path):
             resize_image(self.image.path, 300)
             crop_image(self.image.path, 300)
-
-        if previous_branch_id and previous_branch_id != self.current_branch_id:
-            previous_branch = Sucursal.objects.filter(pk=previous_branch_id).first()
-            if previous_branch:
-                previous_branch.users.remove(self)
-
-        if self.current_branch_id:
-            self.current_branch.users.add(self)
 
     def has_role(self, roles=None):
         """Check if the profile's position matches the given roles.

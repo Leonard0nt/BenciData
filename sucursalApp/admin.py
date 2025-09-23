@@ -1,6 +1,6 @@
 from django.contrib import admin
 
-from .models import Island, Machine, Nozzle, Sucursal
+from .models import Island, Machine, Nozzle, Sucursal, SucursalStaff
 
 
 class NozzleInline(admin.TabularInline):
@@ -17,18 +17,20 @@ class IslandInline(admin.TabularInline):
     model = Island
     extra = 1
 
+class SucursalStaffInline(admin.TabularInline):
+    model = SucursalStaff
+    extra = 1
 
 @admin.register(Sucursal)
 class SucursalAdmin(admin.ModelAdmin):
     list_display = ("name", "company", "city", "region", "island_count", "machines_count", "nozzles_count")
     search_fields = ("name", "company__business_name", "city", "region")
     list_filter = ("company", "city", "region")
-    filter_horizontal = ("users",)
-    inlines = [IslandInline]
+    inlines = [SucursalStaffInline, IslandInline]
 
     @admin.display(description="Islas")
     def island_count(self, obj: Sucursal) -> int:
-        return obj.islands.count()
+        return obj.branch_islands.count()
 
     @admin.display(description="Máquinas")
     def machines_count(self, obj: Sucursal) -> int:

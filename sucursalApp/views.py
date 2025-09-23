@@ -3,6 +3,7 @@ from typing import Any, Dict
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.db.models import Prefetch, QuerySet
 from django.http import HttpResponseRedirect
+from django.urls import reverse_lazy
 
 from django.views.generic import CreateView, ListView, UpdateView
 from django.views.generic.edit import FormMixin
@@ -11,7 +12,7 @@ from core.mixins import RoleRequiredMixin
 from homeApp.models import Company
 
 from .forms import SucursalForm
-from .models import Island, Machine, Sucursal
+from .models import Island, Machine, Sucursal, SucursalStaff
 
 
 class OwnerCompanyMixin(LoginRequiredMixin, RoleRequiredMixin):
@@ -42,7 +43,7 @@ class SucursalListView(OwnerCompanyMixin, FormMixin, ListView):
             .select_related("company")
             .prefetch_related(
                 Prefetch(
-                    "islands",
+                    "branch_islands",
                     queryset=Island.objects.prefetch_related(
                         Prefetch(
                             "machines",
@@ -50,7 +51,12 @@ class SucursalListView(OwnerCompanyMixin, FormMixin, ListView):
                         )
                     ),
                 ),
-                Prefetch("users"),
+                Prefetch(
+                    "staff",
+                    queryset=SucursalStaff.objects.select_related(
+                        "profile__user_FK", "profile__position_FK"
+                    ),
+                ),
             )
         )
 
@@ -80,13 +86,12 @@ class SucursalUpdateView(OwnerCompanyMixin, UpdateView):
         company = self.get_company()
         if company is None:
             return Sucursal.objects.none()
-        return Sucursal.objects.filter(company=company).select_related("company").prefetch_related(
         return (
             Sucursal.objects.filter(company=company)
             .select_related("company")
             .prefetch_related(
                 Prefetch(
-                    "islands",
+                    "branch_islands",
                     queryset=Island.objects.prefetch_related(
                         Prefetch(
                             "machines",
@@ -94,7 +99,12 @@ class SucursalUpdateView(OwnerCompanyMixin, UpdateView):
                         )
                     ),
                 ),
-                Prefetch("users"),
+                Prefetch(
+                    "staff",
+                    queryset=SucursalStaff.objects.select_related(
+                        "profile__user_FK", "profile__position_FK"
+                    ),
+                ),
             )
         )
 
@@ -107,7 +117,7 @@ class SucursalUpdateView(OwnerCompanyMixin, UpdateView):
         context = super().get_context_data(**kwargs)
         if self.object:
             context["islands"] = (
-                self.object.islands.order_by("number")
+                self.object.branch_islands.order_by("number")
                 .prefetch_related(
                     Prefetch(
                         "machines",
