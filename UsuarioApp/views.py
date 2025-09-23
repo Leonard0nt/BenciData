@@ -190,8 +190,8 @@ class UserListView(LoginRequiredMixin, ListView):
             assignments = assignments_by_user.get(user.id, [])
             branch_assignment_map: dict[Any, list[dict[str, Any]]] = defaultdict(list)
             branch_names: list[str] = []
+            branch_name_set: set[str] = set()
             user_branch_ids: set[Any] = set()
-
             for assignment in assignments:
                 shift = assignment.shift
                 branch = shift.sucursal
@@ -201,8 +201,9 @@ class UserListView(LoginRequiredMixin, ListView):
 
                 label = f"{shift.name} · {branch.name}" if branch else shift.name
                 branch_name = branch.name if branch else None
-                if branch_name and branch_name not in branch_names:
+                if branch_name and branch_name not in branch_name_set:
                     branch_names.append(branch_name)
+                    branch_name_set.add(branch_name)
 
                 schedule_summary = shift_summary_cache.get(shift.id, [])
                 branch_assignment_map[branch_id].append(
@@ -222,9 +223,24 @@ class UserListView(LoginRequiredMixin, ListView):
             if current_branch and (
                 not branch_ids or current_branch.id in branch_ids
             ):
-                if current_branch.name not in branch_names:
+                if current_branch.name not in branch_name_set:
                     branch_names.append(current_branch.name)
+                    branch_name_set.add(current_branch.name)
                 user_branch_ids.add(current_branch.id)
+
+            if user_profile is not None:
+                for staff_membership in user_profile.sucursal_staff.select_related(
+                    "sucursal"
+                ):
+                    branch = staff_membership.sucursal
+                    if not branch:
+                        continue
+                    if branch_ids and branch.id not in branch_ids:
+                        continue
+                    user_branch_ids.add(branch.id)
+                    if branch.name not in branch_name_set:
+                        branch_names.append(branch.name)
+                        branch_name_set.add(branch.name)
 
             if not user_branch_ids:
                 branchless_required = True
