@@ -1,11 +1,26 @@
 from __future__ import annotations
 from typing import Iterable, Sequence
 
+from django.core.exceptions import ValidationError
 from django.db import models
+from django.db.models import Q, QuerySet
+from django.utils import timezone
 
 from UsuarioApp.choices import PERMISOS
 
-from django.db.models import QuerySet
+
+class ShiftAssignmentQuerySet(models.QuerySet):
+    """QuerySet helper for filtering shift assignments."""
+
+    def active(self):
+        """Return the assignments that are currently active."""
+
+        today = timezone.localdate()
+        return (
+            self.filter(is_active=True)
+            .filter(Q(start_date__isnull=True) | Q(start_date__lte=today))
+            .filter(Q(end_date__isnull=True) | Q(end_date__gte=today))
+        )
 
 
 
@@ -230,3 +245,163 @@ class Nozzle(models.Model):
 
     def __str__(self) -> str:
         return f"Pistola {self.number} - {self.machine}"
+
+
+class Shift(models.Model):
+    """Representa un turno de trabajo asociado a una sucursal."""
+
+    sucursal = models.ForeignKey(
+        Sucursal,
+        on_delete=models.CASCADE,
+        related_name="shifts",
+        verbose_name="Sucursal",
+    )
+    name = models.CharField("Nombre", max_length=150)
+    description = models.TextField("Descripción", blank=True)
+    created_at = models.DateTimeField("Fecha de creación", auto_now_add=True)
+    updated_at = models.DateTimeField("Fecha de actualización", auto_now=True)
+
+    class Meta:
+        verbose_name = "Turno"
+        verbose_name_plural = "Turnos"
+        ordering = ("sucursal__name", "name")
+
+    def __str__(self) -> str:
+        return f"{self.name} - {self.sucursal.name}"
+
+    def get_schedule_summary(self) -> list[dict[str, str]]:
+        """Devuelve un resumen del horario configurado para el turno."""
+
+        summary = []
+        for schedule in self.schedules.order_by("day_of_week", "start_time"):
+            summary.append(
+                {
+                    "day": schedule.get_day_of_week_display(),
+                    "start": schedule.start_time.strftime("%H:%M"),
+                    "end": schedule.end_time.strftime("%H:%M"),
+                }
+            )
+        return summary
+
+
+class ShiftSchedule(models.Model):
+    """Define los horarios disponibles para un turno determinado."""
+
+    MONDAY = 0
+    TUESDAY = 1
+    WEDNESDAY = 2
+    THURSDAY = 3
+    FRIDAY = 4
+    SATURDAY = 5
+    SUNDAY = 6
+
+    DAYS_OF_WEEK = (
+        (MONDAY, "Lunes"),
+        (TUESDAY, "Martes"),
+        (WEDNESDAY, "Miércoles"),
+        (THURSDAY, "Jueves"),
+        (FRIDAY, "Viernes"),
+        (SATURDAY, "Sábado"),
+        (SUNDAY, "Domingo"),
+    )
+
+    shift = models.ForeignKey(
+        Shift,
+        on_delete=models.CASCADE,
+        related_name="schedules",
+        verbose_name="Turno",
+    )
+    day_of_week = models.PositiveSmallIntegerField(
+        "Día de la semana", choices=DAYS_OF_WEEK
+    )
+    start_time = models.TimeField("Hora de inicio")
+    end_time = models.TimeField("Hora de término")
+
+    class Meta:
+        verbose_name = "Horario de turno"
+        verbose_name_plural = "Horarios de turno"
+        unique_together = ("shift", "day_of_week")
+        ordering = ("day_of_week", "start_time")
+
+    def __str__(self) -> str:
+        return (
+            f"{self.get_day_of_week_display()} {self.start_time:%H:%M}-"
+            f"{self.end_time:%H:%M} ({self.shift})"
+        )
+
+    def clean(self) -> None:
+        super().clean()
+        if self.start_time >= self.end_time:
+            raise ValidationError(
+                {"end_time": "La hora de término debe ser posterior a la de inicio."}
+            )
+
+
+class ShiftAssignment(models.Model):
+    """Asigna turnos a perfiles pertenecientes a una sucursal."""
+
+    shift = models.ForeignKey(
+        Shift,
+        on_delete=models.CASCADE,
+        related_name="assignments",
+        verbose_name="Turno",
+    )
+    profile = models.ForeignKey(
+        "UsuarioApp.Profile",
+        on_delete=models.CASCADE,
+        related_name="shift_assignments",
+        verbose_name="Perfil",
+    )
+    sucursal = models.ForeignKey(
+        Sucursal,
+        on_delete=models.CASCADE,
+        related_name="shift_assignments",
+        verbose_name="Sucursal",
+    )
+    start_date = models.DateField("Fecha de inicio", blank=True, null=True)
+    end_date = models.DateField("Fecha de término", blank=True, null=True)
+    is_active = models.BooleanField("Activo", default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    objects = ShiftAssignmentQuerySet.as_manager()
+
+    class Meta:
+        verbose_name = "Asignación de turno"
+        verbose_name_plural = "Asignaciones de turnos"
+        constraints = [
+            models.UniqueConstraint(
+                fields=["shift", "profile"],
+                condition=Q(is_active=True, end_date__isnull=True),
+                name="unique_active_shift_profile",
+            )
+        ]
+        ordering = ("-created_at",)
+
+    def __str__(self) -> str:
+        return f"{self.profile} → {self.shift}"
+
+    def clean(self) -> None:
+        super().clean()
+        if self.sucursal_id and self.shift_id and self.shift.sucursal_id != self.sucursal_id:
+            raise ValidationError(
+                {"sucursal": "La sucursal de la asignación debe coincidir con la del turno."}
+            )
+
+    def save(self, *args, **kwargs):
+        if not self.sucursal_id and self.shift_id:
+            self.sucursal = self.shift.sucursal
+        self.full_clean()
+        return super().save(*args, **kwargs)
+
+    def is_current(self) -> bool:
+        """Indica si la asignación está vigente en la fecha actual."""
+
+        if not self.is_active:
+            return False
+        today = timezone.localdate()
+        if self.start_date and self.start_date > today:
+            return False
+        if self.end_date and self.end_date < today:
+            return False
+        return True

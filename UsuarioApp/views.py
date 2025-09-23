@@ -14,14 +14,20 @@ from crispy_forms.helper import FormHelper
 from django.contrib.auth import update_session_auth_hash
 from django.shortcuts import redirect, render
 from django.db.models import Q
+from collections import defaultdict
+from typing import Any
+
 from django.utils import timezone
+from django.utils.text import slugify
 from django.templatetags.static import static
 from allauth.account.models import EmailAddress
 from django.contrib import messages
 from django.urls import reverse_lazy
 from core.mixins import PermitsPositionMixin, RoleRequiredMixin
+from UsuarioApp.services import get_shift_assignments_for_users
 
 from .models import Profile
+from sucursalApp.models import ShiftAssignment
 from homeApp.models import Company
 
 # Create your views here.
@@ -71,14 +77,28 @@ class UserListView(LoginRequiredMixin, ListView):
             1 for user in filtered_users if user.date_joined >= cutoff_date
         )
 
-        shift_definitions = {
-            True: {"slug": "tiempo-completo", "label": "Tiempo completo"},
-            False: {"slug": "medio-tiempo", "label": "Medio tiempo"},
-            None: {"slug": "sin-turno", "label": "Sin turno definido"},
-        }
-        shift_order = [True, False, None]
-        shift_buckets = {key: [] for key in shift_definitions}
         user_data_map = {}
+        assignments_by_user: dict[int, list[ShiftAssignment]] = defaultdict(list)
+        shift_summary_cache: dict[int, list[dict[str, str]]] = {}
+
+        assignments_qs = (
+            ShiftAssignment.objects.active()
+            .select_related(
+                "shift__sucursal",
+                "profile__user_FK",
+                "profile__position_FK",
+            )
+            .prefetch_related("shift__schedules")
+            .filter(profile__user_FK_id__in=user_ids)
+        )
+        for assignment in assignments_qs:
+            assignments_by_user[assignment.profile.user_FK_id].append(assignment)
+            if assignment.shift_id not in shift_summary_cache:
+                shift_summary_cache[assignment.shift_id] = assignment.shift.get_schedule_summary()
+
+        shift_tabs_map: dict[int, dict[str, Any]] = {}
+        unassigned_users: list[dict[str, Any]] = []
+        unassigned_label = "Sin turno asignado"
 
         for user in filtered_users:
             try:
@@ -86,18 +106,76 @@ class UserListView(LoginRequiredMixin, ListView):
             except Profile.DoesNotExist:
                 profile = None
 
-            shift_key = None
-            if profile is not None and profile.is_partime in shift_definitions:
-                shift_key = profile.is_partime
-
-            if shift_key not in shift_definitions:
-                shift_key = None
-
             avatar_url = static("img/profile.webp")
             if profile is not None and getattr(profile, "image", None):
                 image_field = profile.image
                 if getattr(image_field, "url", None):
                     avatar_url = image_field.url
+
+            assignments = assignments_by_user.get(user.id, [])
+            assignment_entries = []
+            branch_names = []
+
+            for assignment in assignments:
+                shift = assignment.shift
+                branch = shift.sucursal
+                label = f"{shift.name} · {branch.name}" if branch else shift.name
+                branch_name = branch.name if branch else None
+                if branch_name and branch_name not in branch_names:
+                    branch_names.append(branch_name)
+
+                schedule_summary = shift_summary_cache.get(shift.id, [])
+                assignment_entries.append(
+                    {
+                        "id": assignment.id,
+                        "shift_id": shift.id,
+                        "shift_name": shift.name,
+                        "branch_id": branch.id if branch else None,
+                        "branch_name": branch_name,
+                        "label": label,
+                        "schedule": schedule_summary,
+                    }
+                )
+
+                slug_source = f"{shift.id}-{label}"
+                tab_slug = slugify(slug_source) or f"shift-{shift.id}"
+                tab_id = f"tab-turno-{tab_slug}"
+                tab_entry = shift_tabs_map.setdefault(
+                    shift.id,
+                    {
+                        "id": tab_id,
+                        "label": label,
+                        "sucursal_id": branch.id if branch else None,
+                        "schedule": schedule_summary,
+                        "users": [],
+                    },
+                )
+
+                tab_user_entry = dict()
+                tab_user_entry.update(
+                    {
+                        "id": user.id,
+                        "username": user.username,
+                        "full_name": user.get_full_name() or user.username,
+                        "email": user.email,
+                        "role": (
+                            profile.position_FK.user_position
+                            if profile and profile.position_FK
+                            else "Sin cargo"
+                        ),
+                        "branch": branch_name,
+                        "is_active": user.is_active,
+                        "is_verified": user.id in verified_user_ids,
+                        "shift_label": label,
+                        "profile_image": avatar_url,
+                        "last_login": user.last_login,
+                        "last_activity": getattr(profile, "last_activity", None),
+                    }
+                )
+                tab_entry["users"].append(tab_user_entry)
+
+            if profile and not branch_names and getattr(profile, "current_branch", None):
+                branch_names.append(profile.current_branch.name)
 
             user_entry = {
                 "id": user.id,
@@ -109,46 +187,47 @@ class UserListView(LoginRequiredMixin, ListView):
                     if profile and profile.position_FK
                     else "Sin cargo"
                 ),
-                "branch": (
-                    profile.current_branch.name
-                    if profile and profile.current_branch
-                    else None
-                ),
+                "branch": branch_names[0] if branch_names else None,
+                "branches": branch_names,
                 "is_active": user.is_active,
                 "is_verified": user.id in verified_user_ids,
-                "shift_label": shift_definitions[shift_key]["label"],
-                "shift_key": shift_key,
+                "shift_label": assignment_entries[0]["label"]
+                if assignment_entries
+                else unassigned_label,
                 "profile_image": avatar_url,
                 "last_login": user.last_login,
                 "last_activity": getattr(profile, "last_activity", None),
+                "assignments": assignment_entries,
             }
 
             user_data_map[user.id] = user_entry
-            shift_buckets[shift_key].append(user_entry)
 
-        for bucket in shift_buckets.values():
-            bucket.sort(key=lambda item: item["full_name"].lower())
+            if not assignment_entries:
+                unassigned_users.append(user_entry)
 
-        shift_tabs = []
-        for key in shift_order:
-            bucket = shift_buckets.get(key, [])
-            if not bucket:
-                continue
+        for tab_entry in shift_tabs_map.values():
+            tab_entry["users"].sort(key=lambda item: item["full_name"].lower())
+            total_users = len(tab_entry["users"])
+            active_count = sum(1 for item in tab_entry["users"] if item["is_active"])
+            tab_entry["count"] = total_users
+            tab_entry["active_count"] = active_count
+            tab_entry["inactive_count"] = total_users - active_count
 
-            definition = shift_definitions[key]
-            active_count = sum(1 for item in bucket if item["is_active"])
-            inactive_count = len(bucket) - active_count
-            tab_id = f"tab-turno-{definition['slug']}"
-            shift_tabs.append(
-                {
-                    "id": tab_id,
-                    "label": definition["label"],
-                    "count": len(bucket),
-                    "active_count": active_count,
-                    "inactive_count": inactive_count,
-                    "users": bucket,
-                }
-            )
+        shift_tabs = sorted(shift_tabs_map.values(), key=lambda item: item["label"].lower())
+
+        if unassigned_users:
+            unassigned_users.sort(key=lambda item: item["full_name"].lower())
+            unassigned_tab = {
+                "id": "tab-turno-sin-asignacion",
+                "label": unassigned_label,
+                "count": len(unassigned_users),
+                "active_count": sum(1 for item in unassigned_users if item["is_active"]),
+                "inactive_count": sum(
+                    1 for item in unassigned_users if not item["is_active"]
+                ),
+                "users": unassigned_users,
+            }
+            shift_tabs.append(unassigned_tab)
 
         active_shifts = sum(1 for shift in shift_tabs if shift["active_count"] > 0)
 
