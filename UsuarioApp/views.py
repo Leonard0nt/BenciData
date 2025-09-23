@@ -251,6 +251,7 @@ class UserListView(LoginRequiredMixin, ListView):
                 "username": user.username,
                 "full_name": user.get_full_name() or user.username,
                 "email": user.email,
+                "profile_id": getattr(user_profile, "id", None),
                 "role": (
                     user_profile.position_FK.user_position
                     if user_profile and user_profile.position_FK
@@ -258,6 +259,7 @@ class UserListView(LoginRequiredMixin, ListView):
                 ),
                 "branch": branch_names[0] if branch_names else None,
                 "branches": branch_names,
+                "branch_id": getattr(user_profile, "current_branch_id", None),
                 "is_active": user.is_active,
                 "is_verified": user.id in verified_user_ids,
                 "profile_image": avatar_url,
@@ -378,6 +380,66 @@ class UserListView(LoginRequiredMixin, ListView):
             "detail_class": "text-gray-600",
         }
 
+        branch_shift_catalog: dict[Any, dict[str, Any]] = {}
+        accessible_branch_ids = [branch.id for branch in accessible_branches if branch]
+
+        for branch in accessible_branches:
+            if not branch:
+                continue
+            create_url = reverse(
+                "shift_assignment_create",
+                kwargs={"branch_pk": branch.id},
+            )
+            branch_shift_catalog[branch.id] = {
+                "branch_id": branch.id,
+                "branch_name": branch.name,
+                "create_url": create_url,
+                "shifts": [],
+            }
+
+        if accessible_branch_ids:
+            shift_queryset = (
+                Shift.objects.filter(sucursal_id__in=accessible_branch_ids)
+                .select_related("sucursal")
+                .prefetch_related("schedules")
+                .order_by("sucursal__name", "name")
+            )
+        else:
+            shift_queryset = Shift.objects.none()
+
+        for shift in shift_queryset:
+            branch_id = shift.sucursal_id
+            branch_name = shift.sucursal.name if shift.sucursal else None
+            branch_entry = branch_shift_catalog.setdefault(
+                branch_id,
+                {
+                    "branch_id": branch_id,
+                    "branch_name": branch_name,
+                    "create_url": (
+                        reverse(
+                            "shift_assignment_create",
+                            kwargs={"branch_pk": branch_id},
+                        )
+                        if branch_id
+                        else None
+                    ),
+                    "shifts": [],
+                },
+            )
+            schedule_summary = shift.get_schedule_summary()
+            branch_entry["shifts"].append(
+                {
+                    "id": shift.id,
+                    "name": shift.name,
+                    "branch_name": branch_entry["branch_name"],
+                    "schedule_display": summarize_schedule(schedule_summary),
+                    "create_url": branch_entry["create_url"],
+                }
+            )
+
+        for branch_entry in branch_shift_catalog.values():
+            branch_entry["shifts"].sort(key=lambda item: item["name"].lower())
+
         branch_groups: list[dict[str, Any]] = []
 
         def build_branch_group(branch_id: Any, user_ids_for_branch: list[int]) -> dict[str, Any]:
@@ -411,6 +473,8 @@ class UserListView(LoginRequiredMixin, ListView):
                     "branch": branch_name,
                     "assignments": assignments,
                     "shift_label": shift_label,
+                    "profile_id": common["profile_id"],
+                    "branch_id": branch_id,
                 }
 
                 branch_user_rows.append(row_entry)
@@ -465,6 +529,21 @@ class UserListView(LoginRequiredMixin, ListView):
 
             if branch_unassigned:
                 branch_unassigned.sort(key=lambda item: item["full_name"].lower())
+                assignment_options = branch_shift_catalog.get(branch_id)
+                if assignment_options is None:
+                    assignment_options = {
+                        "branch_id": getattr(branch_obj, "id", branch_id),
+                        "branch_name": branch_name if branch_obj else None,
+                        "create_url": (
+                            reverse(
+                                "shift_assignment_create",
+                                kwargs={"branch_pk": branch_id},
+                            )
+                            if branch_id
+                            else None
+                        ),
+                        "shifts": [],
+                    }
                 shift_tabs.append(
                     {
                         "id": f"{tab_prefix}-sin-asignacion",
@@ -477,9 +556,10 @@ class UserListView(LoginRequiredMixin, ListView):
                             1 for item in branch_unassigned if not item["is_active"]
                         ),
                         "users": branch_unassigned,
+                        "is_unassigned": True,
+                        "assignment_options": assignment_options,
                     }
                 )
-
             summary_cards: list[dict[str, Any]] = []
 
             total_branch_users = len(branch_user_rows)
