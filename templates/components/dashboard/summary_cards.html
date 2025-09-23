@@ -1,4 +1,4 @@
-{% extends 'components/Layout/base_extendido.html' %}
+
 {% load static %}
 {% comment %}
   Renderiza un conjunto de tarjetas resumen.
@@ -11,10 +11,7 @@
 {% if cards %}
   <dl class="grid gap-5 sm:grid-cols-2 xl:grid-cols-3">
     {% for card in cards %}
-    {% with bg_class=card.bg_class|default:'bg-white' ring_class=card.ring_class|default:'ring-1 ring-gray-900/5'
-        value_class=card.text_class|default:'text-gray-900' suffix_class=card.suffix_class|default:'text-gray-500'
-        title_class=card.title_class|default:'text-gray-500' description_class=card.description_class|default:'text-gray-500' 
-        items_border_class=card.items_border_class|default:'border-gray-100' %}
+    {% with bg_class=card.bg_class|default:'bg-white' ring_class=card.ring_class|default:'ring-1 ring-gray-900/5' value_class=card.text_class|default:'text-gray-900' suffix_class=card.suffix_class|default:'text-gray-500' title_class=card.title_class|default:'text-gray-500' description_class=card.description_class|default:'text-gray-500' items_border_class=card.items_border_class|default:'border-gray-100' %}
         <div class="flex h-full flex-col justify-between rounded-xl p-5 shadow {{ bg_class }} {{ ring_class }}">
           <div>
             <dt class="text-sm font-medium {{ title_class }}">{{ card.title }}</dt>
