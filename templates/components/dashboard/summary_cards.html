@@ -9,41 +9,42 @@
     - items (opcional): Lista de diccionarios con ``label``, ``value`` y ``total``.
 {% endcomment %}
 {% if cards %}
-  <dl class="grid gap-5 sm:grid-cols-2 xl:grid-cols-3">
+  <div class="summary-card-grid"></div>
     {% for card in cards %}
-    {% with bg_class=card.bg_class|default:'bg-white' ring_class=card.ring_class|default:'ring-1 ring-gray-900/5' value_class=card.text_class|default:'text-gray-900' suffix_class=card.suffix_class|default:'text-gray-500' title_class=card.title_class|default:'text-gray-500' description_class=card.description_class|default:'text-gray-500' items_border_class=card.items_border_class|default:'border-gray-100' %}
-        <div class="flex h-full flex-col justify-between rounded-xl p-5 shadow {{ bg_class }} {{ ring_class }}">
-          <div>
-            <dt class="text-sm font-medium {{ title_class }}">{{ card.title }}</dt>
-            <dd class="mt-2 flex items-baseline gap-2">
-              <span class="text-3xl font-semibold tracking-tight {{ value_class }}">{{ card.value|default:0 }}</span>
-              {% if card.suffix %}
-                <span class="text-sm {{ suffix_class }}">{{ card.suffix }}</span>
-              {% endif %}
-            </dd>
+      {% with bg_class=card.bg_class|default:'bg-white' ring_class=card.ring_class|default:'ring-1 ring-gray-900/5' value_class=card.text_class|default:'text-gray-900' suffix_class=card.suffix_class|default:'text-gray-500' title_class=card.title_class|default:'text-gray-500' description_class=card.description_class|default:'text-gray-500' detail_class=card.detail_class|default:'text-gray-500' items_border_class=card.items_border_class|default:'border-gray-100' items_value_class=card.items_value_class|default:'text-gray-900' accent_class=card.accent_class|default:'bg-gray-300' %}
+        <article class="summary-card {{ bg_class }} {{ ring_class }}">
+          <span aria-hidden="true" class="summary-card__accent {{ accent_class }}"></span>
+          <div class="summary-card__body">
+            <header class="summary-card__header">
+              <p class="summary-card__title {{ title_class }}">{{ card.title }}</p>
+              <div class="summary-card__value">
+                <span class="summary-card__value-number {{ value_class }}">{{ card.value|default:0 }}</span>
+                {% if card.suffix %}
+                  <span class="summary-card__suffix {{ suffix_class }}">{{ card.suffix }}</span>
+                {% endif %}
+              </div>
+            </header>
             {% if card.description %}
-              <p class="mt-3 text-sm {{ description_class }}">{{ card.description }}</p>
+              <p class="summary-card__description {{ description_class }}">{{ card.description }}</p>
             {% endif %}
           </div>
           {% if card.items %}
-            <div class="mt-5 border-t {{ items_border_class }} pt-4">
-              <ul class="space-y-2 text-sm text-gray-500">
-                {% for item in card.items %}
-                  <li class="flex items-center justify-between">
-                    <span>{{ item.label }}</span>
-                    <span class="font-semibold {{ items_value_class }}">
-                      {{ item.value|default:0 }}
-                      {% if item.total is not None %}
-                        <span class="ml-1 text-xs font-normal text-gray-500">/ {{ item.total }}</span>
-                      {% endif %}
-                    </span>
-                  </li>
-                {% endfor %}
-              </ul>
-            </div>
+            <ul class="summary-card__details {{ items_border_class }}">
+              {% for item in card.items %}
+                <li class="summary-card__detail">
+                  <span class="summary-card__detail-label {{ detail_class }}">{{ item.label }}</span>
+                  <span class="summary-card__detail-value {{ items_value_class }}">
+                    {{ item.value|default:0 }}
+                    {% if item.total is not None %}
+                      <span class="summary-card__detail-total">/ {{ item.total }}</span>
+                    {% endif %}
+                  </span>
+                </li>
+              {% endfor %}
+            </ul>
           {% endif %}
-        </div>      
+        </article>     
       {% endwith %}
     {% endfor %}
-  </dl>
+  </div>
 {% endif %}

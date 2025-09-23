@@ -48,3 +48,115 @@ strong {
   display: none;
 }
 
+.summary-card-grid {
+  display: grid;
+  gap: 1.25rem;
+  grid-template-columns: repeat(1, minmax(0, 1fr));
+}
+
+@media (min-width: 640px) {
+  .summary-card-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (min-width: 1280px) {
+  .summary-card-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+.summary-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  border-radius: 0.875rem;
+  padding: 1.5rem;
+  padding-top: 2rem;
+  box-shadow: 0 20px 45px -25px rgba(15, 23, 42, 0.45);
+  transition: transform 150ms ease, box-shadow 150ms ease;
+  overflow: hidden;
+}
+
+.summary-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 28px 60px -30px rgba(15, 23, 42, 0.55);
+}
+
+.summary-card__accent {
+  position: absolute;
+  inset: 0 0 auto;
+  height: 0.5rem;
+}
+
+.summary-card__body {
+  display: grid;
+  gap: 1rem;
+}
+
+.summary-card__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.summary-card__title {
+  font-size: 0.875rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+
+.summary-card__value {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+}
+
+.summary-card__value-number {
+  font-size: clamp(2rem, 1.5vw + 1.5rem, 2.75rem);
+  font-weight: 700;
+  line-height: 1;
+}
+
+.summary-card__suffix {
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+.summary-card__description {
+  font-size: 0.9375rem;
+  line-height: 1.45;
+}
+
+.summary-card__details {
+  margin-top: 1.5rem;
+  padding-top: 1.25rem;
+  border-top-width: 1px;
+  display: grid;
+  gap: 0.75rem;
+  font-size: 0.875rem;
+}
+
+.summary-card__detail {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.summary-card__detail-value {
+  display: flex;
+  align-items: baseline;
+  font-weight: 600;
+  gap: 0.25rem;
+}
+
+.summary-card__detail-total {
+  font-size: 0.75rem;
+  font-weight: 500;
+  opacity: 0.7;
+}
+

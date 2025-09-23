@@ -242,6 +242,14 @@ class UserListView(LoginRequiredMixin, ListView):
                     f"{recent_new_users} nuevos en los últimos 7 días · "
                     f"{total_filtered} en la vista"
                 ),
+                "bg_class": "bg-indigo-50",
+                "ring_class": "ring-1 ring-inset ring-indigo-100",
+                "title_class": "text-indigo-700",
+                "text_class": "text-indigo-700",
+                "description_class": "text-indigo-600",
+                "suffix_class": "text-indigo-600",
+                "accent_class": "bg-indigo-500",
+                "detail_class": "text-indigo-600",
             },
             {
                 "title": "Usuarios activos",
@@ -250,6 +258,14 @@ class UserListView(LoginRequiredMixin, ListView):
                     f"{active_filtered} activos visibles · "
                     f"{inactive_filtered} inactivos"
                 ),
+                "bg_class": "bg-emerald-50",
+                "ring_class": "ring-1 ring-inset ring-emerald-100",
+                "title_class": "text-emerald-700",
+                "text_class": "text-emerald-700",
+                "description_class": "text-emerald-600",
+                "suffix_class": "text-emerald-600",
+                "accent_class": "bg-emerald-500",
+                "detail_class": "text-emerald-600",
             },
         ]
 
@@ -298,6 +314,8 @@ class UserListView(LoginRequiredMixin, ListView):
                 "description_class": "text-sky-600",
                 "items_value_class": "text-sky-700",
                 "items_border_class": "border-sky-100",
+                "accent_class": "bg-sky-500",
+                "detail_class": "text-sky-600",
             },
             {
                 "bg_class": "bg-amber-50",
@@ -308,6 +326,8 @@ class UserListView(LoginRequiredMixin, ListView):
                 "description_class": "text-amber-600",
                 "items_value_class": "text-amber-700",
                 "items_border_class": "border-amber-100",
+                "accent_class": "bg-amber-500",
+                "detail_class": "text-amber-600",
             },
             {
                 "bg_class": "bg-emerald-50",
@@ -318,6 +338,8 @@ class UserListView(LoginRequiredMixin, ListView):
                 "description_class": "text-emerald-600",
                 "items_value_class": "text-emerald-700",
                 "items_border_class": "border-emerald-100",
+                "accent_class": "bg-emerald-500",
+                "detail_class": "text-emerald-600",
             },
             {
                 "bg_class": "bg-purple-50",
@@ -328,6 +350,8 @@ class UserListView(LoginRequiredMixin, ListView):
                 "description_class": "text-purple-600",
                 "items_value_class": "text-purple-700",
                 "items_border_class": "border-purple-100",
+                "accent_class": "bg-purple-500",
+                "detail_class": "text-purple-600",
             },
         ]
 
@@ -340,6 +364,8 @@ class UserListView(LoginRequiredMixin, ListView):
             "description_class": "text-gray-600",
             "items_value_class": "text-gray-700",
             "items_border_class": "border-gray-200",
+            "accent_class": "bg-gray-400",
+            "detail_class": "text-gray-600",
         }
 
         for index, shift in enumerate(shift_tabs):
