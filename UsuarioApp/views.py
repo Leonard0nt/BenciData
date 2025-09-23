@@ -22,12 +22,12 @@ from django.utils.text import slugify
 from django.templatetags.static import static
 from allauth.account.models import EmailAddress
 from django.contrib import messages
-from django.urls import reverse_lazy
+from django.urls import reverse, reverse_lazy
 from core.mixins import PermitsPositionMixin, RoleRequiredMixin
 from UsuarioApp.services import get_shift_assignments_for_users
 
 from .models import Profile
-from sucursalApp.models import ShiftAssignment
+from sucursalApp.models import Shift, ShiftAssignment
 from homeApp.models import Company
 
 # Create your views here.
@@ -417,6 +417,143 @@ class UserListView(LoginRequiredMixin, ListView):
         # Para mantener el texto en el campo de búsqueda
         context["search_query"] = self.request.GET.get("search", "")
         return context
+
+
+class UserShiftManagementView(LoginRequiredMixin, View):
+    template_name = "pages/usuarios/gestion_turnos.html"
+
+    def get(self, request, *args, **kwargs):
+        profiles = (
+            Profile.objects.select_related(
+                "user_FK", "position_FK", "current_branch"
+            )
+            .prefetch_related(
+                "shift_assignments__shift__sucursal",
+                "shift_assignments__shift__schedules",
+            )
+            .order_by(
+                "user_FK__first_name",
+                "user_FK__last_name",
+                "user_FK__username",
+            )
+        )
+
+        employees: list[dict[str, Any]] = []
+        assigned_employees = 0
+        total_assignments = 0
+
+        def summarize_schedule(schedule: list[dict[str, str]]) -> str:
+            if not schedule:
+                return ""
+            return ", ".join(
+                f"{item['day']} {item['start']}-{item['end']}" for item in schedule
+            )
+
+        for profile in profiles:
+            user = profile.user_FK
+            assignments: list[dict[str, Any]] = []
+
+            for assignment in profile.shift_assignments.all():
+                shift = assignment.shift
+                schedule_summary = shift.get_schedule_summary()
+                assignments.append(
+                    {
+                        "id": assignment.id,
+                        "shift_id": shift.id,
+                        "shift_name": shift.name,
+                        "branch_id": shift.sucursal_id,
+                        "branch_name": shift.sucursal.name,
+                        "schedule": schedule_summary,
+                        "schedule_display": summarize_schedule(schedule_summary),
+                        "start_date": assignment.start_date,
+                        "end_date": assignment.end_date,
+                        "is_active": assignment.is_current(),
+                        "delete_url": reverse(
+                            "shift_assignment_delete", kwargs={"pk": assignment.pk}
+                        ),
+                    }
+                )
+
+            assignments.sort(key=lambda item: item["shift_name"].lower())
+
+            if assignments:
+                assigned_employees += 1
+                total_assignments += len(assignments)
+
+            employees.append(
+                {
+                    "id": user.id,
+                    "profile_id": profile.id,
+                    "full_name": user.get_full_name() or user.username,
+                    "username": user.username,
+                    "email": user.email,
+                    "role": (
+                        profile.position_FK.user_position
+                        if profile.position_FK
+                        else "Sin cargo"
+                    ),
+                    "branch": profile.current_branch.name
+                    if profile.current_branch
+                    else None,
+                    "is_active": user.is_active,
+                    "assignments": assignments,
+                }
+            )
+
+        shift_queryset = (
+            Shift.objects.select_related("sucursal")
+            .prefetch_related("schedules")
+            .order_by("sucursal__name", "name")
+        )
+
+        branch_map: dict[int, dict[str, Any]] = {}
+        shift_choices: list[dict[str, Any]] = []
+
+        for shift in shift_queryset:
+            schedule_summary = shift.get_schedule_summary()
+            create_url = reverse(
+                "shift_assignment_create",
+                kwargs={"branch_pk": shift.sucursal_id},
+            )
+            branch_entry = branch_map.setdefault(
+                shift.sucursal_id,
+                {
+                    "id": shift.sucursal_id,
+                    "name": shift.sucursal.name,
+                    "create_url": create_url,
+                    "shifts": [],
+                },
+            )
+            shift_entry = {
+                "id": shift.id,
+                "name": shift.name,
+                "description": shift.description,
+                "branch_id": shift.sucursal_id,
+                "branch_name": shift.sucursal.name,
+                "schedule": schedule_summary,
+                "schedule_display": summarize_schedule(schedule_summary),
+                "create_url": create_url,
+            }
+            branch_entry["shifts"].append(shift_entry)
+            shift_choices.append(shift_entry)
+
+        branches = sorted(branch_map.values(), key=lambda item: item["name"].lower())
+        total_employees = len(employees)
+        unassigned_employees = total_employees - assigned_employees
+
+        context = {
+            "employees": employees,
+            "shift_choices": shift_choices,
+            "branches": branches,
+            "summary": {
+                "total_employees": total_employees,
+                "assigned_employees": assigned_employees,
+                "unassigned_employees": unassigned_employees,
+                "total_assignments": total_assignments,
+            },
+        }
+
+        return render(request, self.template_name, context)
 
 
 class UserCreateView(LoginRequiredMixin, PermitsPositionMixin, View):
