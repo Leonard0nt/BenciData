@@ -147,22 +147,6 @@
                 <p class="mt-1 text-sm text-red-600">{{ error }}</p>
               {% endfor %}
             </div>
-            <div class="grid gap-4 sm:grid-cols-2">
-              <div>
-                <label for="{{ assignment_form.start_date.id_for_label }}" class="text-sm font-medium text-gray-700">{{ assignment_form.start_date.label }}</label>
-                {{ assignment_form.start_date }}
-                {% for error in assignment_form.start_date.errors %}
-                  <p class="mt-1 text-sm text-red-600">{{ error }}</p>
-                {% endfor %}
-              </div>
-              <div>
-                <label for="{{ assignment_form.end_date.id_for_label }}" class="text-sm font-medium text-gray-700">{{ assignment_form.end_date.label }}</label>
-                {{ assignment_form.end_date }}
-                {% for error in assignment_form.end_date.errors %}
-                  <p class="mt-1 text-sm text-red-600">{{ error }}</p>
-                {% endfor %}
-              </div>
-            </div>
             <div class="flex items-center gap-2">
               {{ assignment_form.is_active }}
               <label for="{{ assignment_form.is_active.id_for_label }}" class="text-sm font-medium text-gray-700">{{ assignment_form.is_active.label }}</label>
