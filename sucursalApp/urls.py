@@ -6,7 +6,12 @@ urlpatterns = [
     path("", views.SucursalListView.as_view(), name="sucursal_list"),
     path("nueva/", views.SucursalCreateView.as_view(), name="sucursal_create"),
     path("<int:pk>/editar/", views.SucursalUpdateView.as_view(), name="sucursal_update"),
-        path(
+    path(
+        "<int:branch_pk>/turnos/gestion/",
+        views.BranchShiftManagementView.as_view(),
+        name="branch_shift_management",
+    ),
+    path(
         "<int:branch_pk>/turnos/",
         views.ShiftListView.as_view(),
         name="shift_list",

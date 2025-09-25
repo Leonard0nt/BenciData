@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from collections import defaultdict
+from datetime import datetime
 from typing import Iterable, List
 
 from django.contrib.auth.models import User
@@ -12,8 +13,18 @@ from sucursalApp.models import ShiftAssignment
 AssignmentList = List[ShiftAssignment]
 
 
+def _should_include_assignment(assignment: ShiftAssignment, today: date) -> bool:
+    """Return ``True`` when the assignment should be part of the schedule feed."""
+
+    if not assignment.is_active:
+        return False
+    if assignment.end_date and assignment.end_date < today:
+        return False
+    return True
+
+
 def get_shift_assignments_for_users(users: Iterable[User]) -> dict[int, AssignmentList]:
-    """Return a mapping of user id to upcoming shift assignments."""
+    """Return a mapping of user id to active or upcoming shift assignments."""
 
     user_ids = [user.id for user in users]
     if not user_ids:
@@ -23,18 +34,24 @@ def get_shift_assignments_for_users(users: Iterable[User]) -> dict[int, Assignme
         ShiftAssignment.objects.filter(profile__user_FK__in=user_ids)
         .select_related(
             "shift__sucursal",
-            "shift__schedule",
             "profile__user_FK",
             "profile__position_FK",
         )
-        .order_by("shift__start")
+        .prefetch_related("shift__schedules")
+        .order_by(
+            "profile__user_FK__first_name",
+            "profile__user_FK__last_name",
+            "shift__sucursal__name",
+            "shift__name",
+            "start_date",
+        )
     )
 
     mapping: dict[int, AssignmentList] = defaultdict(list)
-    now = timezone.now()
+    today = timezone.localdate()
 
     for assignment in assignments:
-        if assignment.shift.end < now:
+        if not _should_include_assignment(assignment, today):
             continue
         user_id = assignment.profile.user_FK_id
         mapping[user_id].append(assignment)
@@ -43,21 +60,33 @@ def get_shift_assignments_for_users(users: Iterable[User]) -> dict[int, Assignme
 
 
 def serialize_assignment(assignment: ShiftAssignment) -> dict:
-    """Serialize an assignment for JSON consumption."""
+    """Serialize an assignment using the new shift scheduling schema."""
 
     shift = assignment.shift
     profile = assignment.profile
     user = getattr(profile, "user_FK", None)
+    schedule_summary = shift.get_schedule_summary()
+
+    role = None
+    if getattr(profile, "position_FK", None):
+        role = profile.position_FK.user_position
+
     return {
         "id": assignment.pk,
-        "role": assignment.assigned_role,
-        "start": shift.start.isoformat(),
-        "end": shift.end.isoformat(),
+        "role": role,
+        "start_date": assignment.start_date.isoformat()
+        if assignment.start_date
+        else None,
+        "end_date": assignment.end_date.isoformat() if assignment.end_date else None,
+        "is_active": assignment.is_current(),
         "shift_name": shift.name,
         "branch_id": shift.sucursal_id,
         "branch_name": shift.sucursal.name,
-        "schedule": shift.schedule.get_day_of_week_display()
-        if shift.schedule
+        "schedule": schedule_summary,
+        "schedule_display": ", ".join(
+            f"{item['day']} {item['start']}-{item['end']}" for item in schedule_summary
+        )
+        if schedule_summary
         else None,
         "user": user.get_full_name() if user else str(profile),
     }

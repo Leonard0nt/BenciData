@@ -1,9 +1,13 @@
 import json
 from typing import Any, Dict
 
+from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.db.models import Prefetch, QuerySet
+from django.forms import HiddenInput
 from django.http import JsonResponse
+from django.shortcuts import get_object_or_404, redirect, render
+from django.urls import reverse, reverse_lazy
 from django.urls import reverse_lazy
 
 from django.shortcuts import get_object_or_404
@@ -154,6 +158,304 @@ class BranchAccessMixin(OwnerCompanyMixin):
     def get_sucursal(self) -> Sucursal:
         queryset = self.get_branch_queryset()
         return get_object_or_404(queryset, pk=self.kwargs.get(self.branch_url_kwarg))
+
+class BranchShiftManagementView(BranchAccessMixin, View):
+    template_name = "pages/sucursales/sucursal_turnos.html"
+
+    def get(self, request, *args, **kwargs):
+        branch = self.get_sucursal()
+        context = self.get_context_data(branch)
+        return render(request, self.template_name, context)
+
+    def post(self, request, *args, **kwargs):
+        branch = self.get_sucursal()
+        action = request.POST.get("action")
+
+        if action == "create_shift":
+            prefix = request.POST.get("form_prefix") or "new-shift"
+            shift_form = self.get_shift_form(branch, data=request.POST, prefix=prefix)
+            assignment_form = self.get_assignment_form(branch, prefix="new-assignment")
+            if shift_form.is_valid():
+                shift_form.save()
+                messages.success(request, "Turno creado con éxito.")
+                return redirect(self.get_success_url(branch))
+            context = self.get_context_data(
+                branch,
+                shift_form=shift_form,
+                assignment_form=assignment_form,
+            )
+            return render(request, self.template_name, context)
+
+        if action == "update_shift":
+            shift = get_object_or_404(branch.shifts.all(), pk=request.POST.get("shift_id"))
+            prefix = request.POST.get("form_prefix") or f"shift-{shift.pk}"
+            shift_form = self.get_shift_form(
+                branch,
+                data=request.POST,
+                instance=shift,
+                prefix=prefix,
+            )
+            if shift_form.is_valid():
+                shift_form.save()
+                messages.success(request, "Turno actualizado correctamente.")
+                return redirect(self.get_success_url(branch))
+            assignment_form = self.get_assignment_form(branch, prefix="new-assignment")
+            context = self.get_context_data(
+                branch,
+                assignment_form=assignment_form,
+                shift_overrides={shift.pk: shift_form},
+            )
+            return render(request, self.template_name, context)
+
+        if action == "delete_shift":
+            shift = get_object_or_404(branch.shifts.all(), pk=request.POST.get("shift_id"))
+            shift.delete()
+            messages.success(request, "Turno eliminado correctamente.")
+            return redirect(self.get_success_url(branch))
+
+        if action == "create_assignment":
+            prefix = request.POST.get("form_prefix") or "new-assignment"
+            assignment_form = self.get_assignment_form(
+                branch,
+                data=request.POST,
+                prefix=prefix,
+            )
+            shift_form = self.get_shift_form(branch, prefix="new-shift")
+            if assignment_form.is_valid():
+                assignment_form.save()
+                messages.success(request, "Asignación creada con éxito.")
+                return redirect(self.get_success_url(branch))
+            context = self.get_context_data(
+                branch,
+                shift_form=shift_form,
+                assignment_form=assignment_form,
+            )
+            return render(request, self.template_name, context)
+
+        if action == "update_assignment":
+            assignment = get_object_or_404(
+                branch.shift_assignments.select_related("shift"),
+                pk=request.POST.get("assignment_id"),
+            )
+            prefix = request.POST.get("form_prefix") or f"assignment-{assignment.pk}"
+            assignment_form = self.get_assignment_form(
+                branch,
+                data=request.POST,
+                instance=assignment,
+                prefix=prefix,
+            )
+            if assignment_form.is_valid():
+                assignment_form.save()
+                messages.success(request, "Asignación actualizada correctamente.")
+                return redirect(self.get_success_url(branch))
+            shift_form = self.get_shift_form(branch, prefix="new-shift")
+            context = self.get_context_data(
+                branch,
+                shift_form=shift_form,
+                assignment_form=self.get_assignment_form(
+                    branch, prefix="new-assignment"
+                ),
+                assignment_overrides={assignment.pk: assignment_form},
+            )
+            return render(request, self.template_name, context)
+
+        if action == "delete_assignment":
+            assignment = get_object_or_404(
+                branch.shift_assignments.select_related("shift"),
+                pk=request.POST.get("assignment_id"),
+            )
+            assignment.delete()
+            messages.success(request, "Asignación eliminada correctamente.")
+            return redirect(self.get_success_url(branch))
+
+        messages.error(request, "Acción no válida para la gestión de turnos.")
+        return redirect(self.get_success_url(branch))
+
+    def get_shift_form(
+        self,
+        branch: Sucursal,
+        *,
+        data: Dict[str, Any] | None = None,
+        instance: Shift | None = None,
+        prefix: str | None = None,
+    ) -> ShiftForm:
+        company = self.get_company()
+        args = (data,) if data is not None else ()
+        kwargs: Dict[str, Any] = {"company": company, "instance": instance}
+        if prefix is not None:
+            kwargs["prefix"] = prefix
+        form = ShiftForm(*args, **kwargs)
+        form.fields["sucursal"].initial = branch
+        form.fields["sucursal"].widget = HiddenInput()
+        return form
+
+    def get_assignment_form(
+        self,
+        branch: Sucursal,
+        *,
+        data: Dict[str, Any] | None = None,
+        instance: ShiftAssignment | None = None,
+        prefix: str | None = None,
+    ) -> ShiftAssignmentForm:
+        company = self.get_company()
+        args = (data,) if data is not None else ()
+        kwargs: Dict[str, Any] = {
+            "company": company,
+            "sucursal": branch,
+            "instance": instance,
+        }
+        if prefix is not None:
+            kwargs["prefix"] = prefix
+        form = ShiftAssignmentForm(*args, **kwargs)
+        form.fields["sucursal"].initial = branch
+        form.fields["sucursal"].widget = HiddenInput()
+        return form
+
+    def build_shift_rows(
+        self,
+        branch: Sucursal,
+        *,
+        shift_overrides: Dict[int, ShiftForm] | None = None,
+        assignment_overrides: Dict[int, ShiftAssignmentForm] | None = None,
+    ) -> tuple[list[dict[str, Any]], Dict[str, int]]:
+        shift_overrides = shift_overrides or {}
+        assignment_overrides = assignment_overrides or {}
+
+        shifts = (
+            branch.shifts.all()
+            .prefetch_related(
+                "schedules",
+                Prefetch(
+                    "assignments",
+                    queryset=ShiftAssignment.objects.select_related(
+                        "profile__user_FK",
+                        "profile__position_FK",
+                    ),
+                ),
+            )
+            .order_by("name")
+        )
+
+        rows: list[dict[str, Any]] = []
+        summary = {"total_assignments": 0, "active_assignments": 0, "inactive_assignments": 0}
+
+        for shift in shifts:
+            schedule_summary = shift.get_schedule_summary()
+            shift_form = shift_overrides.get(shift.pk)
+            if shift_form is None:
+                shift_form = self.get_shift_form(
+                    branch,
+                    instance=shift,
+                    prefix=f"shift-{shift.pk}",
+                )
+
+            assignments_data: list[dict[str, Any]] = []
+            active_count = 0
+
+            for assignment in shift.assignments.all():
+                profile_user = getattr(assignment.profile, "user_FK", None)
+                full_name = None
+                email = None
+                if profile_user is not None:
+                    full_name = profile_user.get_full_name() or profile_user.username
+                    email = profile_user.email
+                else:
+                    full_name = str(assignment.profile)
+
+                assignment_form = assignment_overrides.get(assignment.pk)
+                if assignment_form is None:
+                    assignment_form = self.get_assignment_form(
+                        branch,
+                        instance=assignment,
+                        prefix=f"assignment-{assignment.pk}",
+                    )
+
+                is_active = assignment.is_current()
+                if is_active:
+                    active_count += 1
+
+                assignments_data.append(
+                    {
+                        "object": assignment,
+                        "form": assignment_form,
+                        "profile_name": full_name,
+                        "email": email,
+                        "role": getattr(
+                            getattr(assignment.profile, "position_FK", None),
+                            "user_position",
+                            "",
+                        ),
+                        "is_active": is_active,
+                        "start_date": assignment.start_date,
+                        "end_date": assignment.end_date,
+                        "form_prefix": assignment_form.prefix,
+                    }
+                )
+
+            summary["total_assignments"] += len(assignments_data)
+            summary["active_assignments"] += active_count
+
+            rows.append(
+                {
+                    "shift": shift,
+                    "form": shift_form,
+                    "schedule": schedule_summary,
+                    "assignments": assignments_data,
+                    "active_assignments": active_count,
+                    "total_assignments": len(assignments_data),
+                }
+            )
+
+        summary["inactive_assignments"] = (
+            summary["total_assignments"] - summary["active_assignments"]
+        )
+
+        return rows, summary
+
+    def get_context_data(
+        self,
+        branch: Sucursal,
+        *,
+        shift_form: ShiftForm | None = None,
+        assignment_form: ShiftAssignmentForm | None = None,
+        shift_overrides: Dict[int, ShiftForm] | None = None,
+        assignment_overrides: Dict[int, ShiftAssignmentForm] | None = None,
+    ) -> Dict[str, Any]:
+        if shift_form is None:
+            shift_form = self.get_shift_form(branch, prefix="new-shift")
+        if assignment_form is None:
+            assignment_form = self.get_assignment_form(branch, prefix="new-assignment")
+
+        shift_rows, summary = self.build_shift_rows(
+            branch,
+            shift_overrides=shift_overrides,
+            assignment_overrides=assignment_overrides,
+        )
+
+        profile_field = assignment_form.fields.get("profile")
+        available_profiles = profile_field.queryset.count() if profile_field else 0
+
+        context = {
+            "branch": branch,
+            "shift_form": shift_form,
+            "assignment_form": assignment_form,
+            "shift_rows": shift_rows,
+            "summary": {
+                "total_shifts": len(shift_rows),
+                "total_assignments": summary["total_assignments"],
+                "active_assignments": summary["active_assignments"],
+                "inactive_assignments": summary["inactive_assignments"],
+                "available_profiles": available_profiles,
+            },
+        }
+        return context
+
+    def get_success_url(self, branch: Sucursal) -> str:
+        return reverse(
+            "branch_shift_management",
+            kwargs={self.branch_url_kwarg: branch.pk},
+        )
+
 
 
 class ShiftAccessMixin(OwnerCompanyMixin):
