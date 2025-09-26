@@ -1,11 +1,9 @@
 from __future__ import annotations
 
 from collections import defaultdict
-from datetime import datetime
 from typing import Iterable, List
 
 from django.contrib.auth.models import User
-from django.utils import timezone
 
 from sucursalApp.models import ShiftAssignment
 
@@ -13,15 +11,9 @@ from sucursalApp.models import ShiftAssignment
 AssignmentList = List[ShiftAssignment]
 
 
-def _should_include_assignment(assignment: ShiftAssignment, today: date) -> bool:
+def _should_include_assignment(assignment: ShiftAssignment) -> bool:
     """Return ``True`` when the assignment should be part of the schedule feed."""
-
-    if not assignment.is_active:
-        return False
-    if assignment.end_date and assignment.end_date < today:
-        return False
-    return True
-
+    return assignment.is_active
 
 def get_shift_assignments_for_users(users: Iterable[User]) -> dict[int, AssignmentList]:
     """Return a mapping of user id to active or upcoming shift assignments."""
@@ -43,7 +35,7 @@ def get_shift_assignments_for_users(users: Iterable[User]) -> dict[int, Assignme
             "profile__user_FK__last_name",
             "shift__sucursal__name",
             "shift__name",
-            "start_date",
+            "created_at",
         )
     )
 
@@ -51,7 +43,7 @@ def get_shift_assignments_for_users(users: Iterable[User]) -> dict[int, Assignme
     today = timezone.localdate()
 
     for assignment in assignments:
-        if not _should_include_assignment(assignment, today):
+        if not _should_include_assignment(assignment):
             continue
         user_id = assignment.profile.user_FK_id
         mapping[user_id].append(assignment)
@@ -74,9 +66,6 @@ def serialize_assignment(assignment: ShiftAssignment) -> dict:
     return {
         "id": assignment.pk,
         "role": role,
-        "start_date": assignment.start_date.isoformat()
-        if assignment.start_date
-        else None,
         "end_date": assignment.end_date.isoformat() if assignment.end_date else None,
         "is_active": assignment.is_current(),
         "shift_name": shift.name,

@@ -386,8 +386,6 @@ class BranchShiftManagementView(BranchAccessMixin, View):
                             "",
                         ),
                         "is_active": is_active,
-                        "start_date": assignment.start_date,
-                        "end_date": assignment.end_date,
                         "form_prefix": assignment_form.prefix,
                     }
                 )
@@ -514,12 +512,6 @@ class ShiftListView(BranchAccessMixin, JSONPayloadMixin, View):
                         "user": profile_user.get_full_name()
                         if profile_user
                         else None,
-                        "start_date": assignment.start_date.isoformat()
-                        if assignment.start_date
-                        else None,
-                        "end_date": assignment.end_date.isoformat()
-                        if assignment.end_date
-                        else None,
                         "is_active": assignment.is_current(),
                     }
                 )
@@ -602,7 +594,7 @@ class ShiftAssignmentListView(BranchAccessMixin, View):
             sucursal.shift_assignments.select_related(
                 "shift", "profile__user_FK", "profile__position_FK"
             )
-            .order_by("-is_active", "-start_date")
+            .order_by("-is_active", "-created_at")
         )
         data = []
         for assignment in assignments:
@@ -616,12 +608,6 @@ class ShiftAssignmentListView(BranchAccessMixin, View):
                     "profile_name": profile_user.get_full_name()
                     if profile_user
                     else str(assignment.profile),
-                    "start_date": assignment.start_date.isoformat()
-                    if assignment.start_date
-                    else None,
-                    "end_date": assignment.end_date.isoformat()
-                    if assignment.end_date
-                    else None,
                     "is_active": assignment.is_current(),
                 }
             )
@@ -647,12 +633,6 @@ class ShiftAssignmentCreateView(BranchAccessMixin, JSONPayloadMixin, View):
                     "id": assignment.id,
                     "shift": assignment.shift_id,
                     "profile": assignment.profile_id,
-                    "start_date": assignment.start_date.isoformat()
-                    if assignment.start_date
-                    else None,
-                    "end_date": assignment.end_date.isoformat()
-                    if assignment.end_date
-                    else None,
                     "is_active": assignment.is_current(),
                 },
                 status=201,
@@ -685,12 +665,6 @@ class ShiftAssignmentUpdateView(ShiftAccessMixin, JSONPayloadMixin, View):
                     "id": assignment.id,
                     "shift": assignment.shift_id,
                     "profile": assignment.profile_id,
-                    "start_date": assignment.start_date.isoformat()
-                    if assignment.start_date
-                    else None,
-                    "end_date": assignment.end_date.isoformat()
-                    if assignment.end_date
-                    else None,
                     "is_active": assignment.is_current(),
                 }
             )

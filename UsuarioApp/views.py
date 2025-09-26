@@ -817,8 +817,6 @@ class UserShiftManagementView(LoginRequiredMixin, View):
                         "branch_name": shift.sucursal.name,
                         "schedule": schedule_summary,
                         "schedule_display": summarize_schedule(schedule_summary),
-                        "start_date": assignment.start_date,
-                        "end_date": assignment.end_date,
                         "is_active": assignment.is_current(),
                         "delete_url": reverse(
                             "shift_assignment_delete", kwargs={"pk": assignment.pk}

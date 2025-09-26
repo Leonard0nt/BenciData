@@ -264,20 +264,12 @@ class ShiftAssignmentForm(forms.ModelForm):
             "sucursal",
             "shift",
             "profile",
-            "start_date",
-            "end_date",
             "is_active",
         ]
         widgets = {
             "sucursal": forms.Select(attrs={"class": "w-full border rounded p-2"}),
             "shift": forms.Select(attrs={"class": "w-full border rounded p-2"}),
             "profile": forms.Select(attrs={"class": "w-full border rounded p-2"}),
-            "start_date": forms.DateInput(
-                attrs={"class": "w-full border rounded p-2", "type": "date"}
-            ),
-            "end_date": forms.DateInput(
-                attrs={"class": "w-full border rounded p-2", "type": "date"}
-            ),
         }
 
     def __init__(
@@ -318,12 +310,6 @@ class ShiftAssignmentForm(forms.ModelForm):
 
     def clean(self):
         cleaned_data = super().clean()
-        start_date = cleaned_data.get("start_date")
-        end_date = cleaned_data.get("end_date")
-        if start_date and end_date and end_date < start_date:
-            raise forms.ValidationError(
-                "La fecha de término no puede ser anterior a la fecha de inicio."
-            )
         shift = cleaned_data.get("shift")
         sucursal = cleaned_data.get("sucursal")
         if shift and sucursal and shift.sucursal_id != sucursal.id:

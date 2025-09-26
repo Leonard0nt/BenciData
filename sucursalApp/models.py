@@ -14,13 +14,7 @@ class ShiftAssignmentQuerySet(models.QuerySet):
 
     def active(self):
         """Return the assignments that are currently active."""
-
-        today = timezone.localdate()
-        return (
-            self.filter(is_active=True)
-            .filter(Q(start_date__isnull=True) | Q(start_date__lte=today))
-            .filter(Q(end_date__isnull=True) | Q(end_date__gte=today))
-        )
+        return self.filter(is_active=True)
 
 
 
@@ -358,8 +352,6 @@ class ShiftAssignment(models.Model):
         related_name="shift_assignments",
         verbose_name="Sucursal",
     )
-    start_date = models.DateField("Fecha de inicio", blank=True, null=True)
-    end_date = models.DateField("Fecha de término", blank=True, null=True)
     is_active = models.BooleanField("Activo", default=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -372,7 +364,7 @@ class ShiftAssignment(models.Model):
         constraints = [
             models.UniqueConstraint(
                 fields=["shift", "profile"],
-                condition=Q(is_active=True, end_date__isnull=True),
+                condition=Q(is_active=True),
                 name="unique_active_shift_profile",
             )
         ]
@@ -396,12 +388,4 @@ class ShiftAssignment(models.Model):
 
     def is_current(self) -> bool:
         """Indica si la asignación está vigente en la fecha actual."""
-
-        if not self.is_active:
-            return False
-        today = timezone.localdate()
-        if self.start_date and self.start_date > today:
-            return False
-        if self.end_date and self.end_date < today:
-            return False
-        return True
+        return self.is_active

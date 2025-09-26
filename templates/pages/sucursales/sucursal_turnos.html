@@ -13,14 +13,6 @@
           {{ branch.address }}, {{ branch.city }} · {{ branch.region }}
         </p>
       </div>
-      <div class="flex items-center gap-3">
-        <a
-          href="{% url 'sucursal_list' %}"
-          class="inline-flex items-center rounded-md border border-gray-200 px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50"
-        >
-          Volver a sucursales
-        </a>
-      </div>
     </header>
 
     <section class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -107,7 +99,7 @@
               </div>
             </div>
             <div class="flex justify-end">
-              <button type="submit" class="inline-flex items-center rounded-md bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600">
+              <button type="submit" class="mt-4 mb-4 items-center rounded-md bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600">
                 Guardar turno
               </button>
             </div>
@@ -155,7 +147,7 @@
               <p class="mt-1 text-sm text-red-600">{{ error }}</p>
             {% endfor %}
             <div class="flex justify-end">
-              <button type="submit" class="inline-flex items-center rounded-md bg-emerald-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-emerald-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-600">
+              <button type="submit" class="mt-4 mb-4 bg-indigo-600 items-center rounded-md bg-emerald-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-emerald-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-600">
                 Asignar turno
               </button>
             </div>
@@ -196,7 +188,7 @@
                   {% csrf_token %}
                   <input type="hidden" name="action" value="delete_shift">
                   <input type="hidden" name="shift_id" value="{{ row.shift.id }}">
-                  <button type="submit" class="inline-flex items-center rounded-md border border-red-200 px-3 py-1.5 text-xs font-semibold text-red-600 hover:bg-red-50">
+                  <button type="submit" class="mt-4 mb-4 inline-flex items-center rounded-md border border-red-200 px-3 py-1.5 text-xs font-semibold text-red-600 hover:bg-red-50">
                     Eliminar turno
                   </button>
                 </form>
@@ -268,7 +260,7 @@
                         </div>
                       </div>
                       <div class="flex justify-end">
-                        <button type="submit" class="inline-flex items-center rounded-md bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600">
+                        <button type="submit" class="mt-4 mb-4 inline-flex items-center rounded-md bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600">
                           Guardar cambios
                         </button>
                       </div>
@@ -293,23 +285,12 @@
                               <p class="mt-1 inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium {{ item.is_active|yesno:'bg-emerald-100 text-emerald-700,bg-yellow-100 text-yellow-700' }}">
                                 {{ item.is_active|yesno:'Activa,Inactiva' }}
                               </p>
-                              {% if item.start_date or item.end_date %}
-                                <p class="mt-1 text-xs text-gray-500">
-                                  Vigencia:
-                                  {% if item.start_date %}
-                                    desde {{ item.start_date|date:'d/m/Y' }}
-                                  {% endif %}
-                                  {% if item.end_date %}
-                                    hasta {{ item.end_date|date:'d/m/Y' }}
-                                  {% endif %}
-                                </p>
-                              {% endif %}
                             </div>
                             <form method="post" class="flex items-center gap-2">
                               {% csrf_token %}
                               <input type="hidden" name="action" value="delete_assignment">
                               <input type="hidden" name="assignment_id" value="{{ item.object.id }}">
-                              <button type="submit" class="inline-flex items-center rounded-md border border-red-200 px-3 py-1.5 text-xs font-semibold text-red-600 hover:bg-red-50">Eliminar</button>
+                              <button type="submit" class="mt-4 mb-4 inline-flex items-center rounded-md border border-red-200 px-3 py-1.5 text-xs font-semibold text-red-600 hover:bg-red-50">Eliminar</button>
                             </form>
                           </div>
                           <details class="group mt-4">
@@ -347,22 +328,6 @@
                                     <p class="mt-1 text-xs text-red-600">{{ error }}</p>
                                   {% endfor %}
                                 </div>
-                                <div class="grid gap-3 sm:grid-cols-2">
-                                  <div>
-                                    <label for="{{ item.form.start_date.id_for_label }}" class="text-xs font-medium text-gray-700">{{ item.form.start_date.label }}</label>
-                                    {{ item.form.start_date }}
-                                    {% for error in item.form.start_date.errors %}
-                                      <p class="mt-1 text-xs text-red-600">{{ error }}</p>
-                                    {% endfor %}
-                                  </div>
-                                  <div>
-                                    <label for="{{ item.form.end_date.id_for_label }}" class="text-xs font-medium text-gray-700">{{ item.form.end_date.label }}</label>
-                                    {{ item.form.end_date }}
-                                    {% for error in item.form.end_date.errors %}
-                                      <p class="mt-1 text-xs text-red-600">{{ error }}</p>
-                                    {% endfor %}
-                                  </div>
-                                </div>
                                 <div class="flex items-center gap-2">
                                   {{ item.form.is_active }}
                                   <label for="{{ item.form.is_active.id_for_label }}" class="text-xs font-medium text-gray-700">{{ item.form.is_active.label }}</label>
@@ -371,7 +336,7 @@
                                   <p class="mt-1 text-xs text-red-600">{{ error }}</p>
                                 {% endfor %}
                                 <div class="flex justify-end">
-                                  <button type="submit" class="inline-flex items-center rounded-md bg-indigo-600 px-3 py-1.5 text-xs font-semibold text-white shadow-sm hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600">
+                                  <button type="submit" class="mt-4 mb-4 inline-flex items-center rounded-md bg-indigo-600 px-3 py-1.5 text-xs font-semibold text-white shadow-sm hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600">
                                     Actualizar asignación
                                   </button>
                                 </div>
