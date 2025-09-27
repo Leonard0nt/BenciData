@@ -210,12 +210,6 @@ class Nozzle(models.Model):
         verbose_name="Máquina",
     )
     number = models.PositiveIntegerField("Número")
-    initial_numeral = models.DecimalField(
-        "Numeral inicial", max_digits=12, decimal_places=2, default=0
-    )
-    final_numeral = models.DecimalField(
-        "Numeral final", max_digits=12, decimal_places=2, default=0
-    )
     fuel_type = models.CharField("Tipo de combustible", max_length=50, blank=True)
     description = models.CharField("Descripción", max_length=255, blank=True)
     created_at = models.DateTimeField("Fecha de creación", auto_now_add=True)
