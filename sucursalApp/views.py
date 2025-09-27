@@ -95,10 +95,12 @@ class SucursalUpdateView(OwnerCompanyMixin, UpdateView):
             .prefetch_related(
                 Prefetch(
                     "branch_islands",
-                    queryset=Island.objects.prefetch_related(
+                    queryset=Island.objects.order_by("number").prefetch_related(
                         Prefetch(
                             "machines",
-                            queryset=Machine.objects.prefetch_related("nozzles"),
+                            queryset=Machine.objects.order_by("number").prefetch_related(
+                                "nozzles"
+                            ),
                         )
                     ),
                 ),
@@ -119,17 +121,7 @@ class SucursalUpdateView(OwnerCompanyMixin, UpdateView):
     def get_context_data(self, **kwargs: Any) -> Dict[str, Any]:
         context = super().get_context_data(**kwargs)
         if self.object:
-            context["islands"] = (
-                self.object.branch_islands.order_by("number")
-                .prefetch_related(
-                    Prefetch(
-                        "machines",
-                        queryset=Machine.objects.order_by("number").prefetch_related(
-                            "nozzles"
-                        ),
-                    )
-                )
-            )
+            context["islands"] = self.object.branch_islands.all()
             context["island_create_form"] = IslandForm(
                 initial={"sucursal": self.object}, auto_id="new-island_%s"
             )
