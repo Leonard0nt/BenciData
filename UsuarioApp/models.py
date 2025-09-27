@@ -13,6 +13,9 @@ import os
 from utils.customer_img import resize_image, crop_image, handle_old_image
 
 
+RESTRICTED_PERMISSION_CODE = "RESTRICTED"
+
+
 def profile_picture_path(instance, filename):
     random_filename = str(uuid.uuid4())
     extension = os.path.splitext(filename)[1]
@@ -128,7 +131,7 @@ class Profile(models.Model):
 
         code = self.position_FK.permission_code
         if roles is None:
-            return code != "OWNER"
+            return code != RESTRICTED_PERMISSION_CODE
 
         if isinstance(roles, str):
             roles = [roles]

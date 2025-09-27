@@ -54,7 +54,7 @@ class UserListView(LoginRequiredMixin, ListView):
 
         if profile:
             if is_owner:
-                company = getattr(profile, "company", None)
+                company = Company.objects.filter(profile=profile).first()
                 if company:
                     company_rut = company.rut
                     branches_qs = company.branches.all()
@@ -266,7 +266,7 @@ class UserCreateView(LoginRequiredMixin, PermitsPositionMixin, View):
             profile.user_FK = user
             owner_profile = getattr(request.user, "profile", None)
             if owner_profile is not None:
-                company = getattr(owner_profile, "company", None)
+                company = Company.objects.filter(profile=owner_profile).first()
                 if company is not None:
                     profile.company_rut = company.rut
                 else:
