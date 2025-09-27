@@ -4831,3 +4831,11 @@ summary::-webkit-details-marker {
 summary {
   appearance: none;
 }
+
+.bg-red-600{
+  background-color: red;
+}
+
+.text-red-600 {
+  color: red;
+}

@@ -12,7 +12,7 @@ from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.auth.models import User
 from crispy_forms.helper import FormHelper
 from django.contrib.auth import update_session_auth_hash
-from django.shortcuts import redirect, render
+from django.shortcuts import get_object_or_404, redirect, render
 from django.db.models import Q
 from typing import Any
 
@@ -242,6 +242,12 @@ class UserListView(LoginRequiredMixin, ListView):
         context["placeholder"] = "Buscar por usuario, nombre o apellido "
         context["search_query"] = self.request.GET.get("search", "")
         context["branch_groups"] = branch_groups
+        context["is_owner"] = access.get("is_owner", False)
+        context["is_admin"] = access.get("is_admin", False)
+        context["can_manage_users"] = access.get("is_owner", False) or access.get(
+            "is_admin", False
+        )
+        context["request_user_id"] = getattr(self.request.user, "id", None)
         return context
 
 
@@ -434,3 +440,98 @@ class CompanyUpdateView(LoginRequiredMixin, RoleRequiredMixin, View):
 
         messages.error(request, "Corrige los errores para continuar.")
         return render(request, self.template_name, {"form": form})
+
+
+class UserDeleteView(LoginRequiredMixin, RoleRequiredMixin, View):
+    allowed_roles = ["OWNER", "ADMINISTRATOR"]
+
+    def _get_company_rut(self, profile: Profile | None) -> str | None:
+        if profile is None:
+            return None
+        company = Company.objects.filter(profile=profile).first()
+        if company is not None:
+            return company.rut
+        if profile.company_rut:
+            return Company.normalize_rut(profile.company_rut)
+        return None
+
+    def _get_branch_ids(self, profile: Profile | None) -> list[int]:
+        if profile is None:
+            return []
+        branch_ids = list(
+            SucursalStaff.objects.filter(profile=profile).values_list(
+                "sucursal_id", flat=True
+            )
+        )
+        if profile.current_branch_id:
+            branch_ids.append(profile.current_branch_id)
+        return list(dict.fromkeys(branch_ids))
+
+    def _target_within_scope(self, viewer_profile: Profile | None, target: User) -> bool:
+        if viewer_profile is None:
+            return False
+        target_profile = getattr(target, "profile", None)
+        if target_profile is None:
+            return False
+
+        if viewer_profile.is_owner():
+            viewer_company_rut = self._get_company_rut(viewer_profile)
+            target_company_rut = self._get_company_rut(target_profile)
+            return bool(
+                viewer_company_rut and target_company_rut
+                and viewer_company_rut == target_company_rut
+            )
+
+        if viewer_profile.is_admin():
+            accessible_branch_ids = set(self._get_branch_ids(viewer_profile))
+            if not accessible_branch_ids:
+                return False
+            target_branch_ids = set()
+            if target_profile.current_branch_id:
+                target_branch_ids.add(target_profile.current_branch_id)
+            target_branch_ids.update(
+                SucursalStaff.objects.filter(profile=target_profile).values_list(
+                    "sucursal_id", flat=True
+                )
+            )
+            return bool(accessible_branch_ids & target_branch_ids)
+
+        return False
+
+    def post(self, request, *args, **kwargs):
+        target_user = get_object_or_404(
+            User.objects.select_related("profile"), pk=kwargs.get("pk")
+        )
+
+        if target_user == request.user:
+            messages.error(request, "No puedes desactivar tu propia cuenta.")
+            return redirect("User")
+
+        if target_user.is_superuser:
+            messages.error(
+                request,
+                "No es posible desactivar a un superusuario desde esta interfaz.",
+            )
+            return redirect("User")
+
+        viewer_profile = getattr(request.user, "profile", None)
+        if not self._target_within_scope(viewer_profile, target_user):
+            messages.error(
+                request,
+                "No tienes permisos para desactivar este usuario.",
+            )
+            return redirect("User")
+
+        target_profile = getattr(target_user, "profile", None)
+        if target_profile is not None:
+            SucursalStaff.objects.filter(profile=target_profile).delete()
+
+        if target_user.is_active:
+            target_user.is_active = False
+            target_user.save(update_fields=["is_active"])
+
+        messages.success(
+            request,
+            f"El usuario {target_user.get_full_name() or target_user.username} fue desactivado correctamente.",
+        )
+        return redirect("User")

@@ -1,5 +1,6 @@
 from typing import Any, Dict
 
+from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.db.models import Prefetch, QuerySet
 from django.http import HttpResponseRedirect
@@ -8,7 +9,7 @@ from django.urls import reverse, reverse_lazy
 
 from django.views import View
 
-from django.views.generic import CreateView, ListView, UpdateView
+from django.views.generic import CreateView, DeleteView, ListView, UpdateView
 from django.views.generic.edit import FormMixin
 
 from core.mixins import RoleRequiredMixin
@@ -148,6 +149,23 @@ class SucursalUpdateView(OwnerCompanyMixin, UpdateView):
             context.setdefault("islands", [])
         return context
 
+
+class SucursalDeleteView(OwnerCompanyMixin, DeleteView):
+    model = Sucursal
+    success_url = reverse_lazy("sucursal_list")
+
+    def get_queryset(self) -> QuerySet[Sucursal]:
+        company = self.get_company()
+        if company is None:
+            return Sucursal.objects.none()
+        return Sucursal.objects.filter(company=company)
+
+    def delete(self, request, *args, **kwargs):
+        self.object = self.get_object()
+        sucursal_name = self.object.name
+        response = super().delete(request, *args, **kwargs)
+        messages.success(request, f"Sucursal '{sucursal_name}' eliminada con éxito.")
+        return response
 
 class BranchAccessMixin(OwnerCompanyMixin):
     branch_url_kwarg = "branch_pk"

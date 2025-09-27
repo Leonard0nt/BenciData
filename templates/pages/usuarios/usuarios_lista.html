@@ -45,6 +45,7 @@
                         <th scope="col" class="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Rol y sucursal</th>
                         <th scope="col" class="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Estado</th>
                         <th scope="col" class="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Última actividad</th>
+                        <th scope="col" class="px-3 py-3.5 text-right text-sm font-semibold text-gray-900">Acciones</th>
                       </tr>
                     </thead>
                     <tbody class="divide-y divide-gray-100 bg-white">
@@ -88,6 +89,22 @@
                                 <span class="text-gray-400">Sin registro</span>
                               {% endif %}
                             {% endwith %}
+                          </td>
+                          <td class="whitespace-nowrap px-3 py-4 text-sm text-right">
+                            {% if can_manage_users and row.is_active and row.id != request_user_id %}
+                              <form method="post" action="{% url 'UserDelete' row.id %}" class="inline-flex"
+                                onsubmit="return confirm('¿Estás seguro de desactivar a {{ row.full_name }}?');">
+                                {% csrf_token %}
+                                <button type="submit"
+                                  class="bg-red-600 items-center rounded-md bg-red-600 px-3 py-1.5 text-xs font-semibold text-white shadow-sm hover:bg-red-500 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2">
+                                  Desactivar
+                                </button>
+                              </form>
+                            {% elif not row.is_active %}
+                              <span class="text-gray-400">Inactivo</span>
+                            {% else %}
+                              <span class="text-gray-400">-</span>
+                            {% endif %}
                           </td>
                         </tr>
                       {% endfor %}

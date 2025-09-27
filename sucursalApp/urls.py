@@ -6,6 +6,7 @@ urlpatterns = [
     path("", views.SucursalListView.as_view(), name="sucursal_list"),
     path("nueva/", views.SucursalCreateView.as_view(), name="sucursal_create"),
     path("<int:pk>/editar/", views.SucursalUpdateView.as_view(), name="sucursal_update"),
+    path("<int:pk>/eliminar/", views.SucursalDeleteView.as_view(), name="sucursal_delete"),
     path(
         "<int:branch_pk>/islas/nueva/",
         views.IslandCreateView.as_view(),
