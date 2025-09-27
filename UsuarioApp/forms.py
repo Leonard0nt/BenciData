@@ -167,7 +167,13 @@ class ProfileUpdateForm(forms.ModelForm):
 
     def clean_phone(self):
         phone = self.cleaned_data.get("phone")
+        if not phone:
+            return phone
+
         api_key = os.getenv("PHONE_API_KEY")
+
+        if not api_key:
+            return phone
 
         params = {"access_key": api_key, "number": phone}
         try:
