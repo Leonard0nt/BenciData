@@ -504,13 +504,13 @@ class UserDeleteView(LoginRequiredMixin, RoleRequiredMixin, View):
         )
 
         if target_user == request.user:
-            messages.error(request, "No puedes desactivar tu propia cuenta.")
+            messages.error(request, "No puedes eliminar tu propia cuenta.")
             return redirect("User")
 
         if target_user.is_superuser:
             messages.error(
                 request,
-                "No es posible desactivar a un superusuario desde esta interfaz.",
+                "No es posible eliminar a un superusuario desde esta interfaz.",
             )
             return redirect("User")
 
@@ -518,20 +518,15 @@ class UserDeleteView(LoginRequiredMixin, RoleRequiredMixin, View):
         if not self._target_within_scope(viewer_profile, target_user):
             messages.error(
                 request,
-                "No tienes permisos para desactivar este usuario.",
+                "No tienes permisos para eliminar este usuario.",
             )
             return redirect("User")
 
-        target_profile = getattr(target_user, "profile", None)
-        if target_profile is not None:
-            SucursalStaff.objects.filter(profile=target_profile).delete()
-
-        if target_user.is_active:
-            target_user.is_active = False
-            target_user.save(update_fields=["is_active"])
+        target_name = target_user.get_full_name() or target_user.username
+        target_user.delete()
 
         messages.success(
             request,
-            f"El usuario {target_user.get_full_name() or target_user.username} fue desactivado correctamente.",
+            f"El usuario {target_name} fue eliminado correctamente.",
         )
         return redirect("User")

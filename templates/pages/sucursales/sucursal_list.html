@@ -17,7 +17,6 @@
         <thead class="bg-gray-50">
           <tr>
             <th scope="col" class="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Nombre</th>
-            <th scope="col" class="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Dirección</th>
             <th scope="col" class="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Ciudad</th>
             <th scope="col" class="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Región</th>
             <th scope="col" class="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Administradores</th>
@@ -32,7 +31,6 @@
           {% for sucursal in sucursales %}
             <tr>
               <td class="whitespace-nowrap px-3 py-4 text-sm text-gray-900 font-medium">{{ sucursal.name }}</td>
-              <td class="whitespace-nowrap px-3 py-4 text-sm text-gray-500">{{ sucursal.address }}</td>
               <td class="whitespace-nowrap px-3 py-4 text-sm text-gray-500">{{ sucursal.city }}</td>
               <td class="whitespace-nowrap px-3 py-4 text-sm text-gray-500">{{ sucursal.region }}</td>
               <td class="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
