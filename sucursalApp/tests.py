@@ -93,8 +93,6 @@ class SucursalRelatedViewsTests(TestCase):
             {
                 "machine": machine.pk,
                 "number": 1,
-                "initial_numeral": "5.00",
-                "final_numeral": "15.00",
                 "fuel_type": "Gasolina 93",
                 "description": "Pistola 1",
             },
@@ -156,8 +154,6 @@ class SucursalRelatedViewsTests(TestCase):
         nozzle_data = {
             nozzle_form["machine"].html_name: machine.pk,
             nozzle_form["number"].html_name: 9,
-            nozzle_form["initial_numeral"].html_name: "200.00",
-            nozzle_form["final_numeral"].html_name: "250.00",
             nozzle_form["fuel_type"].html_name: "Diesel",
             nozzle_form["description"].html_name: "Pistola inline",
         }
@@ -188,8 +184,6 @@ class SucursalRelatedViewsTests(TestCase):
         nozzle = Nozzle.objects.create(
             machine=machine,
             number=2,
-            initial_numeral=0,
-            final_numeral=0,
             fuel_type="93",
             description="Pistola original",
         )
@@ -239,8 +233,6 @@ class SucursalRelatedViewsTests(TestCase):
             {
                 "machine": machine.pk,
                 "number": 5,
-                "initial_numeral": "50.00",
-                "final_numeral": "60.00",
                 "fuel_type": "Diesel",
                 "description": "Pistola editada",
             },

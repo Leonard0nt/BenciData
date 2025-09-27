@@ -59,6 +59,6 @@ class MachineAdmin(admin.ModelAdmin):
 
 @admin.register(Nozzle)
 class NozzleAdmin(admin.ModelAdmin):
-    list_display = ("number", "machine", "fuel_type", "initial_numeral", "final_numeral")
+    list_display = ("number", "machine", "fuel_type")
     list_filter = ("machine__island__sucursal", "fuel_type")
     search_fields = ("number", "machine__island__sucursal__name")
