@@ -109,6 +109,69 @@ class SucursalRelatedViewsTests(TestCase):
         self.assertEqual(island.sucursal, self.branch)
         self.assertEqual(machine.island, island)
         self.assertEqual(nozzle.machine, machine)
+    def test_inline_create_forms_accept_template_field_names(self):
+        update_url = reverse("sucursal_update", args=[self.branch.pk])
+        response = self.client.get(update_url)
+        island_form = response.context["island_create_form"]
+        island_data = {
+            island_form["sucursal"].html_name: self.branch.pk,
+            island_form["number"].html_name: 7,
+            island_form["description"].html_name: "Isla inline",
+        }
+        island_create_url = reverse("sucursal_island_create", args=[self.branch.pk])
+        response = self.client.post(island_create_url, island_data)
+        self.assertRedirects(
+            response,
+            reverse("sucursal_update", args=[self.branch.pk]),
+            fetch_redirect_response=False,
+        )
+        island = Island.objects.get(number=7, sucursal=self.branch)
+
+        response = self.client.get(update_url)
+        island_from_context = list(response.context["islands"])[0]
+        machine_form = island_from_context.machine_create_form
+        machine_data = {
+            machine_form["island"].html_name: island.pk,
+            machine_form["number"].html_name: 3,
+            machine_form["initial_numeral"].html_name: "100.00",
+            machine_form["final_numeral"].html_name: "150.00",
+            machine_form["fuel_type"].html_name: "Gasolina 97",
+            machine_form["description"].html_name: "Máquina inline",
+        }
+        machine_create_url = reverse(
+            "sucursal_machine_create", args=[self.branch.pk, island.pk]
+        )
+        response = self.client.post(machine_create_url, machine_data)
+        self.assertRedirects(
+            response,
+            reverse("sucursal_update", args=[self.branch.pk]),
+            fetch_redirect_response=False,
+        )
+        machine = Machine.objects.get(number=3, island=island)
+
+        response = self.client.get(update_url)
+        island_from_context = list(response.context["islands"])[0]
+        machine_from_context = list(island_from_context.machines.all())[0]
+        nozzle_form = machine_from_context.nozzle_create_form
+        nozzle_data = {
+            nozzle_form["machine"].html_name: machine.pk,
+            nozzle_form["number"].html_name: 9,
+            nozzle_form["initial_numeral"].html_name: "200.00",
+            nozzle_form["final_numeral"].html_name: "250.00",
+            nozzle_form["fuel_type"].html_name: "Diesel",
+            nozzle_form["description"].html_name: "Pistola inline",
+        }
+        nozzle_create_url = reverse("sucursal_nozzle_create", args=[machine.pk])
+        response = self.client.post(nozzle_create_url, nozzle_data)
+        self.assertRedirects(
+            response,
+            reverse("sucursal_update", args=[self.branch.pk]),
+            fetch_redirect_response=False,
+        )
+
+        self.assertTrue(
+            Nozzle.objects.filter(number=9, machine=machine, description="Pistola inline").exists()
+        )
 
     def test_owner_can_edit_related_entities(self):
         island = Island.objects.create(

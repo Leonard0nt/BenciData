@@ -131,18 +131,18 @@ class SucursalUpdateView(OwnerCompanyMixin, UpdateView):
                 )
             )
             context["island_create_form"] = IslandForm(
-                prefix="new-island", initial={"sucursal": self.object}
+                initial={"sucursal": self.object}, auto_id="new-island_%s"
             )
             context["island_create_url"] = reverse(
                 "sucursal_island_create", args=[self.object.pk]
             )
             for island in context["islands"]:
                 island.machine_create_form = MachineForm(
-                    prefix=f"new-machine-{island.pk}", initial={"island": island}
+                    initial={"island": island}, auto_id=f"new-machine-{island.pk}_%s"
                 )
                 for machine in island.machines.all():
                     machine.nozzle_create_form = NozzleForm(
-                        prefix=f"new-nozzle-{machine.pk}",
+                        auto_id=f"new-nozzle-{machine.pk}_%s",
                         initial={"machine": machine},
                     )
         else:
