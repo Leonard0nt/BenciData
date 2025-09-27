@@ -49,18 +49,6 @@
             Usuarios
           </a>
         </li>
-        {% if user.profile.is_owner or user.profile.is_admin %}
-          <li>
-            <a href="{% url 'user_shift_management' %}" class=" menu-item {% if request.path == '/usuarios/turnos/' %}text-white bg-current {% else %}  text-gray-400 hover:text-white hover:bg-gray-800 {% endif %}">
-              <svg class="h-6 w-6 shrink-0" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" aria-hidden="true">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M8.25 6.75a.75.75 0 01.75-.75h10.5a.75.75 0 01.75.75V9a.75.75 0 01-.75.75H9a.75.75 0 01-.75-.75V6.75z" />
-                <path stroke-linecap="round" stroke-linejoin="round" d="M3 6.75A2.25 2.25 0 015.25 4.5h1.5A2.25 2.25 0 019 6.75v10.5A2.25 2.25 0 016.75 19.5h-1.5A2.25 2.25 0 013 17.25V6.75z" />
-                <path stroke-linecap="round" stroke-linejoin="round" d="M9 9.75h11.25M9 12.75h11.25M9 15.75h11.25" />
-              </svg>
-              Gestión de turnos
-            </a>
-          </li>
-        {% endif %}
         <div class="text-xs font-semibold leading-6 text-gray-400"></div>
       <ul class="flex flex-1 flex-col space-y-1">
         {% if user.is_authenticated %}
