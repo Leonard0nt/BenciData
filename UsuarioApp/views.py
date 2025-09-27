@@ -14,21 +14,20 @@ from crispy_forms.helper import FormHelper
 from django.contrib.auth import update_session_auth_hash
 from django.shortcuts import redirect, render
 from django.db.models import Q
-from collections import defaultdict
 from typing import Any
 
 from django.utils import timezone
-from django.utils.text import slugify
 from django.templatetags.static import static
 from allauth.account.models import EmailAddress
 from django.contrib import messages
-from django.urls import reverse, reverse_lazy
+from django.urls import reverse_lazy
 from core.mixins import PermitsPositionMixin, RoleRequiredMixin
 from .models import Profile
-from sucursalApp.models import Shift, ShiftAssignment, Sucursal, SucursalStaff
+from sucursalApp.models import Sucursal, SucursalStaff
 from homeApp.models import Company
 
 # Create your views here.
+
 
 
 
@@ -125,16 +124,15 @@ class UserListView(LoginRequiredMixin, ListView):
         context = super().get_context_data(**kwargs)
 
         access = self._get_access_scope()
-        branch_ids = set(access.get("branch_ids", []))
         accessible_branches: list[Sucursal] = access.get("branches", [])
-
-        branch_lookup = {branch.id: branch for branch in accessible_branches}
+        branch_lookup = {branch.id: branch for branch in accessible_branches if branch}
 
         base_queryset = getattr(self, "object_list", self.get_queryset())
         filtered_users = list(
             base_queryset.select_related(
-                "profile__position_FK", "profile__current_branch"
-            )
+                "profile__position_FK",
+                "profile__current_branch",
+            ).prefetch_related("profile__sucursal_staff__sucursal")
         )
 
         user_ids = [user.id for user in filtered_users]
@@ -146,34 +144,8 @@ class UserListView(LoginRequiredMixin, ListView):
 
         cutoff_date = timezone.now() - timezone.timedelta(days=7)
 
-        user_data_map: dict[int, dict[str, Any]] = {}
-        assignments_by_user: dict[int, list[ShiftAssignment]] = defaultdict(list)
-        shift_summary_cache: dict[int, list[dict[str, str]]] = {}
-
-        assignments_qs = ShiftAssignment.objects.active().select_related(
-            "shift__sucursal",
-            "profile__user_FK",
-            "profile__position_FK",
-        ).prefetch_related("shift__schedules")
-
-        if user_ids:
-            assignments_qs = assignments_qs.filter(profile__user_FK_id__in=user_ids)
-
-        company_rut = access.get("company_rut")
-        if access["is_owner"] and company_rut:
-            assignments_qs = assignments_qs.filter(
-                shift__sucursal__company__rut=company_rut
-            )
-        elif access["is_admin"] and branch_ids:
-            assignments_qs = assignments_qs.filter(shift__sucursal_id__in=branch_ids)
-
-        for assignment in assignments_qs:
-            assignments_by_user[assignment.profile.user_FK_id].append(assignment)
-            if assignment.shift_id not in shift_summary_cache:
-                shift_summary_cache[assignment.shift_id] = assignment.shift.get_schedule_summary()
-
-        branch_groups_map: dict[Any, dict[str, Any]] = {}
-        branchless_required = False
+        branch_groups_map: dict[int | None, list[dict[str, Any]]] = {}
+        missing_branch_ids: set[int] = set()
 
         for user in filtered_users:
             try:
@@ -182,71 +154,28 @@ class UserListView(LoginRequiredMixin, ListView):
                 user_profile = None
 
             avatar_url = static("img/profile.webp")
-            if user_profile is not None and getattr(user_profile, "image", None):
+            if user_profile and getattr(user_profile, "image", None):
                 image_field = user_profile.image
                 if getattr(image_field, "url", None):
                     avatar_url = image_field.url
 
-            assignments = assignments_by_user.get(user.id, [])
-            branch_assignment_map: dict[Any, list[dict[str, Any]]] = defaultdict(list)
-            branch_names: list[str] = []
-            branch_name_set: set[str] = set()
-            user_branch_ids: set[Any] = set()
-            for assignment in assignments:
-                shift = assignment.shift
-                branch = shift.sucursal
-                branch_id = branch.id if branch else None
-                if branch_id is not None and branch_ids and branch_id not in branch_ids:
-                    continue
-
-                label = f"{shift.name} · {branch.name}" if branch else shift.name
-                branch_name = branch.name if branch else None
-                if branch_name and branch_name not in branch_name_set:
-                    branch_names.append(branch_name)
-                    branch_name_set.add(branch_name)
-
-                schedule_summary = shift_summary_cache.get(shift.id, [])
-                branch_assignment_map[branch_id].append(
-                    {
-                        "id": assignment.id,
-                        "shift_id": shift.id,
-                        "shift_name": shift.name,
-                        "branch_id": branch_id,
-                        "branch_name": branch_name,
-                        "label": label,
-                        "schedule": schedule_summary,
-                    }
-                )
-                user_branch_ids.add(branch_id)
-
-            current_branch = getattr(user_profile, "current_branch", None)
-            if current_branch and (
-                not branch_ids or current_branch.id in branch_ids
-            ):
-                if current_branch.name not in branch_name_set:
-                    branch_names.append(current_branch.name)
-                    branch_name_set.add(current_branch.name)
-                user_branch_ids.add(current_branch.id)
+            branch_ids_for_user: set[int | None] = set()
 
             if user_profile is not None:
-                for staff_membership in user_profile.sucursal_staff.select_related(
-                    "sucursal"
-                ):
-                    branch = staff_membership.sucursal
-                    if not branch:
-                        continue
-                    if branch_ids and branch.id not in branch_ids:
-                        continue
-                    user_branch_ids.add(branch.id)
-                    if branch.name not in branch_name_set:
-                        branch_names.append(branch.name)
-                        branch_name_set.add(branch.name)
+                if user_profile.current_branch_id:
+                    branch_ids_for_user.add(user_profile.current_branch_id)
+                staff_memberships = getattr(user_profile, "sucursal_staff", None)
+                if staff_memberships is not None:
+                    for membership in staff_memberships.all():
+                        if membership.sucursal_id:
+                            branch_ids_for_user.add(membership.sucursal_id)
+                            if membership.sucursal_id not in branch_lookup:
+                                missing_branch_ids.add(membership.sucursal_id)
 
-            if not user_branch_ids:
-                branchless_required = True
-                user_branch_ids.add(None)
+            if not branch_ids_for_user:
+                branch_ids_for_user.add(None)
 
-            common_entry = {
+            row_entry = {
                 "id": user.id,
                 "username": user.username,
                 "full_name": user.get_full_name() or user.username,
@@ -257,9 +186,6 @@ class UserListView(LoginRequiredMixin, ListView):
                     if user_profile and user_profile.position_FK
                     else "Sin cargo"
                 ),
-                "branch": branch_names[0] if branch_names else None,
-                "branches": branch_names,
-                "branch_id": getattr(user_profile, "current_branch_id", None),
                 "is_active": user.is_active,
                 "is_verified": user.id in verified_user_ids,
                 "profile_image": avatar_url,
@@ -268,660 +194,55 @@ class UserListView(LoginRequiredMixin, ListView):
                 "date_joined": user.date_joined,
             }
 
-            user_data_map[user.id] = {
-                "common": common_entry,
-                "branch_assignments": branch_assignment_map,
-                "branch_ids": user_branch_ids,
-            }
+            for branch_id in branch_ids_for_user:
+                branch_groups_map.setdefault(branch_id, []).append(row_entry)
 
-            for branch_id in user_branch_ids:
-                branch_groups_map.setdefault(branch_id, {"users": []})
-                branch_groups_map[branch_id]["users"].append(user.id)
-
-        if branchless_required:
-            branch_lookup[None] = None
-
-        day_order = [
-            "Lunes",
-            "Martes",
-            "Miércoles",
-            "Jueves",
-            "Viernes",
-            "Sábado",
-            "Domingo",
-        ]
-        day_sort_index = {day: index for index, day in enumerate(day_order)}
-
-        def summarize_schedule(schedule: list[dict[str, str]]) -> str:
-            if not schedule:
-                return "Sin horario configurado"
-
-            unique_ranges = {(item["start"], item["end"]) for item in schedule}
-            if len(unique_ranges) == 1:
-                start_time, end_time = unique_ranges.pop()
-                unique_days = {item["day"] for item in schedule}
-                weekday_map = set(day_order[:5])
-                if unique_days == weekday_map:
-                    day_label = "Lunes a Viernes"
-                elif len(unique_days) == 7:
-                    day_label = "Todos los días"
-                else:
-                    ordered_days = sorted(
-                        unique_days, key=lambda day: day_sort_index.get(day, 99)
-                    )
-                    day_label = ", ".join(ordered_days)
-                return f"{day_label} · {start_time} - {end_time}"
-
-            return " · ".join(
-                f"{item['day']} {item['start']} - {item['end']}" for item in schedule
-            )
-
-        shift_palette = [
-            {
-                "bg_class": "bg-sky-50",
-                "ring_class": "ring-1 ring-inset ring-sky-100",
-                "title_class": "text-sky-700",
-                "text_class": "text-sky-700",
-                "suffix_class": "text-sky-600",
-                "description_class": "text-sky-600",
-                "items_value_class": "text-sky-700",
-                "items_border_class": "border-sky-100",
-                "accent_class": "bg-sky-500",
-                "detail_class": "text-sky-600",
-            },
-            {
-                "bg_class": "bg-amber-50",
-                "ring_class": "ring-1 ring-inset ring-amber-100",
-                "title_class": "text-amber-700",
-                "text_class": "text-amber-700",
-                "suffix_class": "text-amber-600",
-                "description_class": "text-amber-600",
-                "items_value_class": "text-amber-700",
-                "items_border_class": "border-amber-100",
-                "accent_class": "bg-amber-500",
-                "detail_class": "text-amber-600",
-            },
-            {
-                "bg_class": "bg-emerald-50",
-                "ring_class": "ring-1 ring-inset ring-emerald-100",
-                "title_class": "text-emerald-700",
-                "text_class": "text-emerald-700",
-                "suffix_class": "text-emerald-600",
-                "description_class": "text-emerald-600",
-                "items_value_class": "text-emerald-700",
-                "items_border_class": "border-emerald-100",
-                "accent_class": "bg-emerald-500",
-                "detail_class": "text-emerald-600",
-            },
-            {
-                "bg_class": "bg-purple-50",
-                "ring_class": "ring-1 ring-inset ring-purple-100",
-                "title_class": "text-purple-700",
-                "text_class": "text-purple-700",
-                "suffix_class": "text-purple-600",
-                "description_class": "text-purple-600",
-                "items_value_class": "text-purple-700",
-                "items_border_class": "border-purple-100",
-                "accent_class": "bg-purple-500",
-                "detail_class": "text-purple-600",
-            },
-        ]
-
-        unassigned_palette = {
-            "bg_class": "bg-gray-50",
-            "ring_class": "ring-1 ring-inset ring-gray-200",
-            "title_class": "text-gray-700",
-            "text_class": "text-gray-700",
-            "suffix_class": "text-gray-600",
-            "description_class": "text-gray-600",
-            "items_value_class": "text-gray-700",
-            "items_border_class": "border-gray-200",
-            "accent_class": "bg-gray-400",
-            "detail_class": "text-gray-600",
-        }
-
-        branch_shift_catalog: dict[Any, dict[str, Any]] = {}
-        accessible_branch_ids = [branch.id for branch in accessible_branches if branch]
-
-        for branch in accessible_branches:
-            if not branch:
-                continue
-            create_url = reverse(
-                "shift_assignment_create",
-                kwargs={"branch_pk": branch.id},
-            )
-            branch_shift_catalog[branch.id] = {
-                "branch_id": branch.id,
-                "branch_name": branch.name,
-                "create_url": create_url,
-                "shifts": [],
-            }
-
-        if accessible_branch_ids:
-            shift_queryset = (
-                Shift.objects.filter(sucursal_id__in=accessible_branch_ids)
-                .select_related("sucursal")
-                .prefetch_related("schedules")
-                .order_by("sucursal__name", "name")
-            )
-        else:
-            shift_queryset = Shift.objects.none()
-
-        for shift in shift_queryset:
-            branch_id = shift.sucursal_id
-            branch_name = shift.sucursal.name if shift.sucursal else None
-            branch_entry = branch_shift_catalog.setdefault(
-                branch_id,
-                {
-                    "branch_id": branch_id,
-                    "branch_name": branch_name,
-                    "create_url": (
-                        reverse(
-                            "shift_assignment_create",
-                            kwargs={"branch_pk": branch_id},
-                        )
-                        if branch_id
-                        else None
-                    ),
-                    "shifts": [],
-                },
-            )
-            schedule_summary = shift.get_schedule_summary()
-            branch_entry["shifts"].append(
-                {
-                    "id": shift.id,
-                    "name": shift.name,
-                    "branch_name": branch_entry["branch_name"],
-                    "schedule_display": summarize_schedule(schedule_summary),
-                    "create_url": branch_entry["create_url"],
-                }
-            )
-
-        for branch_entry in branch_shift_catalog.values():
-            branch_entry["shifts"].sort(key=lambda item: item["name"].lower())
+        if missing_branch_ids:
+            for branch in Sucursal.objects.filter(id__in=missing_branch_ids):
+                branch_lookup.setdefault(branch.id, branch)
 
         branch_groups: list[dict[str, Any]] = []
-
-        def build_branch_group(branch_id: Any, user_ids_for_branch: list[int]) -> dict[str, Any]:
+        for branch_id, rows in branch_groups_map.items():
             branch_obj = branch_lookup.get(branch_id)
-            if branch_obj is None and branch_id is not None:
-                branch_obj = Sucursal.objects.filter(id=branch_id).first()
-                if branch_obj:
-                    branch_lookup[branch_id] = branch_obj
             branch_name = branch_obj.name if branch_obj else "Sin sucursal"
-            branch_slug = slugify(branch_name) or "sin-sucursal"
-            tab_group_id = f"user-management-tabs-{branch_slug}"
-            tab_prefix = f"tab-{branch_slug}"
-
-            branch_user_rows: list[dict[str, Any]] = []
-            branch_shift_tabs: dict[Any, dict[str, Any]] = {}
-            branch_unassigned: list[dict[str, Any]] = []
-
-            for user_id in user_ids_for_branch:
-                user_info = user_data_map.get(user_id)
-                if not user_info:
-                    continue
-
-                common = user_info["common"]
-                assignments = user_info["branch_assignments"].get(branch_id, [])
-                shift_label = (
-                    assignments[0]["label"] if assignments else "Sin turno asignado"
-                )
-
-                row_entry = {
-                    **common,
-                    "branch": branch_name,
-                    "assignments": assignments,
-                    "shift_label": shift_label,
-                    "profile_id": common["profile_id"],
-                    "branch_id": branch_id,
-                }
-
-                branch_user_rows.append(row_entry)
-
-                if assignments:
-                    for assignment in assignments:
-                        tab_slug = slugify(
-                            f"{assignment['shift_id']}-{assignment['label']}"
-                        ) or f"shift-{assignment['shift_id']}"
-                        tab_id = f"{tab_prefix}-{tab_slug}"
-                        tab_entry = branch_shift_tabs.setdefault(
-                            assignment["shift_id"],
-                            {
-                                "id": tab_id,
-                                "label": assignment["label"],
-                                "sucursal_id": assignment["branch_id"],
-                                "schedule": assignment.get("schedule", []),
-                                "users": [],
-                            },
-                        )
-
-                        tab_entry["users"].append(
-                            {
-                                "id": common["id"],
-                                "username": common["username"],
-                                "full_name": common["full_name"],
-                                "email": common["email"],
-                                "role": common["role"],
-                                "branch": branch_name,
-                                "is_active": common["is_active"],
-                                "is_verified": common["is_verified"],
-                                "shift_label": assignment["label"],
-                                "profile_image": common["profile_image"],
-                                "last_login": common["last_login"],
-                                "last_activity": common["last_activity"],
-                            }
-                        )
-                else:
-                    branch_unassigned.append(row_entry)
-
-            for tab_entry in branch_shift_tabs.values():
-                tab_entry["users"].sort(key=lambda item: item["full_name"].lower())
-                total_users = len(tab_entry["users"])
-                active_count = sum(1 for item in tab_entry["users"] if item["is_active"])
-                tab_entry["count"] = total_users
-                tab_entry["active_count"] = active_count
-                tab_entry["inactive_count"] = total_users - active_count
-
-            shift_tabs = sorted(
-                branch_shift_tabs.values(), key=lambda item: item["label"].lower()
+            row_entries = sorted(
+                (
+                    {**row, "branch": branch_name}
+                    for row in rows
+                ),
+                key=lambda item: item["full_name"].lower(),
             )
-
-            if branch_unassigned:
-                branch_unassigned.sort(key=lambda item: item["full_name"].lower())
-                assignment_options = branch_shift_catalog.get(branch_id)
-                if assignment_options is None:
-                    assignment_options = {
-                        "branch_id": getattr(branch_obj, "id", branch_id),
-                        "branch_name": branch_name,
-                        "create_url": (
-                            reverse(
-                                "shift_assignment_create",
-                                kwargs={"branch_pk": branch_id},
-                            )
-                            if branch_id
-                            else None
-                        ),
-                        "shifts": [],
-                    }
-                else:
-                    assignment_options.setdefault("branch_id", getattr(branch_obj, "id", branch_id))
-                    assignment_options.setdefault("branch_name", branch_name)
-                    assignment_options.setdefault("shifts", [])
-                shift_tabs.append(
-                    {
-                        "id": f"{tab_prefix}-sin-asignacion",
-                        "label": "Sin turno asignado",
-                        "count": len(branch_unassigned),
-                        "active_count": sum(
-                            1 for item in branch_unassigned if item["is_active"]
-                        ),
-                        "inactive_count": sum(
-                            1 for item in branch_unassigned if not item["is_active"]
-                        ),
-                        "users": branch_unassigned,
-                        "is_unassigned": True,
-                        "assignment_options": assignment_options,
-                    }
-                )
-            summary_cards: list[dict[str, Any]] = []
-
-            total_branch_users = len(branch_user_rows)
-            active_branch_users = sum(
-                1 for item in branch_user_rows if item["is_active"]
-            )
-            inactive_branch_users = total_branch_users - active_branch_users
-            recent_branch_users = sum(
+            total_users = len(row_entries)
+            active_users = sum(1 for item in row_entries if item["is_active"])
+            inactive_users = total_users - active_users
+            recent_users = sum(
                 1
-                for item in branch_user_rows
-                if item["date_joined"] and item["date_joined"] >= cutoff_date
+                for item in row_entries
+                if item.get("date_joined") and item["date_joined"] >= cutoff_date
             )
 
-            summary_cards.append(
-                {
-                    "title": "Usuarios registrados",
-                    "value": total_branch_users,
-                    "description": (
-                        f"{recent_branch_users} nuevos en los últimos 7 días · "
-                        f"{total_branch_users} en la vista"
-                    ),
-                    "bg_class": "bg-indigo-50",
-                    "ring_class": "ring-1 ring-inset ring-indigo-100",
-                    "title_class": "text-indigo-700",
-                    "text_class": "text-indigo-700",
-                    "description_class": "text-indigo-600",
-                    "suffix_class": "text-indigo-600",
-                    "accent_class": "bg-indigo-500",
-                    "detail_class": "text-indigo-600",
-                }
-            )
-            summary_cards.append(
-                {
-                    "title": "Usuarios activos",
-                    "value": active_branch_users,
-                    "description": (
-                        f"{active_branch_users} activos visibles · "
-                        f"{inactive_branch_users} inactivos"
-                    ),
-                    "bg_class": "bg-emerald-50",
-                    "ring_class": "ring-1 ring-inset ring-emerald-100",
-                    "title_class": "text-emerald-700",
-                    "text_class": "text-emerald-700",
-                    "description_class": "text-emerald-600",
-                    "suffix_class": "text-emerald-600",
-                    "accent_class": "bg-emerald-500",
-                    "detail_class": "text-emerald-600",
-                }
-            )
-
-            for index, shift in enumerate(shift_tabs):
-                schedule_summary = shift.get("schedule", [])
-                if schedule_summary:
-                    description = summarize_schedule(schedule_summary)
-                elif "sin-asignacion" in shift["id"]:
-                    description = "Usuarios sin turno asignado"
-                else:
-                    description = "Sin horario configurado"
-
-                card_entry = {
-                    "title": shift["label"],
-                    "value": shift.get("active_count", 0),
-                    "suffix": f"de {shift.get('count', 0)} usuarios",
-                    "description": description,
-                    "items": [
-                        {
-                            "label": "Cobertura",
-                            "value": shift.get("active_count", 0),
-                            "total": shift.get("count", 0),
-                        },
-                        {
-                            "label": "Inactivos",
-                            "value": shift.get("inactive_count", 0),
-                            "total": None,
-                        },
-                    ],
-                }
-
-                if "sin-asignacion" in shift["id"]:
-                    card_entry.update(unassigned_palette)
-                else:
-                    palette = (
-                        shift_palette[index % len(shift_palette)]
-                        if shift_palette
-                        else {}
-                    )
-                    card_entry.update(palette)
-
-                summary_cards.append(card_entry)
-
-            tab_navigation = [
-                {
-                    "id": f"{tab_prefix}-usuarios-todos",
-                    "label": "Todos",
-                    "count": total_branch_users,
-                    "is_active": True,
-                }
-            ]
-            tab_navigation.extend(
-                {
-                    "id": shift["id"],
-                    "label": shift["label"],
-                    "count": shift.get("count", 0),
-                    "is_active": False,
-                }
-                for shift in shift_tabs
-            )
-
-            return {
-                "branch": {
-                    "id": getattr(branch_obj, "id", None),
-                    "name": branch_name,
-                },
-                "tab_group_id": tab_group_id,
-                "tab_navigation": tab_navigation,
-                "shift_tabs": shift_tabs,
-                "summary_cards": summary_cards,
-                "user_rows": branch_user_rows,
-            }
-
-        ordered_branch_ids: list[Any] = [branch.id for branch in accessible_branches]
-        if branchless_required:
-            ordered_branch_ids.append(None)
-
-        for branch_id in branch_groups_map.keys():
-            if branch_id not in ordered_branch_ids:
-                ordered_branch_ids.append(branch_id)
-
-        for branch_id in ordered_branch_ids:
-            user_ids_for_branch = branch_groups_map.get(branch_id, {}).get("users", [])
-            if not user_ids_for_branch and branch_id is not None:
-                continue
-            group = build_branch_group(branch_id, user_ids_for_branch)
-            branch_groups.append(group)
-
-        if not branch_groups and branch_groups_map.get(None):
             branch_groups.append(
-                build_branch_group(None, branch_groups_map.get(None, {}).get("users", []))
+                {
+                    "branch": {
+                        "id": getattr(branch_obj, "id", None),
+                        "name": branch_name,
+                    },
+                    "users": row_entries,
+                    "summary": {
+                        "total_users": total_users,
+                        "active_users": active_users,
+                        "inactive_users": inactive_users,
+                        "recent_users": recent_users,
+                    },
+                }
             )
+
+        branch_groups.sort(key=lambda group: group["branch"]["name"].lower())
 
         context["placeholder"] = "Buscar por usuario, nombre o apellido "
         context["search_query"] = self.request.GET.get("search", "")
         context["branch_groups"] = branch_groups
         return context
-
-class UserShiftManagementView(LoginRequiredMixin, View):
-    template_name = "pages/usuarios/gestion_turnos.html"
-
-    def get(self, request, *args, **kwargs):
-        profiles = (
-            Profile.objects.select_related(
-                "user_FK", "position_FK", "current_branch"
-            )
-            .prefetch_related(
-                "shift_assignments__shift__sucursal",
-                "shift_assignments__shift__schedules",
-            )
-            .order_by(
-                "user_FK__first_name",
-                "user_FK__last_name",
-                "user_FK__username",
-            )
-        )
-
-        request_profile = getattr(request.user, "profile", None)
-        company_rut: str | None = None
-        allowed_branch_ids: set[int] = set()
-        allowed_branches_qs = Sucursal.objects.none()
-
-        if request_profile is None:
-            profiles = profiles.none()
-        else:
-            if request_profile.is_owner():
-                company = getattr(request_profile, "company", None)
-                if company is not None:
-                    company_rut = company.rut
-                    allowed_branches_qs = company.branches.all()
-                elif request_profile.company_rut:
-                    company_rut = Company.normalize_rut(request_profile.company_rut)
-                    allowed_branches_qs = Sucursal.objects.filter(
-                        company__rut=company_rut
-                    )
-                allowed_branch_ids = set(
-                    allowed_branches_qs.values_list("id", flat=True)
-                )
-                if company_rut:
-                    profiles = profiles.filter(company_rut=company_rut)
-                else:
-                    profiles = profiles.none()
-            elif request_profile.is_admin():
-                allowed_branch_ids = set(
-                    SucursalStaff.objects.filter(profile=request_profile)
-                    .values_list("sucursal_id", flat=True)
-                )
-                if request_profile.current_branch_id:
-                    allowed_branch_ids.add(request_profile.current_branch_id)
-                if allowed_branch_ids:
-                    allowed_branches_qs = Sucursal.objects.filter(
-                        id__in=allowed_branch_ids
-                    )
-                    profiles = profiles.filter(
-                        Q(current_branch_id__in=allowed_branch_ids)
-                        | Q(
-                            shift_assignments__shift__sucursal_id__in=allowed_branch_ids
-                        )
-                        | Q(sucursal_staff__sucursal_id__in=allowed_branch_ids)
-                    )
-                else:
-                    profiles = profiles.filter(pk=request_profile.pk)
-            else:
-                if request_profile.current_branch_id:
-                    allowed_branch_ids = {request_profile.current_branch_id}
-                    allowed_branches_qs = Sucursal.objects.filter(
-                        id__in=allowed_branch_ids
-                    )
-                profiles = profiles.filter(pk=request_profile.pk)
-
-        profiles = profiles.distinct()
-
-        allowed_branches = list(allowed_branches_qs.order_by("name"))
-        allowed_branch_ids = set(
-            branch.id for branch in allowed_branches if branch is not None
-        )
-
-        employees: list[dict[str, Any]] = []
-        assigned_employees = 0
-        total_assignments = 0
-
-        def summarize_schedule(schedule: list[dict[str, str]]) -> str:
-            if not schedule:
-                return ""
-            return ", ".join(
-                f"{item['day']} {item['start']}-{item['end']}" for item in schedule
-            )
-
-        for profile in profiles:
-            user = profile.user_FK
-            assignments: list[dict[str, Any]] = []
-
-            for assignment in profile.shift_assignments.all():
-                shift = assignment.shift
-                if allowed_branch_ids and shift.sucursal_id not in allowed_branch_ids:
-                    continue
-                schedule_summary = shift.get_schedule_summary()
-                assignments.append(
-                    {
-                        "id": assignment.id,
-                        "shift_id": shift.id,
-                        "shift_name": shift.name,
-                        "branch_id": shift.sucursal_id,
-                        "branch_name": shift.sucursal.name,
-                        "schedule": schedule_summary,
-                        "schedule_display": summarize_schedule(schedule_summary),
-                        "is_active": assignment.is_current(),
-                        "delete_url": reverse(
-                            "shift_assignment_delete", kwargs={"pk": assignment.pk}
-                        ),
-                    }
-                )
-
-            assignments.sort(key=lambda item: item["shift_name"].lower())
-
-            if assignments:
-                assigned_employees += 1
-                total_assignments += len(assignments)
-
-            current_branch_name = None
-            if profile.current_branch and (
-                not allowed_branch_ids
-                or profile.current_branch_id in allowed_branch_ids
-            ):
-                current_branch_name = profile.current_branch.name
-
-            employees.append(
-                {
-                    "id": user.id,
-                    "profile_id": profile.id,
-                    "full_name": user.get_full_name() or user.username,
-                    "username": user.username,
-                    "email": user.email,
-                    "role": (
-                        profile.position_FK.user_position
-                        if profile.position_FK
-                        else "Sin cargo"
-                    ),
-                    "branch": current_branch_name,
-                    "is_active": user.is_active,
-                    "assignments": assignments,
-                }
-            )
-
-        shift_queryset = (
-            Shift.objects.select_related("sucursal")
-            .prefetch_related("schedules")
-            .order_by("sucursal__name", "name")
-        )
-
-        if allowed_branch_ids:
-            shift_queryset = shift_queryset.filter(sucursal_id__in=allowed_branch_ids)
-        elif company_rut:
-            shift_queryset = shift_queryset.filter(sucursal__company__rut=company_rut)
-        else:
-            shift_queryset = shift_queryset.none()
-
-        branch_map: dict[int, dict[str, Any]] = {}
-        for branch in allowed_branches:
-            create_url = reverse(
-                "shift_assignment_create",
-                kwargs={"branch_pk": branch.id},
-            )
-            branch_map[branch.id] = {
-                "id": branch.id,
-                "name": branch.name,
-                "create_url": create_url,
-                "shifts": [],
-            }
-
-        shift_choices: list[dict[str, Any]] = []
-
-        for shift in shift_queryset:
-            schedule_summary = shift.get_schedule_summary()
-            create_url = reverse(
-                "shift_assignment_create",
-                kwargs={"branch_pk": shift.sucursal_id},
-            )
-            branch_entry = branch_map.get(shift.sucursal_id)
-            if branch_entry is None:
-                continue
-            shift_entry = {
-                "id": shift.id,
-                "name": shift.name,
-                "description": shift.description,
-                "branch_id": shift.sucursal_id,
-                "branch_name": shift.sucursal.name,
-                "schedule": schedule_summary,
-                "schedule_display": summarize_schedule(schedule_summary),
-                "create_url": create_url,
-            }
-            branch_entry["shifts"].append(shift_entry)
-            shift_choices.append(shift_entry)
-
-        branches = sorted(branch_map.values(), key=lambda item: item["name"].lower())
-        total_employees = len(employees)
-        unassigned_employees = total_employees - assigned_employees
-
-        context = {
-            "employees": employees,
-            "shift_choices": shift_choices,
-            "branches": branches,
-            "summary": {
-                "total_employees": total_employees,
-                "assigned_employees": assigned_employees,
-                "unassigned_employees": unassigned_employees,
-                "total_assignments": total_assignments,
-            },
-        }
-
-        return render(request, self.template_name, context)
 
 
 class UserCreateView(LoginRequiredMixin, PermitsPositionMixin, View):
