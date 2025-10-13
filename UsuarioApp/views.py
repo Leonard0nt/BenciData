@@ -399,6 +399,64 @@ class ConfigurationView(LoginRequiredMixin, ProfileFormProcessingMixin, View):
             extra_context=extra_context,
         )
 
+class UserManagementScopeMixin:
+    """Provide helper methods to validate user management scope."""
+
+    def _get_company_rut(self, profile: Profile | None) -> str | None:
+        if profile is None:
+            return None
+        company = Company.objects.filter(profile=profile).first()
+        if company is not None:
+            return company.rut
+        if profile.company_rut:
+            return Company.normalize_rut(profile.company_rut)
+        return None
+
+    def _get_branch_ids(self, profile: Profile | None) -> list[int]:
+        if profile is None:
+            return []
+        branch_ids = list(
+            SucursalStaff.objects.filter(profile=profile).values_list(
+                "sucursal_id", flat=True
+            )
+        )
+        if profile.current_branch_id:
+            branch_ids.append(profile.current_branch_id)
+        return list(dict.fromkeys(branch_ids))
+
+    def _target_within_scope(self, viewer_profile: Profile | None, target: User) -> bool:
+        if viewer_profile is None:
+            return False
+        target_profile = getattr(target, "profile", None)
+        if target_profile is None:
+            return False
+
+        if viewer_profile.is_owner():
+            viewer_company_rut = self._get_company_rut(viewer_profile)
+            target_company_rut = self._get_company_rut(target_profile)
+            return bool(
+                viewer_company_rut
+                and target_company_rut
+                and viewer_company_rut == target_company_rut
+            )
+
+        if viewer_profile.is_admin():
+            accessible_branch_ids = set(self._get_branch_ids(viewer_profile))
+            if not accessible_branch_ids:
+                return False
+            target_branch_ids = set()
+            if target_profile.current_branch_id:
+                target_branch_ids.add(target_profile.current_branch_id)
+            target_branch_ids.update(
+                SucursalStaff.objects.filter(profile=target_profile).values_list(
+                    "sucursal_id", flat=True
+                )
+            )
+            return bool(accessible_branch_ids & target_branch_ids)
+
+        return False
+
+
 class CompanyUpdateView(LoginRequiredMixin, RoleRequiredMixin, View):
     template_name = "pages/empresa/empresa_form.html"
     form_class = CompanyForm
@@ -442,61 +500,109 @@ class CompanyUpdateView(LoginRequiredMixin, RoleRequiredMixin, View):
         return render(request, self.template_name, {"form": form})
 
 
-class UserDeleteView(LoginRequiredMixin, RoleRequiredMixin, View):
+class UserUpdateView(
+    LoginRequiredMixin, RoleRequiredMixin, UserManagementScopeMixin, View
+):
     allowed_roles = ["OWNER", "ADMINISTRATOR"]
+    template_name = "pages/usuarios/usuario_form.html"
 
-    def _get_company_rut(self, profile: Profile | None) -> str | None:
-        if profile is None:
-            return None
-        company = Company.objects.filter(profile=profile).first()
-        if company is not None:
-            return company.rut
-        if profile.company_rut:
-            return Company.normalize_rut(profile.company_rut)
+    def _get_target_user(self, pk: int) -> User:
+        return get_object_or_404(User.objects.select_related("profile"), pk=pk)
+
+    def _build_forms(
+        self,
+        request,
+        target_user: User,
+        data=None,
+        files=None,
+    ) -> tuple[UserUpdateForm, ProfileUpdateForm]:
+        target_profile = getattr(target_user, "profile", None)
+        if target_profile is None:
+            target_profile, _ = Profile.objects.get_or_create(user_FK=target_user)
+
+        user_form = UserUpdateForm(data, instance=target_user)
+        profile_form = ProfileUpdateForm(
+            data,
+            files,
+            instance=target_profile,
+            user=request.user,
+        )
+        return user_form, profile_form
+
+    def _handle_scope(self, request, target_user: User):
+        if target_user.is_superuser:
+            messages.error(
+                request,
+                "No es posible editar a un superusuario desde esta interfaz.",
+            )
+            return redirect("User")
+
+        viewer_profile = getattr(request.user, "profile", None)
+        if not self._target_within_scope(viewer_profile, target_user):
+            messages.error(request, "No tienes permisos para editar este usuario.")
+            return redirect("User")
         return None
 
-    def _get_branch_ids(self, profile: Profile | None) -> list[int]:
-        if profile is None:
-            return []
-        branch_ids = list(
-            SucursalStaff.objects.filter(profile=profile).values_list(
-                "sucursal_id", flat=True
-            )
+    def _get_profile_image_url(self, target_user: User) -> str:
+        try:
+            profile = target_user.profile
+        except Profile.DoesNotExist:
+            return static("img/profile.webp")
+
+        image_field = getattr(profile, "image", None)
+        if image_field and getattr(image_field, "url", None):
+            return image_field.url
+        return static("img/profile.webp")
+
+    def get(self, request, *args, **kwargs):
+        target_user = self._get_target_user(kwargs.get("pk"))
+        redirect_response = self._handle_scope(request, target_user)
+        if redirect_response:
+            return redirect_response
+
+        user_form, profile_form = self._build_forms(request, target_user)
+
+        context = {
+            "user_form": user_form,
+            "profile_form": profile_form,
+            "target_user": target_user,
+            "profile_image_url": self._get_profile_image_url(target_user),
+        }
+        return render(request, self.template_name, context)
+
+    def post(self, request, *args, **kwargs):
+        target_user = self._get_target_user(kwargs.get("pk"))
+        redirect_response = self._handle_scope(request, target_user)
+        if redirect_response:
+            return redirect_response
+
+        user_form, profile_form = self._build_forms(
+            request,
+            target_user,
+            data=request.POST,
+            files=request.FILES,
         )
-        if profile.current_branch_id:
-            branch_ids.append(profile.current_branch_id)
-        return list(dict.fromkeys(branch_ids))
 
-    def _target_within_scope(self, viewer_profile: Profile | None, target: User) -> bool:
-        if viewer_profile is None:
-            return False
-        target_profile = getattr(target, "profile", None)
-        if target_profile is None:
-            return False
+        if user_form.is_valid() and profile_form.is_valid():
+            user_form.save()
+            profile_form.save()
+            messages.success(request, "Usuario actualizado con éxito.")
+            return redirect("User")
 
-        if viewer_profile.is_owner():
-            viewer_company_rut = self._get_company_rut(viewer_profile)
-            target_company_rut = self._get_company_rut(target_profile)
-            return bool(
-                viewer_company_rut and target_company_rut
-                and viewer_company_rut == target_company_rut
-            )
+        context = {
+            "user_form": user_form,
+            "profile_form": profile_form,
+            "target_user": target_user,
+            "profile_image_url": self._get_profile_image_url(target_user),
+        }
+        messages.error(request, "Corrige los errores para continuar.")
+        return render(request, self.template_name, context)
 
-        if viewer_profile.is_admin():
-            accessible_branch_ids = set(self._get_branch_ids(viewer_profile))
-            if not accessible_branch_ids:
-                return False
-            target_branch_ids = set()
-            if target_profile.current_branch_id:
-                target_branch_ids.add(target_profile.current_branch_id)
-            target_branch_ids.update(
-                SucursalStaff.objects.filter(profile=target_profile).values_list(
-                    "sucursal_id", flat=True
-                )
-            )
-            return bool(accessible_branch_ids & target_branch_ids)
 
-        return False
+class UserDeleteView(
+    LoginRequiredMixin, RoleRequiredMixin, UserManagementScopeMixin, View
+):
+    allowed_roles = ["OWNER", "ADMINISTRATOR"]
 
     def post(self, request, *args, **kwargs):
         target_user = get_object_or_404(

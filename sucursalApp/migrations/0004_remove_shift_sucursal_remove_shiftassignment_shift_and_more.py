@@ -10,6 +10,10 @@ class Migration(migrations.Migration):
     ]
 
     operations = [
+        migrations.RemoveConstraint(
+            model_name="shiftassignment",
+            name="unique_active_shift_profile",
+        ),
         migrations.RemoveField(
             model_name="shift",
             name="sucursal",

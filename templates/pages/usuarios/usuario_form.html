@@ -1,0 +1,88 @@
+{% extends "components/Layout/base_pages.html" %}
+{% load static %}
+{% load tailwind_filters %}
+
+{% block head_title %}
+  Editar Usuario
+{% endblock head_title %}
+
+{% block content_pages %}
+  <div class="space-y-6">
+    <h1 class="max-w-2xl text-2xl font-bold tracking-tight text-gray-900">
+      Editar {{ target_user.get_full_name|default:target_user.username }}
+    </h1>
+
+    {% include 'components/mensajes.html' %}
+
+    <form method="post" enctype="multipart/form-data" class="space-y-4">
+      {% csrf_token %}
+
+      {% include 'components/input_perfil.html' with img=profile_image_url %}
+
+      {{ user_form|crispy }}
+
+      <div class="grid gap-4 md:grid-cols-2">
+        <div>
+          <label for="id_phone" class="block text-sm font-semibold text-gray-700">Teléfono</label>
+          {{ profile_form.phone }}
+          {% if profile_form.phone.errors %}
+            <p class="text-sm text-red-600">{{ profile_form.phone.errors|join:', ' }}</p>
+          {% endif %}
+        </div>
+        <div>
+          <label for="id_gender" class="block text-sm font-semibold text-gray-700">Sexo</label>
+          {{ profile_form.gender }}
+        </div>
+      </div>
+
+      <div class="grid gap-4 md:grid-cols-2">
+        <div>
+          <label for="id_date_of_birth" class="block text-sm font-semibold text-gray-700">Fecha de nacimiento</label>
+          {{ profile_form.date_of_birth }}
+        </div>
+        <div>
+          <label for="id_salario" class="block text-sm font-semibold text-gray-700">Salario</label>
+          {{ profile_form.salario }}
+        </div>
+      </div>
+
+      <div class="grid gap-4 md:grid-cols-2">
+        <div>
+          <label for="id_current_branch" class="block text-sm font-semibold text-gray-700">Sucursal</label>
+          {{ profile_form.current_branch }}
+        </div>
+        <div>
+          <label for="id_is_partime" class="block text-sm font-semibold text-gray-700">Tipo de jornada</label>
+          {{ profile_form.is_partime }}
+        </div>
+      </div>
+
+      <div class="grid gap-4 md:grid-cols-2">
+        <div>
+          <label for="{{ profile_form.examen_medico.id_for_label }}" class="block text-sm font-semibold text-gray-700">Examen médico</label>
+          {{ profile_form.examen_medico }}
+          {% if profile_form.instance.examen_medico %}
+            <a href="{{ profile_form.instance.examen_medico.url }}" class="mt-1 inline-block text-sm text-indigo-600 hover:text-indigo-500" download>
+              Descargar examen actual
+            </a>
+          {% endif %}
+        </div>
+        <div>
+          <label for="{{ profile_form.contrato.id_for_label }}" class="block text-sm font-semibold text-gray-700">Contrato</label>
+          {{ profile_form.contrato }}
+          {% if profile_form.instance.contrato %}
+            <a href="{{ profile_form.instance.contrato.url }}" class="mt-1 inline-block text-sm text-indigo-600 hover:text-indigo-500" download>
+              Descargar contrato actual
+            </a>
+          {% endif %}
+        </div>
+      </div>
+
+      {% include "components/btn/button.html" with button_text="Guardar cambios" %}
+    </form>
+  </div>
+{% endblock content_pages %}
+
+{% block javascript %}
+  <script defer src="{% static "js/script.js" %}"></script>
+{% endblock javascript %}

@@ -69,13 +69,15 @@ class PermitsPositionMixinTests(TestCase):
 
     def test_restricted_role_is_redirected(self):
         self._login_with_position("restricted_access", self.restricted_position)
+        response = self.client.get(reverse("Register"))
         self.assertEqual(response.status_code, 302)
         self.assertEqual(response.url, reverse("Home"))
 
 
-class UserDeleteViewTests(TestCase):
+class UserManagementTestMixin:
     @classmethod
     def setUpTestData(cls):
+        super().setUpTestData()
         cls.owner_position = Position.objects.create(
             user_position="Owner Role",
             permission_code="OWNER",
@@ -129,6 +131,8 @@ class UserDeleteViewTests(TestCase):
             islands=1,
         )
 
+
+class UserDeleteViewTests(UserManagementTestMixin, TestCase):
     def test_owner_can_deactivate_user_and_cleanup_staff(self):
         company, owner_user, owner_profile = self._create_company_with_owner()
         branch = self._create_branch(company)
@@ -203,3 +207,114 @@ class UserDeleteViewTests(TestCase):
         self.assertRedirects(response, reverse("User"))
         target_user.refresh_from_db()
         self.assertFalse(target_user.is_active)
+
+class UserUpdateViewTests(UserManagementTestMixin, TestCase):
+    def test_owner_can_access_and_update_user(self):
+        company, owner_user, _ = self._create_company_with_owner()
+        branch = self._create_branch(company)
+
+        target_user, target_profile = self._create_user(
+            "employee_user",
+            self.attendant_position,
+            company_rut=company.rut,
+            current_branch=branch,
+        )
+
+        self.client.force_login(owner_user)
+        url = reverse("UserEdit", args=[target_user.pk])
+
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 200)
+
+        post_data = {
+            "username": target_user.username,
+            "email": target_user.email,
+            "first_name": "Nuevo",
+            "last_name": "Nombre",
+            "phone": "987654321",
+            "gender": "",
+            "date_of_birth": "",
+            "salario": "",
+            "current_branch": str(branch.pk),
+            "is_partime": "True",
+        }
+
+        response = self.client.post(url, post_data)
+        self.assertRedirects(response, reverse("User"))
+
+        target_user.refresh_from_db()
+        target_profile.refresh_from_db()
+        self.assertEqual(target_user.first_name, "Nuevo")
+        self.assertEqual(target_user.last_name, "Nombre")
+        self.assertEqual(target_profile.phone, "987654321")
+        self.assertEqual(target_profile.current_branch_id, branch.pk)
+
+    def test_admin_can_update_user_within_branch(self):
+        company, _, _ = self._create_company_with_owner()
+        branch = self._create_branch(company)
+
+        admin_user, admin_profile = self._create_user(
+            "branch_admin",
+            self.admin_position,
+            company_rut=company.rut,
+            current_branch=branch,
+        )
+        SucursalStaff.objects.create(sucursal=branch, profile=admin_profile)
+
+        target_user, target_profile = self._create_user(
+            "branch_employee",
+            self.attendant_position,
+            company_rut=company.rut,
+            current_branch=branch,
+        )
+        SucursalStaff.objects.create(sucursal=branch, profile=target_profile)
+
+        self.client.force_login(admin_user)
+        url = reverse("UserEdit", args=[target_user.pk])
+
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 200)
+
+        post_data = {
+            "username": target_user.username,
+            "email": target_user.email,
+            "first_name": target_user.first_name,
+            "last_name": target_user.last_name,
+            "phone": "222222222",
+            "gender": "",
+            "date_of_birth": "",
+            "salario": "",
+            "current_branch": str(branch.pk),
+            "is_partime": "False",
+        }
+
+        response = self.client.post(url, post_data)
+        self.assertRedirects(response, reverse("User"))
+
+        target_profile.refresh_from_db()
+        self.assertEqual(target_profile.phone, "222222222")
+        self.assertFalse(target_profile.is_partime)
+
+    def test_non_privileged_user_is_redirected(self):
+        company, _, _ = self._create_company_with_owner()
+        branch = self._create_branch(company)
+
+        target_user, _ = self._create_user(
+            "restricted_employee",
+            self.attendant_position,
+            company_rut=company.rut,
+            current_branch=branch,
+        )
+
+        attendant_user, _ = self._create_user(
+            "attendant",
+            self.attendant_position,
+            company_rut=company.rut,
+            current_branch=branch,
+        )
+
+        self.client.force_login(attendant_user)
+        response = self.client.get(reverse("UserEdit", args=[target_user.pk]))
+
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response.url, reverse("Home"))
