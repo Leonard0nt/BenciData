@@ -1,6 +1,6 @@
 from django.contrib import admin
 
-from .models import Island, Machine, Nozzle, Sucursal, SucursalStaff
+from .models import Island, Machine, Nozzle, Shift, Sucursal, SucursalStaff
 
 
 class NozzleInline(admin.TabularInline):
@@ -17,16 +17,31 @@ class IslandInline(admin.TabularInline):
     model = Island
     extra = 1
 
+
+class ShiftInline(admin.TabularInline):
+    model = Shift
+    extra = 0
+
+
 class SucursalStaffInline(admin.TabularInline):
     model = SucursalStaff
     extra = 1
 
 @admin.register(Sucursal)
 class SucursalAdmin(admin.ModelAdmin):
-    list_display = ("name", "company", "city", "region", "island_count", "machines_count", "nozzles_count")
+    list_display = (
+        "name",
+        "company",
+        "city",
+        "region",
+        "island_count",
+        "machines_count",
+        "nozzles_count",
+        "shifts_count",
+    )
     search_fields = ("name", "company__business_name", "city", "region")
     list_filter = ("company", "city", "region")
-    inlines = [SucursalStaffInline, IslandInline]
+    inlines = [SucursalStaffInline, ShiftInline, IslandInline]
 
     @admin.display(description="Islas")
     def island_count(self, obj: Sucursal) -> int:
@@ -39,6 +54,11 @@ class SucursalAdmin(admin.ModelAdmin):
     @admin.display(description="Pistolas")
     def nozzles_count(self, obj: Sucursal) -> int:
         return obj.nozzles_count
+    
+    @admin.display(description="Turnos")
+    def shifts_count(self, obj: Sucursal) -> int:
+        return obj.shifts_count
+
 
 
 @admin.register(Island)
@@ -62,3 +82,10 @@ class NozzleAdmin(admin.ModelAdmin):
     list_display = ("number", "machine", "fuel_type")
     list_filter = ("machine__island__sucursal", "fuel_type")
     search_fields = ("number", "machine__island__sucursal__name")
+
+
+@admin.register(Shift)
+class ShiftAdmin(admin.ModelAdmin):
+    list_display = ("code", "sucursal", "start_time", "end_time", "manager")
+    list_filter = ("sucursal",)
+    search_fields = ("code", "sucursal__name", "manager__user_FK__username")

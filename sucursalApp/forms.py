@@ -4,7 +4,7 @@ from django import forms
 
 from UsuarioApp.models import Profile
 
-from .models import Island, Machine, Nozzle, Sucursal, SucursalStaff
+from .models import Island, Machine, Nozzle, Shift, Sucursal, SucursalStaff
 
 class SucursalForm(forms.ModelForm):
     administrators = forms.ModelMultipleChoiceField(
@@ -150,3 +150,42 @@ class NozzleForm(forms.ModelForm):
             "fuel_type": forms.TextInput(attrs={"class": "w-full border rounded p-2"}),
             "description": forms.TextInput(attrs={"class": "w-full border rounded p-2"}),
         }
+
+
+class ShiftForm(forms.ModelForm):
+    def __init__(self, *args, sucursal: Optional[Sucursal] = None, **kwargs):
+        self.sucursal = sucursal
+        super().__init__(*args, **kwargs)
+        branch = self.sucursal or self.initial.get("sucursal") or self.instance.sucursal
+        queryset = Profile.objects.select_related("user_FK", "position_FK")
+        if branch:
+            queryset = queryset.filter(sucursal_staff__sucursal=branch).distinct()
+        self.fields["manager"].queryset = queryset.order_by(
+            "user_FK__first_name", "user_FK__last_name", "user_FK__username"
+        )
+
+    class Meta:
+        model = Shift
+        fields = ["sucursal", "code", "start_time", "end_time", "manager"]
+        widgets = {
+            "sucursal": forms.HiddenInput(),
+            "code": forms.TextInput(attrs={"class": "w-full border rounded p-2"}),
+            "start_time": forms.TimeInput(
+                attrs={"class": "w-full border rounded p-2", "type": "time"}
+            ),
+            "end_time": forms.TimeInput(
+                attrs={"class": "w-full border rounded p-2", "type": "time"}
+            ),
+            "manager": forms.Select(attrs={"class": "w-full border rounded p-2"}),
+        }
+
+    def clean(self):
+        cleaned_data = super().clean()
+        start = cleaned_data.get("start_time")
+        end = cleaned_data.get("end_time")
+        if start and end and start >= end:
+            self.add_error(
+                "end_time",
+                "La hora de término debe ser posterior a la hora de inicio.",
+            )
+        return cleaned_data

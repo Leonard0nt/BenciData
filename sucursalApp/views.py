@@ -14,8 +14,8 @@ from django.views.generic.edit import FormMixin
 
 from core.mixins import RoleRequiredMixin
 from homeApp.models import Company
-from .forms import IslandForm, MachineForm, NozzleForm, SucursalForm
-from .models import Island, Machine, Nozzle, Sucursal, SucursalStaff
+from .forms import IslandForm, MachineForm, NozzleForm, ShiftForm, SucursalForm
+from .models import Island, Machine, Nozzle, Shift, Sucursal, SucursalStaff
 
 
 class OwnerCompanyMixin(LoginRequiredMixin, RoleRequiredMixin):
@@ -58,6 +58,12 @@ class SucursalListView(OwnerCompanyMixin, FormMixin, ListView):
                     "staff",
                     queryset=SucursalStaff.objects.select_related(
                         "profile__user_FK", "profile__position_FK"
+                    ),
+                ),
+                Prefetch(
+                    "shifts",
+                    queryset=Shift.objects.select_related(
+                        "manager__user_FK", "manager__position_FK"
                     ),
                 ),
             )
@@ -108,6 +114,12 @@ class SucursalUpdateView(OwnerCompanyMixin, UpdateView):
                     "staff",
                     queryset=SucursalStaff.objects.select_related(
                         "profile__user_FK", "profile__position_FK"
+                    ),
+                ),
+                Prefetch(
+                    "shifts",
+                    queryset=Shift.objects.order_by("start_time").select_related(
+                        "manager__user_FK", "manager__position_FK"
                     ),
                 ),
             )
@@ -171,6 +183,81 @@ class BranchAccessMixin(OwnerCompanyMixin):
     def get_sucursal(self) -> Sucursal:
         queryset = self.get_branch_queryset()
         return get_object_or_404(queryset, pk=self.kwargs.get(self.branch_url_kwarg))
+
+class ShiftAccessMixin(OwnerCompanyMixin):
+    model = Shift
+
+    def get_queryset(self) -> QuerySet[Shift]:
+        company = self.get_company()
+        if company is None:
+            return Shift.objects.none()
+        return Shift.objects.filter(sucursal__company=company).select_related(
+            "sucursal", "manager__user_FK", "manager__position_FK"
+        )
+
+    def get_object(self) -> Shift:
+        return get_object_or_404(self.get_queryset(), pk=self.kwargs.get("pk"))
+
+    def get_success_url(self, obj: Shift | None = None) -> str:
+        instance = obj or getattr(self, "object", None)
+        if instance is None:
+            instance = self.get_object()
+        return reverse("sucursal_update", args=[instance.sucursal_id])
+
+
+class ShiftCreateView(BranchAccessMixin, CreateView):
+    form_class = ShiftForm
+    template_name = "pages/sucursales/related_form.html"
+
+    def get_initial(self) -> Dict[str, Any]:
+        initial = super().get_initial()
+        initial.setdefault("sucursal", self.get_sucursal())
+        return initial
+
+    def get_form_kwargs(self) -> Dict[str, Any]:
+        kwargs = super().get_form_kwargs()
+        kwargs.setdefault("sucursal", self.get_sucursal())
+        return kwargs
+
+    def form_valid(self, form: ShiftForm) -> HttpResponseRedirect:
+        form.instance.sucursal = self.get_sucursal()
+        return super().form_valid(form)
+
+    def get_context_data(self, **kwargs: Any) -> Dict[str, Any]:
+        context = super().get_context_data(**kwargs)
+        sucursal = self.get_sucursal()
+        context.update({"sucursal": sucursal, "title": "Agregar turno"})
+        return context
+
+    def get_success_url(self) -> str:
+        return reverse("sucursal_update", args=[self.get_sucursal().pk])
+
+
+class ShiftUpdateView(ShiftAccessMixin, UpdateView):
+    form_class = ShiftForm
+    template_name = "pages/sucursales/related_form.html"
+
+    def get_form_kwargs(self) -> Dict[str, Any]:
+        kwargs = super().get_form_kwargs()
+        kwargs.setdefault("sucursal", self.object.sucursal)
+        return kwargs
+
+    def get_context_data(self, **kwargs: Any) -> Dict[str, Any]:
+        context = super().get_context_data(**kwargs)
+        context.update({"sucursal": self.object.sucursal, "title": "Editar turno"})
+        return context
+
+    def get_success_url(self) -> str:
+        return super().get_success_url(self.object)
+
+
+class ShiftDeleteView(ShiftAccessMixin, View):
+    def post(self, request, *args, **kwargs) -> HttpResponseRedirect:
+        shift = self.get_object()
+        success_url = self.get_success_url(shift)
+        shift.delete()
+        return HttpResponseRedirect(success_url)
+
 class IslandAccessMixin(OwnerCompanyMixin):
     model = Island
 

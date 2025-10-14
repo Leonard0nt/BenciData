@@ -8,6 +8,21 @@ urlpatterns = [
     path("<int:pk>/editar/", views.SucursalUpdateView.as_view(), name="sucursal_update"),
     path("<int:pk>/eliminar/", views.SucursalDeleteView.as_view(), name="sucursal_delete"),
     path(
+        "<int:branch_pk>/turnos/nuevo/",
+        views.ShiftCreateView.as_view(),
+        name="sucursal_shift_create",
+    ),
+    path(
+        "turnos/<int:pk>/editar/",
+        views.ShiftUpdateView.as_view(),
+        name="sucursal_shift_update",
+    ),
+    path(
+        "turnos/<int:pk>/eliminar/",
+        views.ShiftDeleteView.as_view(),
+        name="sucursal_shift_delete",
+    ),    
+    path(
         "<int:branch_pk>/islas/nueva/",
         views.IslandCreateView.as_view(),
         name="sucursal_island_create",

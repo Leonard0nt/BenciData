@@ -16,7 +16,12 @@ SECRET_KEY = os.environ.get("SECRET_KEY")
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = env.bool("DEBUG", default=False)
 
-ALLOWED_HOSTS = env.list("ALLOWED_HOSTS", default=[])
+raw_allowed_hosts = env("ALLOWED_HOSTS", default="")
+ALLOWED_HOSTS = (
+    [host.strip() for host in raw_allowed_hosts.split(",") if host.strip()]
+    if raw_allowed_hosts
+    else []
+)
 
 # Application definition
 

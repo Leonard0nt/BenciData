@@ -54,6 +54,9 @@ class Sucursal(models.Model):
             for machine in island.machines.all()
         )
 
+    @property
+    def shifts_count(self) -> int:
+        return self.shifts.count()
 
     def get_staff_for_role(self, role: str | Iterable[str]):
         """Return the profiles assigned to the sucursal for the given role or roles."""
@@ -224,3 +227,38 @@ class Nozzle(models.Model):
     def __str__(self) -> str:
         return f"Pistola {self.number} - {self.machine}"
 
+
+class Shift(models.Model):
+    """Gestiona los turnos configurados para una sucursal."""
+
+    sucursal = models.ForeignKey(
+        Sucursal,
+        on_delete=models.CASCADE,
+        related_name="shifts",
+        verbose_name="Sucursal",
+    )
+    code = models.CharField("Código", max_length=25)
+    start_time = models.TimeField("Hora de inicio")
+    end_time = models.TimeField("Hora de término")
+    manager = models.ForeignKey(
+        "UsuarioApp.Profile",
+        on_delete=models.PROTECT,
+        related_name="managed_shifts",
+        verbose_name="Encargado del turno",
+    )
+    created_at = models.DateTimeField("Fecha de creación", auto_now_add=True)
+    updated_at = models.DateTimeField("Fecha de actualización", auto_now=True)
+
+    class Meta:
+        verbose_name = "Turno"
+        verbose_name_plural = "Turnos"
+        ordering = ("sucursal__name", "start_time")
+        constraints = [
+            models.UniqueConstraint(
+                fields=["sucursal", "code"],
+                name="unique_sucursal_shift_code",
+            )
+        ]
+
+    def __str__(self) -> str:
+        return f"Turno {self.code} - {self.sucursal.name}"
