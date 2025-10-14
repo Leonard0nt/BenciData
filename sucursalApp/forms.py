@@ -166,10 +166,24 @@ class ShiftForm(forms.ModelForm):
 
     class Meta:
         model = Shift
-        fields = ["sucursal", "code", "start_time", "end_time", "manager"]
+        fields = [
+            "sucursal",
+            "code",
+            "description",
+            "start_time",
+            "end_time",
+            "manager",
+        ]
         widgets = {
             "sucursal": forms.HiddenInput(),
             "code": forms.TextInput(attrs={"class": "w-full border rounded p-2"}),
+            "description": forms.Textarea(
+                attrs={
+                    "class": "w-full border rounded p-2",
+                    "rows": 3,
+                    "placeholder": "Ej. Turno matutino para recepción y control de inventario",
+                }
+            ),
             "start_time": forms.TimeInput(
                 attrs={"class": "w-full border rounded p-2", "type": "time"}
             ),

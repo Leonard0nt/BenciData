@@ -238,6 +238,12 @@ class Shift(models.Model):
         verbose_name="Sucursal",
     )
     code = models.CharField("Código", max_length=25)
+    description = models.CharField(
+        "Descripción",
+        max_length=255,
+        blank=True,
+        help_text="Resume las funciones principales y responsabilidades del turno.",
+    )
     start_time = models.TimeField("Hora de inicio")
     end_time = models.TimeField("Hora de término")
     manager = models.ForeignKey(

@@ -86,6 +86,11 @@ class NozzleAdmin(admin.ModelAdmin):
 
 @admin.register(Shift)
 class ShiftAdmin(admin.ModelAdmin):
-    list_display = ("code", "sucursal", "start_time", "end_time", "manager")
+    list_display = ("code", "sucursal", "description", "start_time", "end_time", "manager")
     list_filter = ("sucursal",)
-    search_fields = ("code", "sucursal__name", "manager__user_FK__username")
+    search_fields = (
+        "code",
+        "description",
+        "sucursal__name",
+        "manager__user_FK__username",
+    )
