@@ -140,6 +140,15 @@ class SucursalUpdateView(OwnerCompanyMixin, UpdateView):
             context["island_create_url"] = reverse(
                 "sucursal_island_create", args=[self.object.pk]
             )
+            context["shifts"] = self.object.shifts.all()
+            context["shift_create_form"] = ShiftForm(
+                initial={"sucursal": self.object},
+                sucursal=self.object,
+                auto_id="new-shift_%s",
+            )
+            context["shift_create_url"] = reverse(
+                "sucursal_shift_create", args=[self.object.pk]
+            )
             for island in context["islands"]:
                 island.machine_create_form = MachineForm(
                     initial={"island": island}, auto_id=f"new-machine-{island.pk}_%s"
@@ -151,6 +160,7 @@ class SucursalUpdateView(OwnerCompanyMixin, UpdateView):
                     )
         else:
             context.setdefault("islands", [])
+            context.setdefault("shifts", [])
         return context
 
 
