@@ -19,7 +19,7 @@
               Registro de Usuarios
             </a>
           </li>
-          {% if user.profile.is_owner %}
+          {% if user.profile.is_owner or user.profile.is_admin %}
           <li>
             <a href="{% url 'company_edit' %}" class=" menu-item {% if request.path == '/empresa/' %}text-white bg-current {% else %} text-gray-400 hover:text-white hover:bg-gray-800 {% endif %}">
               <svg class="h-6 w-6 shrink-0" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" aria-hidden="true">
