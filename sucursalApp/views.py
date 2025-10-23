@@ -142,9 +142,9 @@ class SucursalUpdateView(OwnerCompanyMixin, UpdateView):
                 ),
                 Prefetch(
                     "shifts",
-                    queryset=Shift.objects.order_by("start_time").select_related(
-                        "manager__user_FK", "manager__position_FK"
-                    ),
+                    queryset=Shift.objects.order_by("start_time")
+                    .select_related("manager__user_FK", "manager__position_FK")
+                    .prefetch_related("attendants__user_FK", "attendants__position_FK"),
                 ),
             )
         )
@@ -164,15 +164,29 @@ class SucursalUpdateView(OwnerCompanyMixin, UpdateView):
             context["island_create_url"] = reverse(
                 "sucursal_island_create", args=[self.object.pk]
             )
-            context["shifts"] = self.object.shifts.all()
-            context["shift_create_form"] = ShiftForm(
-                initial={"sucursal": self.object},
-                sucursal=self.object,
-                auto_id="new-shift_%s",
+            shift_queryset = (
+                self.object.shifts.select_related(
+                    "manager__user_FK", "manager__position_FK"
+                )
+                .prefetch_related("attendants__user_FK", "attendants__position_FK")
+                .order_by("start_time")
             )
-            context["shift_create_url"] = reverse(
-                "sucursal_shift_create", args=[self.object.pk]
+            context["shifts"] = shift_queryset
+            profile = getattr(self.request.user, "profile", None)
+            can_manage_shifts = bool(
+                self.request.user.is_superuser
+                or (profile and profile.has_role("ADMINISTRATOR"))
             )
+            context["can_manage_shifts"] = can_manage_shifts
+            if can_manage_shifts:
+                context["shift_create_form"] = ShiftForm(
+                    initial={"sucursal": self.object},
+                    sucursal=self.object,
+                    auto_id="new-shift_%s",
+                )
+                context["shift_create_url"] = reverse(
+                    "sucursal_shift_create", args=[self.object.pk]
+                )
             context["fuel_inventories"] = self.object.fuel_inventories.all()
             context["fuel_inventory_create_form"] = FuelInventoryForm(
                 initial={"sucursal": self.object}, auto_id="new-inventory_%s"
@@ -192,6 +206,7 @@ class SucursalUpdateView(OwnerCompanyMixin, UpdateView):
         else:
             context.setdefault("islands", [])
             context.setdefault("shifts", [])
+        context.setdefault("can_manage_shifts", False)
         return context
 
 
@@ -232,8 +247,10 @@ class ShiftAccessMixin(OwnerCompanyMixin):
         company = self.get_company()
         if company is None:
             return Shift.objects.none()
-        return Shift.objects.filter(sucursal__company=company).select_related(
-            "sucursal", "manager__user_FK", "manager__position_FK"
+        return (
+            Shift.objects.filter(sucursal__company=company)
+            .select_related("sucursal", "manager__user_FK", "manager__position_FK")
+            .prefetch_related("attendants__user_FK", "attendants__position_FK")
         )
 
     def get_object(self) -> Shift:
@@ -249,6 +266,7 @@ class ShiftAccessMixin(OwnerCompanyMixin):
 class ShiftCreateView(BranchAccessMixin, CreateView):
     form_class = ShiftForm
     template_name = "pages/sucursales/related_form.html"
+    allowed_roles = ["ADMINISTRATOR","OWNER"]
 
     def get_initial(self) -> Dict[str, Any]:
         initial = super().get_initial()
@@ -277,6 +295,7 @@ class ShiftCreateView(BranchAccessMixin, CreateView):
 class ShiftUpdateView(ShiftAccessMixin, UpdateView):
     form_class = ShiftForm
     template_name = "pages/sucursales/related_form.html"
+    allowed_roles = ["ADMINISTRATOR","OWNER"]
 
     def get_form_kwargs(self) -> Dict[str, Any]:
         kwargs = super().get_form_kwargs()
@@ -293,6 +312,7 @@ class ShiftUpdateView(ShiftAccessMixin, UpdateView):
 
 
 class ShiftDeleteView(ShiftAccessMixin, View):
+    allowed_roles = ["ADMINISTRATOR","OWNER"]
     def post(self, request, *args, **kwargs) -> HttpResponseRedirect:
         shift = self.get_object()
         success_url = self.get_success_url(shift)

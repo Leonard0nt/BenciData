@@ -92,13 +92,15 @@
                     </span>
                   </p>
                 </div>
-                <div class="flex items-center gap-2">
-                  <a href="{% url 'sucursal_shift_update' shift.pk %}" class="inline-flex items-center rounded-md border border-gray-300 px-3 py-1 text-xs font-medium text-gray-700 hover:bg-gray-50">Editar</a>
-                  <form method="post" action="{% url 'sucursal_shift_delete' shift.pk %}">
-                    {% csrf_token %}
-                    <button type="submit" class="inline-flex items-center rounded-md border border-red-200 bg-red-50 px-3 py-1 text-xs font-medium text-red-600 hover:bg-red-100">Eliminar</button>
-                  </form>
-                </div>
+                {% if can_manage_shifts %}
+                  <div class="flex items-center gap-2">
+                    <a href="{% url 'sucursal_shift_update' shift.pk %}" class="inline-flex items-center rounded-md border border-gray-300 px-3 py-1 text-xs font-medium text-gray-700 hover:bg-gray-50">Editar</a>
+                    <form method="post" action="{% url 'sucursal_shift_delete' shift.pk %}">
+                      {% csrf_token %}
+                      <button type="submit" class="inline-flex items-center rounded-md border border-red-200 bg-red-50 px-3 py-1 text-xs font-medium text-red-600 hover:bg-red-100">Eliminar</button>
+                    </form>
+                  </div>
+                {% endif %}
               </div>
               <div class="mt-4 rounded-md border border-gray-200 p-4">
                 <p class="text-xs font-semibold uppercase tracking-wide text-gray-500">Encargado</p>
@@ -111,6 +113,27 @@
                   {% endif %}
                 </div>
               </div>
+              {% with attendants=shift.attendants.all %}
+                <div class="mt-4 rounded-md border border-gray-200 p-4">
+                  <p class="text-xs font-semibold uppercase tracking-wide text-gray-500">Bomberos asignados</p>
+                  {% if attendants %}
+                    <ul class="mt-2 space-y-1 text-sm text-gray-700">
+                      {% for attendant in attendants %}
+                        {% with attendant_name=attendant.user_FK.get_full_name %}
+                          <li class="flex items-center justify-between gap-2">
+                            <span class="font-medium text-gray-900">{{ attendant_name|default:attendant.user_FK.username }}</span>
+                            {% if attendant.position_FK %}
+                              <span class="text-xs text-gray-500">{{ attendant.position_FK.user_position }}</span>
+                            {% endif %}
+                          </li>
+                        {% endwith %}
+                      {% endfor %}
+                    </ul>
+                  {% else %}
+                    <p class="mt-2 text-sm text-gray-500">No hay bomberos asignados a este turno.</p>
+                  {% endif %}
+                </div>
+              {% endwith %}
             </div>
           {% endfor %}
         </div>

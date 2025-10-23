@@ -256,6 +256,13 @@ class Shift(models.Model):
         related_name="managed_shifts",
         verbose_name="Encargado del turno",
     )
+    attendants = models.ManyToManyField(
+        "UsuarioApp.Profile",
+        blank=True,
+        related_name="assigned_shifts",
+        verbose_name="Bomberos asignados",
+        help_text="Selecciona los bomberos que trabajarán en este turno.",
+    )
     created_at = models.DateTimeField("Fecha de creación", auto_now_add=True)
     updated_at = models.DateTimeField("Fecha de actualización", auto_now=True)
 

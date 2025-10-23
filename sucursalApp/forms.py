@@ -171,7 +171,14 @@ class ShiftForm(forms.ModelForm):
         self.fields["manager"].queryset = queryset.order_by(
             "user_FK__first_name", "user_FK__last_name", "user_FK__username"
         )
-
+        attendants_field = self.fields.get("attendants")
+        if attendants_field is not None:
+            attendants_queryset = queryset.filter(
+                position_FK__permission_code__in=["ATTENDANT", "HEAD_ATTENDANT"]
+            )
+            attendants_field.queryset = attendants_queryset.order_by(
+                "user_FK__first_name", "user_FK__last_name", "user_FK__username"
+            )
     class Meta:
         model = Shift
         fields = [
@@ -200,7 +207,9 @@ class ShiftForm(forms.ModelForm):
             ),
             "manager": forms.Select(attrs={"class": "w-full border rounded p-2"}),
         }
-
+            "attendants": forms.SelectMultiple(
+                attrs={"class": "w-full border rounded p-2"}
+            ),
     def clean(self):
         cleaned_data = super().clean()
         start = cleaned_data.get("start_time")
