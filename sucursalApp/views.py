@@ -1,4 +1,4 @@
-from typing import Any, Dict
+from typing import Any, Dict, List
 
 from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin
@@ -33,6 +33,26 @@ from .models import (
 )
 
 
+def get_admin_branch_ids(profile) -> List[int]:
+    """Return the branch IDs managed by the given administrator profile."""
+
+    if not profile or not getattr(profile, "is_admin", None) or not profile.is_admin():
+        return []
+
+    branch_ids = set(
+        SucursalStaff.objects.filter(
+            profile=profile, role="ADMINISTRATOR"
+        ).values_list("sucursal_id", flat=True)
+    )
+
+    current_branch_id = getattr(profile, "current_branch_id", None)
+    if current_branch_id:
+        branch_ids.add(current_branch_id)
+
+    branch_ids.discard(None)
+    return list(branch_ids)
+
+
 class OwnerCompanyMixin(LoginRequiredMixin, RoleRequiredMixin):
     allowed_roles = ["OWNER"]
 
@@ -44,20 +64,41 @@ class OwnerCompanyMixin(LoginRequiredMixin, RoleRequiredMixin):
             return profile.company
         except Company.DoesNotExist:
             return None
+    def get_managed_branch_ids(self) -> List[int]:
+        if hasattr(self, "_managed_branch_ids"):
+            return self._managed_branch_ids  # type: ignore[attr-defined]
 
+        company = self.get_company()
+        if company is not None:
+            branch_ids = list(company.branches.values_list("pk", flat=True))
+        else:
+            profile = getattr(self.request.user, "profile", None)
+            branch_ids = get_admin_branch_ids(profile)
+
+        # Ensure unique values and ignore None entries
+        branch_ids = list(dict.fromkeys(branch_ids))
+        self._managed_branch_ids = branch_ids  # type: ignore[attr-defined]
+        return branch_ids
+
+    def get_managed_branches_queryset(self) -> QuerySet[Sucursal]:
+        branch_ids = self.get_managed_branch_ids()
+        if not branch_ids:
+            return Sucursal.objects.none()
+        return Sucursal.objects.filter(pk__in=branch_ids)
 class SucursalListView(OwnerCompanyMixin, FormMixin, ListView):
     model = Sucursal
     template_name = "pages/sucursales/sucursal_list.html"
     context_object_name = "sucursales"
     form_class = SucursalForm
     success_url = reverse_lazy("sucursal_list")
+    allowed_roles = ["OWNER", "ADMINISTRATOR"]
 
     def get_queryset(self) -> QuerySet[Sucursal]:
-        company = self.get_company()
-        if company is None:
+        branch_ids = self.get_managed_branch_ids()
+        if not branch_ids:
             return Sucursal.objects.none()
         return (
-            Sucursal.objects.filter(company=company)
+            Sucursal.objects.filter(pk__in=branch_ids)
             .select_related("company")
             .prefetch_related(
                 Prefetch(
@@ -110,13 +151,14 @@ class SucursalUpdateView(OwnerCompanyMixin, UpdateView):
     form_class = SucursalForm
     template_name = "pages/sucursales/sucursal_form.html"
     success_url = reverse_lazy("sucursal_list")
+    allowed_roles = ["OWNER", "ADMINISTRATOR"]
 
     def get_queryset(self) -> QuerySet[Sucursal]:
-        company = self.get_company()
-        if company is None:
+        branch_ids = self.get_managed_branch_ids()
+        if not branch_ids:
             return Sucursal.objects.none()
         return (
-            Sucursal.objects.filter(company=company)
+            Sucursal.objects.filter(pk__in=branch_ids)
             .select_related("company")
             .prefetch_related(
                 Prefetch(
@@ -151,7 +193,10 @@ class SucursalUpdateView(OwnerCompanyMixin, UpdateView):
 
     def get_form_kwargs(self) -> Dict[str, Any]:
         kwargs = super().get_form_kwargs()
-        kwargs["company"] = self.get_company()
+        company = self.get_company()
+        if company is None and getattr(self, "object", None):
+            company = self.object.company
+        kwargs["company"] = company
         return kwargs
 
     def get_context_data(self, **kwargs: Any) -> Dict[str, Any]:
@@ -229,12 +274,10 @@ class SucursalDeleteView(OwnerCompanyMixin, DeleteView):
 
 class BranchAccessMixin(OwnerCompanyMixin):
     branch_url_kwarg = "branch_pk"
+    allowed_roles = ["OWNER", "ADMINISTRATOR"]
 
     def get_branch_queryset(self):
-        company = self.get_company()
-        if company is None:
-            return Sucursal.objects.none()
-        return Sucursal.objects.filter(company=company)
+        return self.get_managed_branches_queryset()
 
     def get_sucursal(self) -> Sucursal:
         queryset = self.get_branch_queryset()
@@ -242,13 +285,13 @@ class BranchAccessMixin(OwnerCompanyMixin):
 
 class ShiftAccessMixin(OwnerCompanyMixin):
     model = Shift
-
+    allowed_roles = ["OWNER", "ADMINISTRATOR"]
     def get_queryset(self) -> QuerySet[Shift]:
-        company = self.get_company()
-        if company is None:
+        branch_ids = self.get_managed_branch_ids()
+        if not branch_ids:
             return Shift.objects.none()
         return (
-            Shift.objects.filter(sucursal__company=company)
+            Shift.objects.filter(sucursal_id__in=branch_ids)
             .select_related("sucursal", "manager__user_FK", "manager__position_FK")
             .prefetch_related("attendants__user_FK", "attendants__position_FK")
         )
@@ -322,12 +365,12 @@ class ShiftDeleteView(ShiftAccessMixin, View):
 
 class FuelInventoryAccessMixin(OwnerCompanyMixin):
     model = FuelInventory
-
+    allowed_roles = ["OWNER", "ADMINISTRATOR"]
     def get_queryset(self) -> QuerySet[FuelInventory]:
-        company = self.get_company()
-        if company is None:
+        branch_ids = self.get_managed_branch_ids()
+        if not branch_ids:
             return FuelInventory.objects.none()
-        return FuelInventory.objects.filter(sucursal__company=company).select_related(
+        return FuelInventory.objects.filter(sucursal_id__in=branch_ids).select_related(
             "sucursal"
         )
 
@@ -396,12 +439,14 @@ class FuelInventoryDeleteView(FuelInventoryAccessMixin, View):
 
 class IslandAccessMixin(OwnerCompanyMixin):
     model = Island
-
+    allowed_roles = ["OWNER", "ADMINISTRATOR"]
     def get_queryset(self) -> QuerySet[Island]:
-        company = self.get_company()
-        if company is None:
+        branch_ids = self.get_managed_branch_ids()
+        if not branch_ids:
             return Island.objects.none()
-        return Island.objects.filter(sucursal__company=company).select_related("sucursal")
+        return Island.objects.filter(sucursal_id__in=branch_ids).select_related(
+            "sucursal"
+        )
 
     def get_object(self) -> Island:
         return get_object_or_404(self.get_queryset(), pk=self.kwargs.get("pk"))
@@ -415,12 +460,12 @@ class IslandAccessMixin(OwnerCompanyMixin):
 
 class MachineAccessMixin(OwnerCompanyMixin):
     model = Machine
-
+    allowed_roles = ["OWNER", "ADMINISTRATOR"]
     def get_queryset(self) -> QuerySet[Machine]:
-        company = self.get_company()
-        if company is None:
+        branch_ids = self.get_managed_branch_ids()
+        if not branch_ids:
             return Machine.objects.none()
-        return Machine.objects.filter(island__sucursal__company=company).select_related(
+        return Machine.objects.filter(island__sucursal_id__in=branch_ids).select_related(
             "island__sucursal"
         )
 
@@ -436,13 +481,13 @@ class MachineAccessMixin(OwnerCompanyMixin):
 
 class NozzleAccessMixin(OwnerCompanyMixin):
     model = Nozzle
-
+    allowed_roles = ["OWNER", "ADMINISTRATOR"]
     def get_queryset(self) -> QuerySet[Nozzle]:
-        company = self.get_company()
-        if company is None:
+        branch_ids = self.get_managed_branch_ids()
+        if not branch_ids:
             return Nozzle.objects.none()
         return Nozzle.objects.filter(
-            machine__island__sucursal__company=company
+            machine__island__sucursal_id__in=branch_ids
         ).select_related("machine__island__sucursal")
 
     def get_object(self) -> Nozzle:
@@ -583,12 +628,13 @@ class NozzleCreateView(OwnerCompanyMixin, CreateView):
     form_class = NozzleForm
     template_name = "pages/sucursales/related_form.html"
     machine_url_kwarg = "machine_pk"
+    allowed_roles = ["OWNER", "ADMINISTRATOR"]
 
     def get_machine_queryset(self) -> QuerySet[Machine]:
-        company = self.get_company()
-        if company is None:
+        branch_ids = self.get_managed_branch_ids()
+        if not branch_ids:
             return Machine.objects.none()
-        return Machine.objects.filter(island__sucursal__company=company).select_related(
+        return Machine.objects.filter(island__sucursal_id__in=branch_ids).select_related(
             "island__sucursal"
         )
 
