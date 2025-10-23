@@ -188,6 +188,7 @@ class ShiftForm(forms.ModelForm):
             "start_time",
             "end_time",
             "manager",
+            "attendants",
         ]
         widgets = {
             "sucursal": forms.HiddenInput(),
@@ -205,11 +206,12 @@ class ShiftForm(forms.ModelForm):
             "end_time": forms.TimeInput(
                 attrs={"class": "w-full border rounded p-2", "type": "time"}
             ),
-            "manager": forms.Select(attrs={"class": "w-full border rounded p-2"}),
-        }
+            "manager": forms.Select(attrs={"class": "w-full border rounded p-2"}
+            ),
             "attendants": forms.SelectMultiple(
                 attrs={"class": "w-full border rounded p-2"}
             ),
+        }
     def clean(self):
         cleaned_data = super().clean()
         start = cleaned_data.get("start_time")
