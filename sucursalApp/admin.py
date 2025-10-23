@@ -1,6 +1,6 @@
 from django.contrib import admin
 
-from .models import Island, Machine, Nozzle, Shift, Sucursal, SucursalStaff
+from .models import FuelInventory, Island, Machine, Nozzle, Shift, Sucursal, SucursalStaff
 
 
 class NozzleInline(admin.TabularInline):
@@ -27,6 +27,11 @@ class SucursalStaffInline(admin.TabularInline):
     model = SucursalStaff
     extra = 1
 
+
+class FuelInventoryInline(admin.TabularInline):
+    model = FuelInventory
+    extra = 0
+
 @admin.register(Sucursal)
 class SucursalAdmin(admin.ModelAdmin):
     list_display = (
@@ -38,10 +43,11 @@ class SucursalAdmin(admin.ModelAdmin):
         "machines_count",
         "nozzles_count",
         "shifts_count",
+        "fuel_inventory_count",
     )
     search_fields = ("name", "company__business_name", "city", "region")
     list_filter = ("company", "city", "region")
-    inlines = [SucursalStaffInline, ShiftInline, IslandInline]
+    inlines = [SucursalStaffInline, ShiftInline, FuelInventoryInline, IslandInline]
 
     @admin.display(description="Islas")
     def island_count(self, obj: Sucursal) -> int:
@@ -59,6 +65,16 @@ class SucursalAdmin(admin.ModelAdmin):
     def shifts_count(self, obj: Sucursal) -> int:
         return obj.shifts_count
 
+    @admin.display(description="Inventarios de combustible")
+    def fuel_inventory_count(self, obj: Sucursal) -> int:
+        return obj.fuel_inventories_count
+
+
+@admin.register(FuelInventory)
+class FuelInventoryAdmin(admin.ModelAdmin):
+    list_display = ("code", "sucursal", "fuel_type", "capacity", "liters")
+    list_filter = ("sucursal__company", "fuel_type")
+    search_fields = ("code", "sucursal__name", "fuel_type")
 
 
 @admin.register(Island)

@@ -21,7 +21,22 @@ urlpatterns = [
         "turnos/<int:pk>/eliminar/",
         views.ShiftDeleteView.as_view(),
         name="sucursal_shift_delete",
-    ),    
+    ),
+    path(
+        "<int:branch_pk>/inventarios/nuevo/",
+        views.FuelInventoryCreateView.as_view(),
+        name="sucursal_fuel_inventory_create",
+    ),
+    path(
+        "inventarios/<int:pk>/editar/",
+        views.FuelInventoryUpdateView.as_view(),
+        name="sucursal_fuel_inventory_update",
+    ),
+    path(
+        "inventarios/<int:pk>/eliminar/",
+        views.FuelInventoryDeleteView.as_view(),
+        name="sucursal_fuel_inventory_delete",
+    ),
     path(
         "<int:branch_pk>/islas/nueva/",
         views.IslandCreateView.as_view(),

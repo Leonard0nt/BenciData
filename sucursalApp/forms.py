@@ -4,7 +4,15 @@ from django import forms
 
 from UsuarioApp.models import Profile
 
-from .models import Island, Machine, Nozzle, Shift, Sucursal, SucursalStaff
+from .models import (
+    FuelInventory,
+    Island,
+    Machine,
+    Nozzle,
+    Shift,
+    Sucursal,
+    SucursalStaff,
+)
 
 class SucursalForm(forms.ModelForm):
     administrators = forms.ModelMultipleChoiceField(
@@ -203,3 +211,20 @@ class ShiftForm(forms.ModelForm):
                 "La hora de término debe ser posterior a la hora de inicio.",
             )
         return cleaned_data
+
+
+class FuelInventoryForm(forms.ModelForm):
+    class Meta:
+        model = FuelInventory
+        fields = ["sucursal", "code", "fuel_type", "capacity", "liters"]
+        widgets = {
+            "sucursal": forms.HiddenInput(),
+            "code": forms.TextInput(attrs={"class": "w-full border rounded p-2"}),
+            "fuel_type": forms.TextInput(attrs={"class": "w-full border rounded p-2"}),
+            "capacity": forms.NumberInput(
+                attrs={"class": "w-full border rounded p-2", "step": "0.01"}
+            ),
+            "liters": forms.NumberInput(
+                attrs={"class": "w-full border rounded p-2", "step": "0.01"}
+            ),
+        }

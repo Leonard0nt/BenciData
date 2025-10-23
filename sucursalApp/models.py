@@ -58,6 +58,10 @@ class Sucursal(models.Model):
     def shifts_count(self) -> int:
         return self.shifts.count()
 
+    @property
+    def fuel_inventories_count(self) -> int:
+        return self.fuel_inventories.count()
+
     def get_staff_for_role(self, role: str | Iterable[str]):
         """Return the profiles assigned to the sucursal for the given role or roles."""
 
@@ -268,3 +272,39 @@ class Shift(models.Model):
 
     def __str__(self) -> str:
         return f"Turno {self.code} - {self.sucursal.name}"
+
+
+
+class FuelInventory(models.Model):
+    """Gestiona el inventario de combustibles asignado a una sucursal."""
+
+    sucursal = models.ForeignKey(
+        Sucursal,
+        on_delete=models.CASCADE,
+        related_name="fuel_inventories",
+        verbose_name="Sucursal",
+    )
+    code = models.CharField("Código", max_length=30)
+    fuel_type = models.CharField("Tipo de combustible", max_length=100)
+    capacity = models.DecimalField(
+        "Capacidad del tanque (L)", max_digits=12, decimal_places=2
+    )
+    liters = models.DecimalField(
+        "Litraje disponible (L)", max_digits=12, decimal_places=2
+    )
+    created_at = models.DateTimeField("Fecha de creación", auto_now_add=True)
+    updated_at = models.DateTimeField("Fecha de actualización", auto_now=True)
+
+    class Meta:
+        verbose_name = "Inventario de combustible"
+        verbose_name_plural = "Inventarios de combustible"
+        ordering = ("code",)
+        constraints = [
+            models.UniqueConstraint(
+                fields=["sucursal", "code"],
+                name="unique_inventory_code_per_branch",
+            )
+        ]
+
+    def __str__(self) -> str:
+        return f"{self.code} - {self.sucursal.name} ({self.fuel_type})"
