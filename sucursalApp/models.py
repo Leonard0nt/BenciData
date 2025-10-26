@@ -62,6 +62,10 @@ class Sucursal(models.Model):
     def fuel_inventories_count(self) -> int:
         return self.fuel_inventories.count()
 
+    @property
+    def products_count(self) -> int:
+        return self.products.count()
+
     def get_staff_for_role(self, role: str | Iterable[str]):
         """Return the profiles assigned to the sucursal for the given role or roles."""
 
@@ -280,6 +284,32 @@ class Shift(models.Model):
     def __str__(self) -> str:
         return f"Turno {self.code} - {self.sucursal.name}"
 
+
+
+class BranchProduct(models.Model):
+    """Registra los productos disponibles en una sucursal."""
+
+    sucursal = models.ForeignKey(
+        Sucursal,
+        on_delete=models.CASCADE,
+        related_name="products",
+        verbose_name="Sucursal",
+    )
+    product_type = models.CharField("Tipo", max_length=150)
+    quantity = models.PositiveIntegerField("Cantidad")
+    arrival_date = models.DateField("Fecha de llegada")
+    batch_number = models.CharField("Número de lote", max_length=100)
+    value = models.DecimalField("Valor", max_digits=12, decimal_places=2)
+    created_at = models.DateTimeField("Fecha de creación", auto_now_add=True)
+    updated_at = models.DateTimeField("Fecha de actualización", auto_now=True)
+
+    class Meta:
+        verbose_name = "Producto de sucursal"
+        verbose_name_plural = "Productos de sucursal"
+        ordering = ("product_type", "arrival_date")
+
+    def __str__(self) -> str:
+        return f"{self.product_type} - {self.sucursal.name}"
 
 
 class FuelInventory(models.Model):

@@ -1,6 +1,15 @@
 from django.contrib import admin
 
-from .models import FuelInventory, Island, Machine, Nozzle, Shift, Sucursal, SucursalStaff
+from .models import (
+    BranchProduct,
+    FuelInventory,
+    Island,
+    Machine,
+    Nozzle,
+    Shift,
+    Sucursal,
+    SucursalStaff,
+)
 
 
 class NozzleInline(admin.TabularInline):
@@ -32,6 +41,11 @@ class FuelInventoryInline(admin.TabularInline):
     model = FuelInventory
     extra = 0
 
+
+class BranchProductInline(admin.TabularInline):
+    model = BranchProduct
+    extra = 0
+
 @admin.register(Sucursal)
 class SucursalAdmin(admin.ModelAdmin):
     list_display = (
@@ -44,10 +58,17 @@ class SucursalAdmin(admin.ModelAdmin):
         "nozzles_count",
         "shifts_count",
         "fuel_inventory_count",
+        "products_count",   
     )
     search_fields = ("name", "company__business_name", "city", "region")
     list_filter = ("company", "city", "region")
-    inlines = [SucursalStaffInline, ShiftInline, FuelInventoryInline, IslandInline]
+    inlines = [
+        SucursalStaffInline,
+        ShiftInline,
+        FuelInventoryInline,
+        BranchProductInline,
+        IslandInline,
+    ]
 
     @admin.display(description="Islas")
     def island_count(self, obj: Sucursal) -> int:
@@ -69,6 +90,9 @@ class SucursalAdmin(admin.ModelAdmin):
     def fuel_inventory_count(self, obj: Sucursal) -> int:
         return obj.fuel_inventories_count
 
+    @admin.display(description="Productos")
+    def products_count(self, obj: Sucursal) -> int:
+        return obj.products_count
 
 @admin.register(FuelInventory)
 class FuelInventoryAdmin(admin.ModelAdmin):
@@ -76,6 +100,20 @@ class FuelInventoryAdmin(admin.ModelAdmin):
     list_filter = ("sucursal__company", "fuel_type")
     search_fields = ("code", "sucursal__name", "fuel_type")
 
+
+
+@admin.register(BranchProduct)
+class BranchProductAdmin(admin.ModelAdmin):
+    list_display = (
+        "product_type",
+        "sucursal",
+        "quantity",
+        "arrival_date",
+        "batch_number",
+        "value",
+    )
+    list_filter = ("sucursal__company", "arrival_date")
+    search_fields = ("product_type", "sucursal__name", "batch_number")
 
 @admin.register(Island)
 class IslandAdmin(admin.ModelAdmin):

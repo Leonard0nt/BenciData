@@ -5,6 +5,7 @@ from django import forms
 from UsuarioApp.models import Profile
 
 from .models import (
+    BranchProduct,
     FuelInventory,
     Island,
     Machine,
@@ -236,6 +237,37 @@ class FuelInventoryForm(forms.ModelForm):
                 attrs={"class": "w-full border rounded p-2", "step": "0.01"}
             ),
             "liters": forms.NumberInput(
+                attrs={"class": "w-full border rounded p-2", "step": "0.01"}
+            ),
+        }
+
+
+class BranchProductForm(forms.ModelForm):
+    class Meta:
+        model = BranchProduct
+        fields = [
+            "sucursal",
+            "product_type",
+            "quantity",
+            "arrival_date",
+            "batch_number",
+            "value",
+        ]
+        widgets = {
+            "sucursal": forms.HiddenInput(),
+            "product_type": forms.TextInput(
+                attrs={"class": "w-full border rounded p-2"}
+            ),
+            "quantity": forms.NumberInput(
+                attrs={"class": "w-full border rounded p-2", "min": "0"}
+            ),
+            "arrival_date": forms.DateInput(
+                attrs={"class": "w-full border rounded p-2", "type": "date"}
+            ),
+            "batch_number": forms.TextInput(
+                attrs={"class": "w-full border rounded p-2"}
+            ),
+            "value": forms.NumberInput(
                 attrs={"class": "w-full border rounded p-2", "step": "0.01"}
             ),
         }

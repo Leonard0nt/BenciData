@@ -15,6 +15,7 @@ from django.views.generic.edit import FormMixin
 from core.mixins import RoleRequiredMixin
 from homeApp.models import Company
 from .forms import (
+    BranchProductForm,
     FuelInventoryForm,
     IslandForm,
     MachineForm,
@@ -23,6 +24,7 @@ from .forms import (
     SucursalForm,
 )
 from .models import (
+    BranchProduct,
     FuelInventory,
     Island,
     Machine,
@@ -115,6 +117,10 @@ class SucursalListView(OwnerCompanyMixin, FormMixin, ListView):
                     queryset=FuelInventory.objects.order_by("code"),
                 ),
                 Prefetch(
+                    "products",
+                    queryset=BranchProduct.objects.order_by("product_type", "arrival_date"),
+                ),
+                Prefetch(
                     "staff",
                     queryset=SucursalStaff.objects.select_related(
                         "profile__user_FK", "profile__position_FK"
@@ -175,6 +181,10 @@ class SucursalUpdateView(OwnerCompanyMixin, UpdateView):
                 Prefetch(
                     "fuel_inventories",
                     queryset=FuelInventory.objects.order_by("code"),
+                ),
+                Prefetch(
+                    "products",
+                    queryset=BranchProduct.objects.order_by("product_type", "arrival_date"),
                 ),
                 Prefetch(
                     "staff",
@@ -239,6 +249,13 @@ class SucursalUpdateView(OwnerCompanyMixin, UpdateView):
             context["fuel_inventory_create_url"] = reverse(
                 "sucursal_fuel_inventory_create", args=[self.object.pk]
             )
+            context["products"] = self.object.products.all()
+            context["product_create_form"] = BranchProductForm(
+                initial={"sucursal": self.object}, auto_id="new-product_%s"
+            )
+            context["product_create_url"] = reverse(
+                "sucursal_product_create", args=[self.object.pk]
+            )
             for island in context["islands"]:
                 island.machine_create_form = MachineForm(
                     initial={"island": island}, auto_id=f"new-machine-{island.pk}_%s"
@@ -251,6 +268,7 @@ class SucursalUpdateView(OwnerCompanyMixin, UpdateView):
         else:
             context.setdefault("islands", [])
             context.setdefault("shifts", [])
+            context.setdefault("products", [])
         context.setdefault("can_manage_shifts", False)
         return context
 
@@ -436,6 +454,79 @@ class FuelInventoryDeleteView(FuelInventoryAccessMixin, View):
         inventory.delete()
         return HttpResponseRedirect(success_url)
 
+
+class BranchProductAccessMixin(OwnerCompanyMixin):
+    model = BranchProduct
+    allowed_roles = ["OWNER", "ADMINISTRATOR"]
+
+    def get_queryset(self) -> QuerySet[BranchProduct]:
+        branch_ids = self.get_managed_branch_ids()
+        if not branch_ids:
+            return BranchProduct.objects.none()
+        return BranchProduct.objects.filter(sucursal_id__in=branch_ids).select_related(
+            "sucursal"
+        )
+
+    def get_object(self) -> BranchProduct:
+        return get_object_or_404(self.get_queryset(), pk=self.kwargs.get("pk"))
+
+    def get_success_url(self, obj: BranchProduct | None = None) -> str:
+        instance = obj or getattr(self, "object", None)
+        if instance is None:
+            instance = self.get_object()
+        return reverse("sucursal_update", args=[instance.sucursal_id])
+
+
+class BranchProductCreateView(BranchAccessMixin, CreateView):
+    form_class = BranchProductForm
+    template_name = "pages/sucursales/related_form.html"
+
+    def get_initial(self) -> Dict[str, Any]:
+        initial = super().get_initial()
+        initial.setdefault("sucursal", self.get_sucursal())
+        return initial
+
+    def form_valid(self, form: BranchProductForm) -> HttpResponseRedirect:
+        form.instance.sucursal = self.get_sucursal()
+        return super().form_valid(form)
+
+    def get_context_data(self, **kwargs: Any) -> Dict[str, Any]:
+        context = super().get_context_data(**kwargs)
+        context.update({"sucursal": self.get_sucursal(), "title": "Agregar producto"})
+        return context
+
+    def get_success_url(self) -> str:
+        return reverse("sucursal_update", args=[self.get_sucursal().pk])
+
+
+class BranchProductUpdateView(BranchProductAccessMixin, UpdateView):
+    form_class = BranchProductForm
+    template_name = "pages/sucursales/related_form.html"
+
+    def form_valid(self, form: BranchProductForm) -> HttpResponseRedirect:
+        form.instance.sucursal = self.object.sucursal
+        return super().form_valid(form)
+
+    def get_context_data(self, **kwargs: Any) -> Dict[str, Any]:
+        context = super().get_context_data(**kwargs)
+        context.update(
+            {
+                "sucursal": self.object.sucursal,
+                "title": "Editar producto",
+            }
+        )
+        return context
+
+    def get_success_url(self) -> str:
+        return super().get_success_url(self.object)
+
+
+class BranchProductDeleteView(BranchProductAccessMixin, View):
+    def post(self, request, *args, **kwargs) -> HttpResponseRedirect:
+        product = self.get_object()
+        success_url = self.get_success_url(product)
+        product.delete()
+        return HttpResponseRedirect(success_url)
 
 class IslandAccessMixin(OwnerCompanyMixin):
     model = Island

@@ -38,6 +38,21 @@ urlpatterns = [
         name="sucursal_fuel_inventory_delete",
     ),
     path(
+        "<int:branch_pk>/productos/nuevo/",
+        views.BranchProductCreateView.as_view(),
+        name="sucursal_product_create",
+    ),
+    path(
+        "productos/<int:pk>/editar/",
+        views.BranchProductUpdateView.as_view(),
+        name="sucursal_product_update",
+    ),
+    path(
+        "productos/<int:pk>/eliminar/",
+        views.BranchProductDeleteView.as_view(),
+        name="sucursal_product_delete",
+    ),
+    path(
         "<int:branch_pk>/islas/nueva/",
         views.IslandCreateView.as_view(),
         name="sucursal_island_create",
