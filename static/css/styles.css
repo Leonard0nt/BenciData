@@ -10,6 +10,9 @@ summary {
   gap: 0.5rem;
 }
 
+[x-cloak] {
+  display: none !important;
+}
 details > summary svg {
   width: 1rem;
   height: 1rem;

@@ -61,35 +61,41 @@
               <h2 class="text-xl font-semibold text-gray-900">Información general</h2>
               <p class="mt-1 text-sm text-gray-500">Revisa los datos principales y el personal asignado a la sucursal.</p>
             </div>
-            <dl class="grid grid-cols-1 gap-x-6 gap-y-3 text-sm text-gray-600 sm:grid-cols-2">
+          </div>
+
+          <div class="mt-6 grid grid-cols-1 gap-6 md:grid-cols-3">
+            <dl class="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
                 <dt class="font-medium text-gray-700">Nombre</dt>
                 <dd class="mt-1 text-gray-900">{{ branch.name }}</dd>
               </div>
+            
               <div>
                 <dt class="font-medium text-gray-700">Dirección</dt>
                 <dd class="mt-1 text-gray-900">{{ branch.address }}</dd>
               </div>
+            
               <div>
                 <dt class="font-medium text-gray-700">Ciudad</dt>
                 <dd class="mt-1 text-gray-900">{{ branch.city }}</dd>
               </div>
+            
               <div>
                 <dt class="font-medium text-gray-700">Región</dt>
                 <dd class="mt-1 text-gray-900">{{ branch.region }}</dd>
               </div>
+            
               <div>
                 <dt class="font-medium text-gray-700">Teléfono</dt>
                 <dd class="mt-1 text-gray-900">{{ branch.phone|default:"Sin información" }}</dd>
               </div>
+            
               <div>
                 <dt class="font-medium text-gray-700">Correo electrónico</dt>
                 <dd class="mt-1 text-gray-900">{{ branch.email|default:"Sin información" }}</dd>
               </div>
             </dl>
-          </div>
 
-          <div class="mt-6 grid grid-cols-1 gap-6 md:grid-cols-3">
             <div>
               <h3 class="text-sm font-semibold uppercase tracking-wide text-gray-500">Administradores</h3>
               {% with administrators=branch.administrators %}
