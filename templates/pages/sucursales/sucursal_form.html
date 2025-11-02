@@ -1,142 +1,464 @@
 {% extends 'components/Layout/base_pages.html' %}
 
 {% block content_pages %}
-  {% if not form.instance.pk %}
-    <h1 class="text-2xl font-semibold text-gray-900 mb-6">
-      Crear sucursal
-    </h1>
-    <form method="post" class="space-y-6">
-      {% csrf_token %}
-      {% for field in form %}
-        <div>
-          <label class="block text-sm font-medium text-gray-700 mb-1" for="{{ field.id_for_label }}">{{ field.label }}</label>
-          {{ field }}
-          {% if field.help_text %}
-            <p class="mt-1 text-sm text-gray-500">{{ field.help_text }}</p>
+  {% if form.instance.pk %}
+    <form
+      method="post"
+      class="space-y-8"
+      x-data="{ openModal: null }"
+      @keydown.escape.window="openModal = null"
+      x-init="
+        {% if form.errors %}
+          {% if form.name.errors or form.address.errors or form.city.errors or form.region.errors or form.phone.errors or form.email.errors %}
+            openModal = 'general';
+          {% elif form.administrators.errors or form.accountants.errors or form.firefighters.errors %}
+            openModal = 'staff';
           {% endif %}
-          {% for error in field.errors %}
-            <p class="mt-1 text-sm text-red-600">{{ error }}</p>
-          {% endfor %}
-        </div>
-      {% endfor %}
-      {% if form.non_field_errors %}
-        {% for error in form.non_field_errors %}
-          <p class="text-sm text-red-600">{{ error }}</p>
-        {% endfor %}
-      {% endif %}
-      <div class="flex justify-end gap-3">
-        <a href="{% url 'sucursal_list' %}" class="inline-flex items-center rounded-md border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">Cancelar</a>
-        <button type="submit" class="inline-flex items-center rounded-md bg-gradient-to-br from-blue-600 to-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:from-blue-500 hover:to-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600">
-          Guardar
-        </button>
-      </div>
-    </form>
-  {% else %}
-    <style>
-      [x-cloak] { display: none !important; }
-    </style>
-    {% with branch=form.instance %}
-      <div
-        x-data="{ openModal: null }"
-        x-init="{% if form.is_bound and form.errors %}openModal = 'edit-branch';{% endif %}"
-        class="relative"
-      >
-        <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between mb-6">
+        {% endif %}
+      "
+    >
+      {% csrf_token %}
+      <div class="flex flex-wrap items-start justify-between gap-4">
+        <div>
           <h1 class="text-2xl font-semibold text-gray-900">Editar sucursal</h1>
-          <div class="flex flex-col gap-3 sm:flex-row">
-            <a href="{% url 'sucursal_list' %}" class="inline-flex items-center justify-center rounded-md border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">Volver al listado</a>
+          <p class="mt-1 text-sm text-gray-600">
+            Revisa los datos principales y el personal asignado a la sucursal.
+          </p>
+        </div>
+        <div class="flex flex-wrap items-center justify-end gap-3">
+          <a
+            href="{% url 'sucursal_list' %}"
+            class="inline-flex items-center rounded-md border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+          >
+            Volver al listado
+          </a>
+          <button
+            type="button"
+            class="inline-flex items-center rounded-md bg-gradient-to-br from-indigo-500 to-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:from-indigo-600 hover:to-blue-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600"
+            @click="openModal = 'general'"
+          >
+            Editar información
+          </button>
+          <button
+            type="button"
+            class="inline-flex items-center rounded-md border border-indigo-200 bg-indigo-50 px-4 py-2 text-sm font-semibold text-indigo-600 shadow-sm hover:bg-indigo-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-500"
+            @click="openModal = 'staff'"
+          >
+            Gestionar personal
+          </button>
+        </div>
+      </div>
+
+      {% if form.non_field_errors %}
+        <div class="rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+          <ul class="space-y-1">
+            {% for error in form.non_field_errors %}
+              <li>{{ error }}</li>
+            {% endfor %}
+          </ul>
+        </div>
+      {% endif %}
+
+      <section class="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
+        <div class="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <h2 class="text-lg font-semibold text-gray-900">Información general</h2>
+            <p class="mt-1 text-sm text-gray-500">Datos principales de contacto y ubicación de la sucursal.</p>
+          </div>
+          <button
+            type="button"
+            class="inline-flex items-center rounded-md border border-gray-300 px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50"
+            @click="openModal = 'general'"
+          >
+            Editar
+          </button>
+        </div>
+        <dl class="mt-6 grid grid-cols-1 gap-6 sm:grid-cols-2">
+          <div>
+            <dt class="text-sm font-medium text-gray-500">Nombre</dt>
+            <dd class="mt-1 text-base font-semibold text-gray-900">{{ form.name.value|default:form.instance.name|default:"-" }}</dd>
+          </div>
+          <div>
+            <dt class="text-sm font-medium text-gray-500">Dirección</dt>
+            <dd class="mt-1 text-base font-semibold text-gray-900">{{ form.address.value|default:form.instance.address|default:"-" }}</dd>
+          </div>
+          <div>
+            <dt class="text-sm font-medium text-gray-500">Ciudad</dt>
+            <dd class="mt-1 text-base font-semibold text-gray-900">{{ form.city.value|default:form.instance.city|default:"-" }}</dd>
+          </div>
+          <div>
+            <dt class="text-sm font-medium text-gray-500">Región</dt>
+            <dd class="mt-1 text-base font-semibold text-gray-900">{{ form.region.value|default:form.instance.region|default:"-" }}</dd>
+          </div>
+          <div>
+            <dt class="text-sm font-medium text-gray-500">Teléfono</dt>
+            <dd class="mt-1 text-base font-semibold text-gray-900">{{ form.phone.value|default:form.instance.phone|default:"-" }}</dd>
+          </div>
+          <div>
+            <dt class="text-sm font-medium text-gray-500">Correo electrónico</dt>
+            <dd class="mt-1 text-base font-semibold text-gray-900">{{ form.email.value|default:form.instance.email|default:"-" }}</dd>
+          </div>
+        </dl>
+      </section>
+
+      <section class="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
+        <div class="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <h2 class="text-lg font-semibold text-gray-900">Personal asignado</h2>
+            <p class="mt-1 text-sm text-gray-500">Administradores, contadores y bomberos asociados a la sucursal.</p>
+          </div>
+          <button
+            type="button"
+            class="inline-flex items-center rounded-md border border-indigo-200 bg-indigo-50 px-3 py-1.5 text-sm font-medium text-indigo-600 hover:bg-indigo-100"
+            @click="openModal = 'staff'"
+          >
+            Gestionar
+          </button>
+        </div>
+        <div class="mt-6 grid grid-cols-1 gap-6 md:grid-cols-3">
+          <div class="rounded-lg border border-gray-100 bg-gray-50 p-4">
+            <h3 class="text-sm font-semibold text-gray-900">Administradores</h3>
+            {% with administrators=form.instance.administrators %}
+              {% if administrators %}
+                <ul class="mt-3 space-y-2 text-sm text-gray-700">
+                  {% for administrator in administrators %}
+                    {% with full_name=administrator.user_FK.get_full_name %}
+                      <li>
+                        <p class="font-medium text-gray-900">{{ full_name|default:administrator.user_FK.username }}</p>
+                        {% if administrator.position_FK %}
+                          <p class="text-xs text-gray-500">{{ administrator.position_FK.user_position }}</p>
+                        {% endif %}
+                      </li>
+                    {% endwith %}
+                  {% endfor %}
+                </ul>
+              {% else %}
+                <p class="mt-3 text-sm text-gray-500">No se han asignado administradores.</p>
+              {% endif %}
+            {% endwith %}
+          </div>
+          <div class="rounded-lg border border-gray-100 bg-gray-50 p-4">
+            <h3 class="text-sm font-semibold text-gray-900">Contadores</h3>
+            {% with accountants=form.instance.accountants %}
+              {% if accountants %}
+                <ul class="mt-3 space-y-2 text-sm text-gray-700">
+                  {% for accountant in accountants %}
+                    {% with full_name=accountant.user_FK.get_full_name %}
+                      <li>
+                        <p class="font-medium text-gray-900">{{ full_name|default:accountant.user_FK.username }}</p>
+                        {% if accountant.position_FK %}
+                          <p class="text-xs text-gray-500">{{ accountant.position_FK.user_position }}</p>
+                        {% endif %}
+                      </li>
+                    {% endwith %}
+                  {% endfor %}
+                </ul>
+              {% else %}
+                <p class="mt-3 text-sm text-gray-500">No se han asignado contadores.</p>
+              {% endif %}
+            {% endwith %}
+          </div>
+          <div class="rounded-lg border border-gray-100 bg-gray-50 p-4">
+            <h3 class="text-sm font-semibold text-gray-900">Bomberos</h3>
+            {% with firefighters=form.instance.firefighters %}
+              {% if firefighters %}
+                <ul class="mt-3 space-y-2 text-sm text-gray-700">
+                  {% for firefighter in firefighters %}
+                    {% with full_name=firefighter.user_FK.get_full_name %}
+                      <li>
+                        <p class="font-medium text-gray-900">{{ full_name|default:firefighter.user_FK.username }}</p>
+                        {% if firefighter.position_FK %}
+                          <p class="text-xs text-gray-500">{{ firefighter.position_FK.user_position }}</p>
+                        {% endif %}
+                      </li>
+                    {% endwith %}
+                  {% endfor %}
+                </ul>
+              {% else %}
+                <p class="mt-3 text-sm text-gray-500">No se han asignado bomberos.</p>
+              {% endif %}
+            {% endwith %}
+          </div>
+        </div>
+      </section>
+
+      <!-- Modal: información general -->
+      <div
+        x-cloak
+        x-show="openModal === 'general'"
+        class="fixed inset-0 z-50 flex items-center justify-center px-4 py-6 sm:px-6 lg:px-8"
+        role="dialog"
+        aria-modal="true"
+        x-transition:enter="ease-out duration-200"
+        x-transition:enter-start="opacity-0"
+        x-transition:enter-end="opacity-100"
+        x-transition:leave="ease-in duration-150"
+        x-transition:leave-start="opacity-100"
+        x-transition:leave-end="opacity-0"
+      >
+        <div class="absolute inset-0 bg-gray-900/60" @click="openModal = null"></div>
+        <div
+          class="relative z-10 w-full max-w-2xl overflow-hidden rounded-xl bg-white shadow-xl"
+          x-transition:enter="ease-out duration-200"
+          x-transition:enter-start="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
+          x-transition:enter-end="opacity-100 translate-y-0 sm:scale-100"
+          x-transition:leave="ease-in duration-150"
+          x-transition:leave-start="opacity-100 translate-y-0 sm:scale-100"
+          x-transition:leave-end="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
+        >
+          <div class="flex items-start justify-between border-b border-gray-200 px-6 py-4">
+            <div>
+              <h3 class="text-lg font-semibold text-gray-900">Editar información general</h3>
+              <p class="mt-1 text-sm text-gray-500">Actualiza los datos de contacto y localización de la sucursal.</p>
+            </div>
             <button
               type="button"
-              class="inline-flex items-center justify-center rounded-md bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600"
-              @click="openModal = 'edit-branch'"
+              class="rounded-md p-1 text-gray-400 hover:text-gray-600"
+              @click="openModal = null"
             >
-              Editar información
+              <span class="sr-only">Cerrar modal</span>
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="h-5 w-5">
+                <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd" />
+              </svg>
+            </button>
+          </div>
+          <div class="max-h-[70vh] overflow-y-auto px-5 py-5">
+            <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1" for="{{ form.name.id_for_label }}">{{ form.name.label }}</label>
+                {{ form.name }}
+                {% if form.name.help_text %}
+                  <p class="mt-1 text-sm text-gray-500">{{ form.name.help_text }}</p>
+                {% endif %}
+                {% if form.name.errors %}
+                  <ul class="mt-1 space-y-1 text-sm text-red-600">
+                    {% for error in form.name.errors %}
+                      <li>{{ error }}</li>
+                    {% endfor %}
+                  </ul>
+                {% endif %}
+              </div>
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1" for="{{ form.address.id_for_label }}">{{ form.address.label }}</label>
+                {{ form.address }}
+                {% if form.address.help_text %}
+                  <p class="mt-1 text-sm text-gray-500">{{ form.address.help_text }}</p>
+                {% endif %}
+                {% if form.address.errors %}
+                  <ul class="mt-1 space-y-1 text-sm text-red-600">
+                    {% for error in form.address.errors %}
+                      <li>{{ error }}</li>
+                    {% endfor %}
+                  </ul>
+                {% endif %}
+              </div>
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1" for="{{ form.city.id_for_label }}">{{ form.city.label }}</label>
+                {{ form.city }}
+                {% if form.city.help_text %}
+                  <p class="mt-1 text-sm text-gray-500">{{ form.city.help_text }}</p>
+                {% endif %}
+                {% if form.city.errors %}
+                  <ul class="mt-1 space-y-1 text-sm text-red-600">
+                    {% for error in form.city.errors %}
+                      <li>{{ error }}</li>
+                    {% endfor %}
+                  </ul>
+                {% endif %}
+              </div>
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1" for="{{ form.region.id_for_label }}">{{ form.region.label }}</label>
+                {{ form.region }}
+                {% if form.region.help_text %}
+                  <p class="mt-1 text-sm text-gray-500">{{ form.region.help_text }}</p>
+                {% endif %}
+                {% if form.region.errors %}
+                  <ul class="mt-1 space-y-1 text-sm text-red-600">
+                    {% for error in form.region.errors %}
+                      <li>{{ error }}</li>
+                    {% endfor %}
+                  </ul>
+                {% endif %}
+              </div>
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1" for="{{ form.phone.id_for_label }}">{{ form.phone.label }}</label>
+                {{ form.phone }}
+                {% if form.phone.help_text %}
+                  <p class="mt-1 text-sm text-gray-500">{{ form.phone.help_text }}</p>
+                {% endif %}
+                {% if form.phone.errors %}
+                  <ul class="mt-1 space-y-1 text-sm text-red-600">
+                    {% for error in form.phone.errors %}
+                      <li>{{ error }}</li>
+                    {% endfor %}
+                  </ul>
+                {% endif %}
+              </div>
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1" for="{{ form.email.id_for_label }}">{{ form.email.label }}</label>
+                {{ form.email }}
+                {% if form.email.help_text %}
+                  <p class="mt-1 text-sm text-gray-500">{{ form.email.help_text }}</p>
+                {% endif %}
+                {% if form.email.errors %}
+                  <ul class="mt-1 space-y-1 text-sm text-red-600">
+                    {% for error in form.email.errors %}
+                      <li>{{ error }}</li>
+                    {% endfor %}
+                  </ul>
+                {% endif %}
+              </div>
+            </div>
+          </div>
+          <div class="flex justify-end gap-3 border-t border-gray-200 bg-gray-50 px-5 py-4">
+            <button
+              type="button"
+              class="inline-flex items-center rounded-md border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100"
+              @click="openModal = null"
+            >
+              Cancelar
+            </button>
+            <button
+              type="submit"
+              class="inline-flex items-center rounded-md bg-gradient-to-br from-indigo-500 to-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:from-indigo-600 hover:to-blue-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600"
+            >
+              Guardar
             </button>
           </div>
         </div>
+      </div>
 
-        <section class="rounded-lg border border-gray-200 bg-white p-6 shadow-sm">
-          <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+      <!-- Modal: personal -->
+      <div
+        x-cloak
+        x-show="openModal === 'staff'"
+        class="fixed inset-0 z-50 flex items-center justify-center px-4 py-6 sm:px-6 lg:px-8"
+        role="dialog"
+        aria-modal="true"
+        x-transition:enter="ease-out duration-200"
+        x-transition:enter-start="opacity-0"
+        x-transition:enter-end="opacity-100"
+        x-transition:leave="ease-in duration-150"
+        x-transition:leave-start="opacity-100"
+        x-transition:leave-end="opacity-0"
+      >
+        <div class="absolute inset-0 bg-gray-900/60" @click="openModal = null"></div>
+        <div
+          class="relative z-10 w-full max-w-2xl overflow-hidden rounded-xl bg-white shadow-xl"
+          x-transition:enter="ease-out duration-200"
+          x-transition:enter-start="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
+          x-transition:enter-end="opacity-100 translate-y-0 sm:scale-100"
+          x-transition:leave="ease-in duration-150"
+          x-transition:leave-start="opacity-100 translate-y-0 sm:scale-100"
+          x-transition:leave-end="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
+        >
+          <div class="flex items-start justify-between border-b border-gray-200 px-6 py-4">
             <div>
-              <h2 class="text-xl font-semibold text-gray-900">Información general</h2>
-              <p class="mt-1 text-sm text-gray-500">Revisa los datos principales y el personal asignado a la sucursal.</p>
+              <h3 class="text-lg font-semibold text-gray-900">Gestionar personal asignado</h3>
+              <p class="mt-1 text-sm text-gray-500">Selecciona administradores, contadores y bomberos para la sucursal.</p>
+            </div>
+            <button
+              type="button"
+              class="rounded-md p-1 text-gray-400 hover:text-gray-600"
+              @click="openModal = null"
+            >
+              <span class="sr-only">Cerrar modal</span>
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="h-5 w-5">
+                <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd" />
+              </svg>
+            </button>
+          </div>
+          <div class="max-h-[70vh] overflow-y-auto px-5 py-5 space-y-5">
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1" for="{{ form.administrators.id_for_label }}">{{ form.administrators.label }}</label>
+              {{ form.administrators }}
+              {% if form.administrators.help_text %}
+                <p class="mt-1 text-sm text-gray-500">{{ form.administrators.help_text }}</p>
+              {% endif %}
+              {% if form.administrators.errors %}
+                <ul class="mt-1 space-y-1 text-sm text-red-600">
+                  {% for error in form.administrators.errors %}
+                    <li>{{ error }}</li>
+                  {% endfor %}
+                </ul>
+              {% endif %}
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1" for="{{ form.accountants.id_for_label }}">{{ form.accountants.label }}</label>
+              {{ form.accountants }}
+              {% if form.accountants.help_text %}
+                <p class="mt-1 text-sm text-gray-500">{{ form.accountants.help_text }}</p>
+              {% endif %}
+              {% if form.accountants.errors %}
+                <ul class="mt-1 space-y-1 text-sm text-red-600">
+                  {% for error in form.accountants.errors %}
+                    <li>{{ error }}</li>
+                  {% endfor %}
+                </ul>
+              {% endif %}
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1" for="{{ form.firefighters.id_for_label }}">{{ form.firefighters.label }}</label>
+              {{ form.firefighters }}
+              {% if form.firefighters.help_text %}
+                <p class="mt-1 text-sm text-gray-500">{{ form.firefighters.help_text }}</p>
+              {% endif %}
+              {% if form.firefighters.errors %}
+                <ul class="mt-1 space-y-1 text-sm text-red-600">
+                  {% for error in form.firefighters.errors %}
+                    <li>{{ error }}</li>
+                  {% endfor %}
+                </ul>
+              {% endif %}
             </div>
           </div>
+          <div class="flex justify-end gap-3 border-t border-gray-200 bg-gray-50 px-5 py-4">
+            <button
+              type="button"
+              class="inline-flex items-center rounded-md border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100"
+              @click="openModal = null"
+            >
+              Cancelar
+            </button>
+            <button
+              type="submit"
+              class="inline-flex items-center rounded-md bg-gradient-to-br from-indigo-500 to-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:from-indigo-600 hover:to-blue-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600"
+            >
+              Guardar
+            </button>
+          </div>
+        </div>
+      </div>
+    </form>
 
-          <div class="mt-6 grid grid-cols-1 gap-6 md:grid-cols-3">
-            <dl class="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div>
-                <dt class="font-medium text-gray-700">Nombre</dt>
-                <dd class="mt-1 text-gray-900">{{ branch.name }}</dd>
-              </div>
-            
-              <div>
-                <dt class="font-medium text-gray-700">Dirección</dt>
-                <dd class="mt-1 text-gray-900">{{ branch.address }}</dd>
-              </div>
-            
-              <div>
-                <dt class="font-medium text-gray-700">Ciudad</dt>
-                <dd class="mt-1 text-gray-900">{{ branch.city }}</dd>
-              </div>
-            
-              <div>
-                <dt class="font-medium text-gray-700">Región</dt>
-                <dd class="mt-1 text-gray-900">{{ branch.region }}</dd>
-              </div>
-            
-              <div>
-                <dt class="font-medium text-gray-700">Teléfono</dt>
-                <dd class="mt-1 text-gray-900">{{ branch.phone|default:"Sin información" }}</dd>
-              </div>
-            
-              <div>
-                <dt class="font-medium text-gray-700">Correo electrónico</dt>
-                <dd class="mt-1 text-gray-900">{{ branch.email|default:"Sin información" }}</dd>
-              </div>
-            </dl>
-
-            <div>
-              <h3 class="text-sm font-semibold uppercase tracking-wide text-gray-500">Administradores</h3>
-              {% with administrators=branch.administrators %}
-                {% if administrators %}
-                  <ul class="mt-3 space-y-2 text-sm text-gray-700">
-                    {% for profile in administrators %}
-                      {% with user=profile.user_FK %}
-                        <li class="rounded-md border border-gray-200 bg-gray-50 p-3">
-                          <p class="font-medium text-gray-900">{{ user.get_full_name|default:user.username }}</p>
-                          {% if profile.position_FK %}
-                            <p class="mt-1 text-xs text-gray-500">{{ profile.position_FK.user_position }}</p>
-                          {% endif %}
-                        </li>
-                      {% endwith %}
-                    {% endfor %}
-                  </ul>
-                {% else %}
-                  <p class="mt-3 text-sm text-gray-500">Aún no se han asignado administradores.</p>
-                {% endif %}
-              {% endwith %}
-            </div>
-            <div>
-              <h3 class="text-sm font-semibold uppercase tracking-wide text-gray-500">Contadores</h3>
-              {% with accountants=branch.accountants %}
-                {% if accountants %}
-                  <ul class="mt-3 space-y-2 text-sm text-gray-700">
-                    {% for profile in accountants %}
-                      {% with user=profile.user_FK %}
-                        <li class="rounded-md border border-gray-200 bg-gray-50 p-3">
-                          <p class="font-medium text-gray-900">{{ user.get_full_name|default:user.username }}</p>
-                          {% if profile.position_FK %}
-                            <p class="mt-1 text-xs text-gray-500">{{ profile.position_FK.user_position }}</p>
-                          {% endif %}
-                        </li>
-                      {% endwith %}
-                    {% endfor %}
-                  </ul>
-                {% else %}
-                  <p class="mt-3 text-sm text-gray-500">Aún no se han asignado contadores.</p>
-                {% endif %}
-              {% endwith %}
+    <section class="mt-10">
+      <h2 class="text-xl font-semibold text-gray-900 mb-4">Turnos de la sucursal</h2>
+      {% if shift_create_form %}
+        <div class="rounded-lg border border-gray-200 bg-white p-6 mb-6">
+          <h3 class="text-lg font-medium text-gray-800">Agregar nuevo turno</h3>
+          <p class="mt-1 text-sm text-gray-500">Registra código, horario y encargado para organizar la rotación del personal.</p>
+          <form method="post" action="{{ shift_create_url }}" class="mt-4 space-y-6">
+            {% csrf_token %}
+            {% for hidden in shift_create_form.hidden_fields %}
+              {{ hidden }}
+            {% endfor %}
+            <div class="grid grid-cols-1 gap-6 md:grid-cols-2">
+              {% for field in shift_create_form.visible_fields %}
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 mb-1" for="{{ field.id_for_label }}">{{ field.label }}</label>
+                  {{ field }}
+                  {% if field.help_text %}
+                    <p class="mt-1 text-sm text-gray-500">{{ field.help_text }}</p>
+                  {% endif %}
+                  {% if field.errors %}
+                    <ul class="mt-1 space-y-1 text-sm text-red-600">
+                      {% for error in field.errors %}
+                        <li>{{ error }}</li>
+                      {% endfor %}
+                    </ul>
+                  {% endif %}
+                </div>
+              {% endfor %}
             </div>
             <div>
               <h3 class="text-sm font-semibold uppercase tracking-wide text-gray-500">Bomberos</h3>
@@ -300,46 +622,51 @@
                 Agregar producto
               </button>
             {% endif %}
-          </div>
-          {% if products %}
-            <div class="space-y-4">
-              {% for product in products %}
-                <div class="rounded-lg border border-gray-200 bg-white p-4">
-                  <div class="flex items-start justify-between gap-4">
-                    <div>
-                      <p class="text-xs font-semibold uppercase tracking-wide text-gray-500">Tipo</p>
-                      <h3 class="text-lg font-semibold text-gray-900">{{ product.product_type }}</h3>
-                      <p class="mt-2 text-sm text-gray-600">Lote: {{ product.batch_number }}</p>
-                    </div>
-                    <div class="flex items-center gap-2">
-                      <a href="{% url 'sucursal_product_update' product.pk %}" class="inline-flex items-center rounded-md border border-gray-300 px-3 py-1 text-xs font-medium text-gray-700 hover:bg-gray-50">Editar</a>
-                      <form method="post" action="{% url 'sucursal_product_delete' product.pk %}">
-                        {% csrf_token %}
-                        <button type="submit" class="inline-flex items-center rounded-md border border-red-200 bg-red-50 px-3 py-1 text-xs font-medium text-red-600 hover:bg-red-100">Eliminar</button>
-                      </form>
-                    </div>
-                  </div>
-                  <dl class="mt-4 grid-cols-1 gap-x-4 gap-y-2 text-sm text-gray-600 sm:grid-cols-2">
-                    <div>
-                      <dt class="font-medium text-gray-700">Cantidad</dt>
-                      <dd>{{ product.quantity }}</dd>
-                    </div>
-                    <div>
-                      <dt class="font-medium text-gray-700">Valor</dt>
-                      <dd>${{ product.value }}</dd>
-                    </div>
-                    <div>
-                      <dt class="font-medium text-gray-700">Fecha de llegada</dt>
-                      <dd>{{ product.arrival_date|date:"d/m/Y" }}</dd>
-                    </div>
-                  </dl>
-                </div>
-              {% endfor %}
+            <div class="flex justify-end">
+              <button type="submit" class="inline-flex items-center rounded-md bg-indigo-500 px-4 py-1.5 text-sm font-semibold text-white shadow-sm hover:bg-indigo-600 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-500">Guardar producto</button>
             </div>
-          {% else %}
-            <p class="text-sm text-gray-500">Aún no se han registrado productos para esta sucursal.</p>
-          {% endif %}
-        </section>
+          </form>
+        </div>
+      {% endif %}
+      {% if products %}
+        <div class="space-y-4">
+          {% for product in products %}
+            <div class="rounded-lg border border-gray-200 bg-white p-4">
+              <div class="flex items-start justify-between gap-4">
+                <div>
+                  <p class="text-xs font-semibold uppercase tracking-wide text-gray-500">Tipo</p>
+                  <h3 class="text-lg font-semibold text-gray-900">{{ product.product_type }}</h3>
+                  <p class="mt-2 text-sm text-gray-600">Lote: {{ product.batch_number }}</p>
+                </div>
+                <div class="flex items-center gap-2">
+                  <a href="{% url 'sucursal_product_update' product.pk %}" class="inline-flex items-center rounded-md border border-gray-300 px-3 py-1 text-xs font-medium text-gray-700 hover:bg-gray-50">Editar</a>
+                  <form method="post" action="{% url 'sucursal_product_delete' product.pk %}">
+                    {% csrf_token %}
+                    <button type="submit" class="inline-flex items-center rounded-md border border-red-200 bg-red-50 px-3 py-1 text-xs font-medium text-red-600 hover:bg-red-100">Eliminar</button>
+                  </form>
+                </div>
+              </div>
+              <dl class="mt-4 grid-cols-1 gap-x-4 gap-y-2 text-sm text-gray-600 sm:grid-cols-2">
+                <div>
+                  <dt class="font-medium text-gray-700">Cantidad</dt>
+                  <dd>{{ product.quantity }}</dd>
+                </div>
+                <div>
+                  <dt class="font-medium text-gray-700">Valor</dt>
+                  <dd>${{ product.value }}</dd>
+                </div>
+                <div>
+                  <dt class="font-medium text-gray-700">Fecha de llegada</dt>
+                  <dd>{{ product.arrival_date|date:"d/m/Y" }}</dd>
+                </div>
+              </dl>
+            </div>
+          {% endfor %}
+        </div>
+      {% else %}
+        <p class="text-sm text-gray-500">Aún no se han registrado productos para esta sucursal.</p>
+      {% endif %}
+    </section>
 
         <section class="mt-10">
           <div class="flex items-center justify-between mb-4">
@@ -882,7 +1209,37 @@
             </div>
           </div>
         </div>
+      {% else %}
+        <p class="text-sm text-gray-500">Aún no se han registrado islas para esta sucursal.</p>
+      {% endif %}
+    </section>
+  {% else %}
+    <h1 class="text-2xl font-semibold text-gray-900 mb-6">Crear sucursal</h1>
+    <form method="post" class="space-y-6">
+      {% csrf_token %}
+      {% for field in form %}
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1" for="{{ field.id_for_label }}">{{ field.label }}</label>
+          {{ field }}
+          {% if field.help_text %}
+            <p class="mt-1 text-sm text-gray-500">{{ field.help_text }}</p>
+          {% endif %}
+          {% for error in field.errors %}
+            <p class="mt-1 text-sm text-red-600">{{ error }}</p>
+          {% endfor %}
+        </div>
+      {% endfor %}
+      {% if form.non_field_errors %}
+        {% for error in form.non_field_errors %}
+          <p class="text-sm text-red-600">{{ error }}</p>
+        {% endfor %}
+      {% endif %}
+      <div class="flex justify-end gap-3">
+        <a href="{% url 'sucursal_list' %}" class="inline-flex items-center rounded-md border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">Cancelar</a>
+        <button type="submit" class="inline-flex items-center rounded-md bg-gradient-to-br px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-blue-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600">
+          Guardar
+        </button>
       </div>
-    {% endwith %}
+    </form>
   {% endif %}
 {% endblock content_pages %}
