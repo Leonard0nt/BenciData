@@ -95,6 +95,19 @@ class SucursalListView(OwnerCompanyMixin, FormMixin, ListView):
     success_url = reverse_lazy("sucursal_list")
     allowed_roles = ["OWNER", "ADMINISTRATOR"]
 
+    def dispatch(self, request, *args, **kwargs):
+        profile = getattr(request.user, "profile", None)
+        if profile and profile.has_role("ADMINISTRATOR"):
+            branch_ids = self.get_managed_branch_ids()
+            if branch_ids:
+                current_branch_id = getattr(profile, "current_branch_id", None)
+                if current_branch_id in branch_ids:
+                    branch_id = current_branch_id
+                else:
+                    branch_id = branch_ids[0]
+                return redirect("sucursal_update", pk=branch_id)
+        return super().dispatch(request, *args, **kwargs)
+        
     def get_queryset(self) -> QuerySet[Sucursal]:
         branch_ids = self.get_managed_branch_ids()
         if not branch_ids:
