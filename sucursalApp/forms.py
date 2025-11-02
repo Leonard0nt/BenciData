@@ -3,6 +3,7 @@ from typing import Optional
 from django import forms
 
 from UsuarioApp.models import Profile
+from django.db.models import Q
 
 from .models import (
     BranchProduct,
@@ -169,7 +170,13 @@ class ShiftForm(forms.ModelForm):
         queryset = Profile.objects.select_related("user_FK", "position_FK")
         if branch:
             queryset = queryset.filter(sucursal_staff__sucursal=branch).distinct()
-        self.fields["manager"].queryset = queryset.order_by(
+        manager_queryset = queryset.filter(
+            Q(position_FK__permission_code__in=["ATTENDANT", "HEAD_ATTENDANT"])
+        )
+        current_manager = getattr(self.instance, "manager_id", None)
+        if current_manager:
+            manager_queryset = (manager_queryset | queryset.filter(pk=current_manager)).distinct()
+        self.fields["manager"].queryset = manager_queryset.order_by(
             "user_FK__first_name", "user_FK__last_name", "user_FK__username"
         )
         attendants_field = self.fields.get("attendants")

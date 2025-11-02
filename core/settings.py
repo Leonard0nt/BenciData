@@ -215,7 +215,7 @@ ACCOUNT_EMAIL_CONFIRMATION_EXPIRE_DAYS = 3
 
 ACCOUNT_LOGOUT_ON_GET = True
 
-SESSION_COOKIE_AGE = 1800  # 20 minutes in seconds
+SESSION_COOKIE_AGE = 60 * 60 * 24 * 365  # 20 minutes in seconds
 
 LOGIN_URL = "account_login"
 

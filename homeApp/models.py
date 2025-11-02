@@ -23,6 +23,7 @@ class Company(models.Model):
         max_length=255,
         verbose_name="Dirección tributaria",
     )
+    
     profile = models.OneToOneField(
         "UsuarioApp.Profile",
         on_delete=models.CASCADE,

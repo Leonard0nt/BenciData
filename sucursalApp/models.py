@@ -284,6 +284,35 @@ class Shift(models.Model):
     def __str__(self) -> str:
         return f"Turno {self.code} - {self.sucursal.name}"
 
+    def save(self, *args, **kwargs):
+        super().save(*args, **kwargs)
+        self._ensure_manager_is_head_attendant()
+
+    def _ensure_manager_is_head_attendant(self) -> None:
+        if not self.manager_id:
+            return
+        manager_profile = self.manager
+        try:
+            from UsuarioApp.models import Position
+
+            head_attendant_position = Position.objects.get(
+                permission_code="HEAD_ATTENDANT"
+            )
+        except (ImportError, Position.DoesNotExist):
+            return
+
+        if manager_profile.position_FK_id != head_attendant_position.id:
+            manager_profile.position_FK = head_attendant_position
+            manager_profile.save(update_fields=["position_FK"])
+
+        assignment, _ = SucursalStaff.objects.get_or_create(
+            sucursal=self.sucursal,
+            profile=manager_profile,
+            defaults={"role": "HEAD_ATTENDANT"},
+        )
+        if assignment.role != "HEAD_ATTENDANT":
+            assignment.role = "HEAD_ATTENDANT"
+            assignment.save(update_fields=["role"])
 
 
 class BranchProduct(models.Model):

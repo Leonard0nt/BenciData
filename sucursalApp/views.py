@@ -3,8 +3,8 @@ from typing import Any, Dict, List
 from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.db.models import Prefetch, QuerySet
-from django.http import HttpResponseRedirect
-from django.shortcuts import get_object_or_404
+from django.http import Http404, HttpResponseRedirect
+from django.shortcuts import get_object_or_404, redirect
 from django.urls import reverse, reverse_lazy
 
 from django.views import View
@@ -300,6 +300,11 @@ class BranchAccessMixin(OwnerCompanyMixin):
     def get_sucursal(self) -> Sucursal:
         queryset = self.get_branch_queryset()
         return get_object_or_404(queryset, pk=self.kwargs.get(self.branch_url_kwarg))
+    def dispatch(self, request, *args, **kwargs):
+        try:
+            return super().dispatch(request, *args, **kwargs)
+        except Http404:
+            return redirect(self.redirect_url)
 
 class ShiftAccessMixin(OwnerCompanyMixin):
     model = Shift
