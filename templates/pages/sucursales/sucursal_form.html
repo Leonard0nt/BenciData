@@ -1213,7 +1213,9 @@
         <p class="text-sm text-gray-500">Aún no se han registrado islas para esta sucursal.</p>
       {% endif %}
     </section>
-  {% else %}
+  {% endif %}
+
+  {% if not form.instance.pk %}
     <h1 class="text-2xl font-semibold text-gray-900 mb-6">Crear sucursal</h1>
     <form method="post" class="space-y-6">
       {% csrf_token %}
