@@ -1,4 +1,5 @@
 {% extends 'components/Layout/base_pages.html' %}
+{% load static %}
 
 {% block content_pages %}
 
@@ -39,7 +40,7 @@
 >
 
 {% if form.instance.pk %}
-  <form method="post" id="sucursal-update-form" class="space-y-8"></form>
+  <form method="post" id="sucursal-update-form" class="space-y-8">
     {% csrf_token %}
 
     <div class="flex flex-wrap items-start justify-between gap-4">
@@ -65,100 +66,139 @@
       </div>
     {% endif %}
 
-    <!-- Información general (vista) -->
-    <section class="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
-      <div class="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h2 class="text-lg font-semibold text-gray-900">Información general</h2>
-          <p class="mt-1 text-sm text-gray-500">Datos principales de contacto y ubicación de la sucursal.</p>
+    <div class="mt-8 border-b border-gray-200">
+      <nav class="-mb-px flex flex-wrap gap-4" aria-label="Tabs">
+        <button
+          type="button"
+          data-tab-target="tab-sucursal"
+          data-tab-group="branch-detail"
+          class="whitespace-nowrap border-b-2 border-indigo-500 px-1 py-3 text-sm font-medium text-indigo-600"
+          aria-controls="tab-sucursal"
+          aria-selected="true"
+        >Sucursal</button>
+        <button
+          type="button"
+          data-tab-target="tab-turnos"
+          data-tab-group="branch-detail"
+          class="whitespace-nowrap border-b-2 border-transparent px-1 py-3 text-sm font-medium text-gray-500 hover:border-gray-300 hover:text-gray-700"
+          aria-controls="tab-turnos"
+          aria-selected="false"
+        >Turnos</button>
+        <button
+          type="button"
+          data-tab-target="tab-productos"
+          data-tab-group="branch-detail"
+          class="whitespace-nowrap border-b-2 border-transparent px-1 py-3 text-sm font-medium text-gray-500 hover:border-gray-300 hover:text-gray-700"
+          aria-controls="tab-productos"
+          aria-selected="false"
+        >Productos</button>
+        <button
+          type="button"
+          data-tab-target="tab-islas"
+          data-tab-group="branch-detail"
+          class="whitespace-nowrap border-b-2 border-transparent px-1 py-3 text-sm font-medium text-gray-500 hover:border-gray-300 hover:text-gray-700"
+          aria-controls="tab-islas"
+          aria-selected="false"
+        >Islas y equipos</button>
+      </nav>
+    </div>
+
+    <div id="tab-sucursal" class="tab-content mt-8 space-y-8">
+      <!-- Información general (vista) -->
+      <section class="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
+        <div class="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <h2 class="text-lg font-semibold text-gray-900">Información general</h2>
+            <p class="mt-1 text-sm text-gray-500">Datos principales de contacto y ubicación de la sucursal.</p>
+          </div>
         </div>
-      </div>
-      <dl class="mt-6 grid grid-cols-1 gap-6 sm:grid-cols-2">
-        <div><dt class="text-sm font-medium text-gray-500">Nombre</dt><dd class="mt-1 text-base font-semibold text-gray-900">{{ form.name.value|default:form.instance.name|default:"-" }}</dd></div>
+        <dl class="mt-6 grid grid-cols-1 gap-6 sm:grid-cols-2">
+          <div><dt class="text-sm font-medium text-gray-500">Nombre</dt><dd class="mt-1 text-base font-semibold text-gray-900">{{ form.name.value|default:form.instance.name|default:"-" }}</dd></div>
         <div><dt class="text-sm font-medium text-gray-500">Dirección</dt><dd class="mt-1 text-base font-semibold text-gray-900">{{ form.address.value|default:form.instance.address|default:"-" }}</dd></div>
         <div><dt class="text-sm font-medium text-gray-500">Ciudad</dt><dd class="mt-1 text-base font-semibold text-gray-900">{{ form.city.value|default:form.instance.city|default:"-" }}</dd></div>
         <div><dt class="text-sm font-medium text-gray-500">Región</dt><dd class="mt-1 text-base font-semibold text-gray-900">{{ form.region.value|default:form.instance.region|default:"-" }}</dd></div>
         <div><dt class="text-sm font-medium text-gray-500">Teléfono</dt><dd class="mt-1 text-base font-semibold text-gray-900">{{ form.phone.value|default:form.instance.phone|default:"-" }}</dd></div>
         <div><dt class="text-sm font-medium text-gray-500">Correo electrónico</dt><dd class="mt-1 text-base font-semibold text-gray-900">{{ form.email.value|default:form.instance.email|default:"-" }}</dd></div>
       </dl>
-    </section>
+      </section>
 
-    <!-- Personal asignado (vista) -->
-    <section class="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
-      <div class="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h2 class="text-lg font-semibold text-gray-900">Personal asignado</h2>
-          <p class="mt-1 text-sm text-gray-500">Administradores, contadores y bomberos asociados a la sucursal.</p>
-        </div>
-        <button
-          type="button"
-          class="inline-flex items-center rounded-md border border-indigo-200 bg-indigo-50 px-3 py-1.5 text-sm font-medium text-indigo-600 hover:bg-indigo-50"
-          @click="openModal = 'staff'"
-        >Gestionar</button>
-      </div>
-
-      <div class="mt-6 grid grid-cols-1 gap-6 md:grid-cols-3">
-        <div class="rounded-lg border border-gray-100 bg-gray-50 p-4">
-          <h3 class="text-sm font-semibold text-gray-900">Administradores</h3>
-          {% with administrators=form.instance.administrators %}
-            {% if administrators %}
-              <ul class="mt-3 space-y-2 text-sm text-gray-700">
-                {% for administrator in administrators %}
-                  {% with full_name=administrator.user_FK.get_full_name %}
-                    <li>
-                      <p class="font-medium text-gray-900">{{ full_name|default:administrator.user_FK.username }}</p>
-                      {% if administrator.position_FK %}<p class="text-xs text-gray-500">{{ administrator.position_FK.user_position }}</p>{% endif %}
-                    </li>
-                  {% endwith %}
-                {% endfor %}
-              </ul>
-            {% else %}
-              <p class="mt-3 text-sm text-gray-500">No se han asignado administradores.</p>
-            {% endif %}
-          {% endwith %}
+      <!-- Personal asignado (vista) -->
+      <section class="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
+        <div class="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <h2 class="text-lg font-semibold text-gray-900">Personal asignado</h2>
+            <p class="mt-1 text-sm text-gray-500">Administradores, contadores y bomberos asociados a la sucursal.</p>
+          </div>
+          <button
+            type="button"
+            class="inline-flex items-center rounded-md border border-indigo-200 bg-indigo-50 px-3 py-1.5 text-sm font-medium text-indigo-600 hover:bg-indigo-50"
+            @click="openModal = 'staff'"
+          >Gestionar</button>
         </div>
 
-        <div class="rounded-lg border border-gray-100 bg-gray-50 p-4">
-          <h3 class="text-sm font-semibold text-gray-900">Contadores</h3>
-          {% with accountants=form.instance.accountants %}
-            {% if accountants %}
-              <ul class="mt-3 space-y-2 text-sm text-gray-700">
-                {% for accountant in accountants %}
-                  {% with full_name=accountant.user_FK.get_full_name %}
-                    <li>
-                      <p class="font-medium text-gray-900">{{ full_name|default:accountant.user_FK.username }}</p>
-                      {% if accountant.position_FK %}<p class="text-xs text-gray-500">{{ accountant.position_FK.user_position }}</p>{% endif %}
-                    </li>
-                  {% endwith %}
-                {% endfor %}
-              </ul>
-            {% else %}
-              <p class="mt-3 text-sm text-gray-500">No se han asignado contadores.</p>
-            {% endif %}
-          {% endwith %}
-        </div>
+        <div class="mt-6 grid grid-cols-1 gap-4 border-t border-gray-100 pt-6 md:grid-cols-3">
+          <div class="rounded-lg border border-gray-100 bg-gray-50 p-4 h-full">
+            <h3 class="text-sm font-semibold text-gray-900">Administradores</h3>
+            {% with administrators=form.instance.administrators %}
+              {% if administrators %}
+                <ul class="mt-3 space-y-2 text-sm text-gray-700">
+                  {% for administrator in administrators %}
+                    {% with full_name=administrator.user_FK.get_full_name %}
+                      <li>
+                        <p class="font-medium text-gray-900">{{ full_name|default:administrator.user_FK.username }}</p>
+                        {% if administrator.position_FK %}<p class="text-xs text-gray-500">{{ administrator.position_FK.user_position }}</p>{% endif %}
+                      </li>
+                    {% endwith %}
+                  {% endfor %}
+                </ul>
+              {% else %}
+                <p class="mt-3 text-sm text-gray-500">No se han asignado administradores.</p>
+              {% endif %}
+            {% endwith %}
+          </div>
 
-        <div class="rounded-lg border border-gray-100 bg-gray-50 p-4">
-          <h3 class="text-sm font-semibold text-gray-900">Bomberos</h3>
-          {% with firefighters=form.instance.firefighters %}
-            {% if firefighters %}
-              <ul class="mt-3 space-y-2 text-sm text-gray-700">
-                {% for firefighter in firefighters %}
-                  {% with full_name=firefighter.user_FK.get_full_name %}
-                    <li>
-                      <p class="font-medium text-gray-900">{{ full_name|default:firefighter.user_FK.username }}</p>
-                      {% if firefighter.position_FK %}<p class="text-xs text-gray-500">{{ firefighter.position_FK.user_position }}</p>{% endif %}
-                    </li>
-                  {% endwith %}
-                {% endfor %}
-              </ul>
-            {% else %}
-              <p class="mt-3 text-sm text-gray-500">No se han asignado bomberos.</p>
-            {% endif %}
-          {% endwith %}
+          <div class="rounded-lg border border-gray-100 bg-gray-50 p-4 h-full">
+            <h3 class="text-sm font-semibold text-gray-900">Contadores</h3>
+            {% with accountants=form.instance.accountants %}
+              {% if accountants %}
+                <ul class="mt-3 space-y-2 text-sm text-gray-700">
+                  {% for accountant in accountants %}
+                    {% with full_name=accountant.user_FK.get_full_name %}
+                      <li>
+                        <p class="font-medium text-gray-900">{{ full_name|default:accountant.user_FK.username }}</p>
+                        {% if accountant.position_FK %}<p class="text-xs text-gray-500">{{ accountant.position_FK.user_position }}</p>{% endif %}
+                      </li>
+                    {% endwith %}
+                  {% endfor %}
+                </ul>
+              {% else %}
+                <p class="mt-3 text-sm text-gray-500">No se han asignado contadores.</p>
+              {% endif %}
+            {% endwith %}
+          </div>
+
+          <div class="rounded-lg border border-gray-100 bg-gray-50 p-4 h-full">
+            <h3 class="text-sm font-semibold text-gray-900">Bomberos</h3>
+            {% with firefighters=form.instance.firefighters %}
+              {% if firefighters %}
+                <ul class="mt-3 space-y-2 text-sm text-gray-700">
+                  {% for firefighter in firefighters %}
+                    {% with full_name=firefighter.user_FK.get_full_name %}
+                      <li>
+                        <p class="font-medium text-gray-900">{{ full_name|default:firefighter.user_FK.username }}</p>
+                        {% if firefighter.position_FK %}<p class="text-xs text-gray-500">{{ firefighter.position_FK.user_position }}</p>{% endif %}
+                      </li>
+                    {% endwith %}
+                  {% endfor %}
+                </ul>
+              {% else %}
+                <p class="mt-3 text-sm text-gray-500">No se han asignado bomberos.</p>
+              {% endif %}
+            {% endwith %}
+          </div>
         </div>
-      </div>
-    </section>
+      </section>
+    </div>
 
     <!-- Overlay global para modales del formulario principal -->
     <template x-if="openModal">
@@ -239,8 +279,9 @@
 
   </form>
 
-  <!-- Turnos -->
-  <section class="mt-10">
+  <div id="tab-turnos" class="tab-content mt-8 hidden space-y-6">
+    <!-- Turnos -->
+    <section class="mt-2">
     <div class="flex items-center justify-between mb-4">
         <h2 class="text-xl font-semibold text-gray-900">Turnos de la sucursal</h2>
         {% if shift_create_form %}
@@ -374,8 +415,46 @@
       {% endif %}
     </section>
 
+    <!-- Modal: crear turno -->
+    {% if shift_create_form %}
+      <div x-cloak x-show="openModal === 'shift-create'" x-transition.opacity class="fixed inset-0 z-50 flex items-center justify-center bg-transparent p-4" @keydown.escape.window="openModal = null" @click.self="openModal = null">
+        <div class="modal-panel w-full bg-white shadow-2xl flex flex-col" x-transition.scale.origin.center>
+          <div class="flex items-center justify-between border-b border-gray-200 px-6 py-4 shrink-0">
+            <h3 class="text-lg font-semibold text-gray-900">Agregar turno</h3>
+            <button type="button" class="text-gray-400 hover:text-gray-600" @click="openModal = null"><span class="sr-only">Cerrar</span>
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke-width="1.5" stroke="currentColor" class="h-5 w-5"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12" /></svg>
+            </button>
+          </div>
+          <div class="px-6 py-6 overflow-y-auto">
+            <form method="post" action="{{ shift_create_url }}" class="space-y-6 mx-auto w-full max-w-[36rem]">
+              {% csrf_token %}
+              {% for hidden in shift_create_form.hidden_fields %}{{ hidden }}{% endfor %}
+              <div class="grid grid-cols-1 gap-6 md:grid-cols-2">
+                {% for field in shift_create_form.visible_fields %}
+                  <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1" for="{{ field.id_for_label }}">{{ field.label }}</label>
+                    {{ field }}
+                    {% if field.help_text %}<p class="mt-1 text-xs text-gray-500">{{ field.help_text }}</p>{% endif %}
+                    {% if field.errors %}<ul class="mt-1 space-y-1 text-sm text-red-600">{% for e in field.errors %}<li>{{ e }}</li>{% endfor %}</ul>{% endif %}
+                  </div>
+                {% endfor %}
+              </div>
+              {% if shift_create_form.non_field_errors %}<ul class="space-y-1 text-sm text-red-600">{% for e in shift_create_form.non_field_errors %}<li>{{ e }}</li>{% endfor %}</ul>{% endif %}
+              <div class="flex justify-end gap-3">
+                <button type="button" class="inline-flex items-center rounded-md border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50" @click="openModal = null">Cancelar</button>
+                <button type="submit" class="inline-flex items-center rounded-md bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-50">Guardar turno</button>
+              </div>
+            </form>
+          </div>
+          <div class="border-t border-gray-200 bg-gray-50 px-6 py-5 shrink-0"></div>
+        </div>
+      </div>
+    {% endif %}
+  </div>
+
+  <div id="tab-productos" class="tab-content mt-8 hidden space-y-6">
     <!-- Inventario -->
-    <section class="mt-10">
+    <section class="mt-2">
       <div class="flex items-center justify-between mb-4">
         <h2 class="text-xl font-semibold text-gray-900">Inventario de combustible</h2>
         {% if fuel_inventory_create_form %}
@@ -568,8 +647,80 @@
       {% endif %}
     </section>
 
+    {% if fuel_inventory_create_form %}
+      <div x-cloak x-show="openModal === 'fuel-inventory'" x-transition.opacity class="fixed inset-0 z-50 flex items-center justify-center bg-transparent p-4" @keydown.escape.window="openModal = null" @click.self="openModal = null">
+        <div class="modal-panel w-full bg-white shadow-2xl flex flex-col" x-transition.scale.origin.center>
+          <div class="flex items-center justify-between border-b border-gray-200 px-6 py-4 shrink-0">
+            <h3 class="text-lg font-semibold text-gray-900">Agregar inventario</h3>
+            <button type="button" class="text-gray-400 hover:text-gray-600" @click="openModal = null"><span class="sr-only">Cerrar</span>
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke-width="1.5" stroke="currentColor" class="h-5 w-5"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12" /></svg>
+            </button>
+          </div>
+          <div class="px-6 py-6 overflow-y-auto">
+            <form method="post" action="{{ fuel_inventory_create_url }}" class="space-y-6 mx-auto w-full max-w-[36rem]">
+              {% csrf_token %}
+              {% for hidden in fuel_inventory_create_form.hidden_fields %}{{ hidden }}{% endfor %}
+              <div class="grid grid-cols-1 gap-6 md:grid-cols-2">
+                {% for field in fuel_inventory_create_form.visible_fields %}
+                  <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1" for="{{ field.id_for_label }}">{{ field.label }}</label>
+                    {{ field }}
+                    {% if field.help_text %}<p class="mt-1 text-xs text-gray-500">{{ field.help_text }}</p>{% endif %}
+                    {% if field.errors %}<ul class="mt-1 space-y-1 text-sm text-red-600">{% for e in field.errors %}<li>{{ e }}</li>{% endfor %}</ul>{% endif %}
+                  </div>
+                {% endfor %}
+              </div>
+              {% if fuel_inventory_create_form.non_field_errors %}<ul class="space-y-1 text-sm text-red-600">{% for e in fuel_inventory_create_form.non_field_errors %}<li>{{ e }}</li>{% endfor %}</ul>{% endif %}
+              <div class="flex justify-end gap-3">
+                <button type="button" class="inline-flex items-center rounded-md border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50" @click="openModal = null">Cancelar</button>
+                <button type="submit" class="inline-flex items-center rounded-md bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-50">Guardar inventario</button>
+              </div>
+            </form>
+          </div>
+          <div class="border-t border-gray-200 bg-gray-50 px-6 py-5 shrink-0"></div>
+        </div>
+      </div>
+    {% endif %}
+
+    {% if product_create_form %}
+      <div x-cloak x-show="openModal === 'product'" x-transition.opacity class="fixed inset-0 z-50 flex items-center justify-center bg-transparent p-4" @keydown.escape.window="openModal = null" @click.self="openModal = null">
+        <div class="modal-panel w-full bg-white shadow-2xl flex flex-col" x-transition.scale.origin.center>
+          <div class="flex items-center justify-between border-b border-gray-200 px-6 py-4 shrink-0">
+            <h3 class="text-lg font-semibold text-gray-900">Agregar producto</h3>
+            <button type="button" class="text-gray-400 hover:text-gray-600" @click="openModal = null"><span class="sr-only">Cerrar</span>
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke-width="1.5" stroke="currentColor" class="h-5 w-5"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12" /></svg>
+            </button>
+          </div>
+          <div class="px-6 py-6 overflow-y-auto">
+            <form method="post" action="{{ product_create_url }}" class="space-y-6 mx-auto w-full max-w-[36rem]">
+              {% csrf_token %}
+              {% for hidden in product_create_form.hidden_fields %}{{ hidden }}{% endfor %}
+              <div class="grid grid-cols-1 gap-6 md:grid-cols-2">
+                {% for field in product_create_form.visible_fields %}
+                  <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1" for="{{ field.id_for_label }}">{{ field.label }}</label>
+                    {{ field }}
+                    {% if field.help_text %}<p class="mt-1 text-xs text-gray-500">{{ field.help_text }}</p>{% endif %}
+                    {% if field.errors %}<ul class="mt-1 space-y-1 text-sm text-red-600">{% for e in field.errors %}<li>{{ e }}</li>{% endfor %}</ul>{% endif %}
+                  </div>
+                {% endfor %}
+              </div>
+              {% if product_create_form.non_field_errors %}<ul class="space-y-1 text-sm text-red-600">{% for e in product_create_form.non_field_errors %}<li>{{ e }}</li>{% endfor %}</ul>{% endif %}
+              <div class="flex justify-end gap-3">
+                <button type="button" class="inline-flex items-center rounded-md border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50" @click="openModal = null">Cancelar</button>
+                <button type="submit" class="inline-flex items-center rounded-md bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-50">Guardar producto</button>
+              </div>
+            </form>
+          </div>
+          <div class="border-t border-gray-200 bg-gray-50 px-6 py-5 shrink-0"></div>
+        </div>
+      </div>
+    {% endif %}
+  </div>
+
+  <div id="tab-islas" class="tab-content mt-8 hidden space-y-6">
     <!-- Islas y equipos -->
-    <section class="mt-10">
+    <section class="mt-2">
       <div class="flex items-center justify-between mb-4">
         <h2 class="text-xl font-semibold text-gray-900">Islas y equipos</h2>
         {% if island_create_form %}
@@ -910,149 +1061,7 @@
       {% endif %}
     </section>
 
-    <!-- Modal: crear isla -->
-    {% if island_create_form %}
-      <div x-cloak x-show="openModal === 'island-create'" x-transition.opacity class="fixed inset-0 z-50 flex items-center justify-center bg-transparent p-4" @keydown.escape.window="openModal = null" @click.self="openModal = null">
-        <div class="modal-panel w-full bg-white shadow-2xl flex flex-col" x-transition.scale.origin.center>
-          <div class="flex items-center justify-between border-b border-gray-200 px-6 py-4 shrink-0">
-            <h3 class="text-lg font-semibold text-gray-900">Agregar isla</h3>
-            <button type="button" class="text-gray-400 hover:text-gray-600" @click="openModal = null"><span class="sr-only">Cerrar</span>
-              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke-width="1.5" stroke="currentColor" class="h-5 w-5"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12" /></svg>
-            </button>
-          </div>
-          <div class="px-6 py-6 overflow-y-auto">
-            <form method="post" action="{% url 'sucursal_island_create' form.instance.pk %}" class="space-y-6 mx-auto w-full max-w-[36rem]">
-              {% csrf_token %}
-              {% for hidden in island_create_form.hidden_fields %}{{ hidden }}{% endfor %}
-              {% for field in island_create_form.visible_fields %}
-                <div>
-                  <label class="block text-sm font-medium text-gray-700 mb-1" for="{{ field.id_for_label }}">{{ field.label }}</label>
-                  {{ field }}
-                  {% if field.help_text %}<p class="mt-1 text-xs text-gray-500">{{ field.help_text }}</p>{% endif %}
-                  {% if field.errors %}<ul class="mt-1 space-y-1 text-xs text-red-600">{% for e in field.errors %}<li>{{ e }}</li>{% endfor %}</ul>{% endif %}
-                </div>
-              {% endfor %}
-              {% if island_create_form.non_field_errors %}<ul class="space-y-1 text-sm text-red-600">{% for e in island_create_form.non_field_errors %}<li>{{ e }}</li>{% endfor %}</ul>{% endif %}
-              <div class="flex justify-end gap-3">
-                <button type="button" class="inline-flex items-center rounded-md border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50" @click="openModal = null">Cancelar</button>
-                <button type="submit" class="inline-flex items-center rounded-md bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-50">Guardar isla</button>
-              </div>
-            </form>
-          </div>
-          <div class="border-t border-gray-200 bg-gray-50 px-6 py-5 shrink-0"></div>
-        </div>
-      </div>
-    {% endif %}
-
-
-
-  <!-- Modal: crear turno -->
-  {% if shift_create_form %}
-    <div x-cloak x-show="openModal === 'shift-create'" x-transition.opacity class="fixed inset-0 z-50 flex items-center justify-center bg-transparent p-4" @keydown.escape.window="openModal = null" @click.self="openModal = null">
-      <div class="modal-panel w-full bg-white shadow-2xl flex flex-col" x-transition.scale.origin.center>
-        <div class="flex items-center justify-between border-b border-gray-200 px-6 py-4 shrink-0">
-          <h3 class="text-lg font-semibold text-gray-900">Agregar turno</h3>
-          <button type="button" class="text-gray-400 hover:text-gray-600" @click="openModal = null"><span class="sr-only">Cerrar</span>
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke-width="1.5" stroke="currentColor" class="h-5 w-5"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12" /></svg>
-          </button>
-        </div>
-        <div class="px-6 py-6 overflow-y-auto">
-          <form method="post" action="{{ shift_create_url }}" class="space-y-6 mx-auto w-full max-w-[36rem]">
-            {% csrf_token %}
-            {% for hidden in shift_create_form.hidden_fields %}{{ hidden }}{% endfor %}
-            <div class="grid grid-cols-1 gap-6 md:grid-cols-2">
-              {% for field in shift_create_form.visible_fields %}
-                <div>
-                  <label class="block text-sm font-medium text-gray-700 mb-1" for="{{ field.id_for_label }}">{{ field.label }}</label>
-                  {{ field }}
-                  {% if field.help_text %}<p class="mt-1 text-xs text-gray-500">{{ field.help_text }}</p>{% endif %}
-                  {% if field.errors %}<ul class="mt-1 space-y-1 text-sm text-red-600">{% for e in field.errors %}<li>{{ e }}</li>{% endfor %}</ul>{% endif %}
-                </div>
-              {% endfor %}
-            </div>
-            {% if shift_create_form.non_field_errors %}<ul class="space-y-1 text-sm text-red-600">{% for e in shift_create_form.non_field_errors %}<li>{{ e }}</li>{% endfor %}</ul>{% endif %}
-            <div class="flex justify-end gap-3">
-              <button type="button" class="inline-flex items-center rounded-md border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50" @click="openModal = null">Cancelar</button>
-              <button type="submit" class="inline-flex items-center rounded-md bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-50">Guardar turno</button>
-            </div>
-          </form>
-        </div>
-        <div class="border-t border-gray-200 bg-gray-50 px-6 py-5 shrink-0"></div>
-      </div>
-    </div>
-  {% endif %}
-
-  <!-- Modal: inventario combustible -->
-  {% if fuel_inventory_create_form %}
-    <div x-cloak x-show="openModal === 'fuel-inventory'" x-transition.opacity class="fixed inset-0 z-50 flex items-center justify-center bg-transparent p-4" @keydown.escape.window="openModal = null" @click.self="openModal = null">
-      <div class="modal-panel w-full bg-white shadow-2xl flex flex-col" x-transition.scale.origin.center>
-        <div class="flex items-center justify-between border-b border-gray-200 px-6 py-4 shrink-0">
-          <h3 class="text-lg font-semibold text-gray-900">Agregar inventario</h3>
-          <button type="button" class="text-gray-400 hover:text-gray-600" @click="openModal = null"><span class="sr-only">Cerrar</span>
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke-width="1.5" stroke="currentColor" class="h-5 w-5"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12" /></svg>
-          </button>
-        </div>
-        <div class="px-6 py-6 overflow-y-auto">
-          <form method="post" action="{{ fuel_inventory_create_url }}" class="space-y-6 mx-auto w-full max-w-[36rem]">
-            {% csrf_token %}
-            {% for hidden in fuel_inventory_create_form.hidden_fields %}{{ hidden }}{% endfor %}
-            <div class="grid grid-cols-1 gap-6 md:grid-cols-2">
-              {% for field in fuel_inventory_create_form.visible_fields %}
-                <div>
-                  <label class="block text-sm font-medium text-gray-700 mb-1" for="{{ field.id_for_label }}">{{ field.label }}</label>
-                  {{ field }}
-                  {% if field.help_text %}<p class="mt-1 text-xs text-gray-500">{{ field.help_text }}</p>{% endif %}
-                  {% if field.errors %}<ul class="mt-1 space-y-1 text-sm text-red-600">{% for e in field.errors %}<li>{{ e }}</li>{% endfor %}</ul>{% endif %}
-                </div>
-              {% endfor %}
-            </div>
-            {% if fuel_inventory_create_form.non_field_errors %}<ul class="space-y-1 text-sm text-red-600">{% for e in fuel_inventory_create_form.non_field_errors %}<li>{{ e }}</li>{% endfor %}</ul>{% endif %}
-            <div class="flex justify-end gap-3">
-              <button type="button" class="inline-flex items-center rounded-md border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50" @click="openModal = null">Cancelar</button>
-              <button type="submit" class="inline-flex items-center rounded-md bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-50">Guardar inventario</button>
-            </div>
-          </form>
-        </div>
-        <div class="border-t border-gray-200 bg-gray-50 px-6 py-5 shrink-0"></div>
-      </div>
-    </div>
-  {% endif %}
-
-  <!-- Modal: producto -->
-  {% if product_create_form %}
-    <div x-cloak x-show="openModal === 'product'" x-transition.opacity class="fixed inset-0 z-50 flex items-center justify-center bg-transparent p-4" @keydown.escape.window="openModal = null" @click.self="openModal = null">
-      <div class="modal-panel w-full bg-white shadow-2xl flex flex-col" x-transition.scale.origin.center>
-        <div class="flex items-center justify-between border-b border-gray-200 px-6 py-4 shrink-0">
-          <h3 class="text-lg font-semibold text-gray-900">Agregar producto</h3>
-          <button type="button" class="text-gray-400 hover:text-gray-600" @click="openModal = null"><span class="sr-only">Cerrar</span>
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke-width="1.5" stroke="currentColor" class="h-5 w-5"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12" /></svg>
-          </button>
-        </div>
-        <div class="px-6 py-6 overflow-y-auto">
-          <form method="post" action="{{ product_create_url }}" class="space-y-6 mx-auto w-full max-w-[36rem]">
-            {% csrf_token %}
-            {% for hidden in product_create_form.hidden_fields %}{{ hidden }}{% endfor %}
-            <div class="grid grid-cols-1 gap-6 md:grid-cols-2">
-              {% for field in product_create_form.visible_fields %}
-                <div>
-                  <label class="block text-sm font-medium text-gray-700 mb-1" for="{{ field.id_for_label }}">{{ field.label }}</label>
-                  {{ field }}
-                  {% if field.help_text %}<p class="mt-1 text-xs text-gray-500">{{ field.help_text }}</p>{% endif %}
-                  {% if field.errors %}<ul class="mt-1 space-y-1 text-sm text-red-600">{% for e in field.errors %}<li>{{ e }}</li>{% endfor %}</ul>{% endif %}
-                </div>
-              {% endfor %}
-            </div>
-            {% if product_create_form.non_field_errors %}<ul class="space-y-1 text-sm text-red-600">{% for e in product_create_form.non_field_errors %}<li>{{ e }}</li>{% endfor %}</ul>{% endif %}
-            <div class="flex justify-end gap-3">
-              <button type="button" class="inline-flex items-center rounded-md border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50" @click="openModal = null">Cancelar</button>
-              <button type="submit" class="inline-flex items-center rounded-md bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-50">Guardar producto</button>
-            </div>
-          </form>
-        </div>
-        <div class="border-t border-gray-200 bg-gray-50 px-6 py-5 shrink-0"></div>
-      </div>
-    </div>
-  {% endif %}
+  </div>
 
 {% else %}
   <!-- Crear sucursal -->
@@ -1080,3 +1089,7 @@
 </div>
 
 {% endblock content_pages %}
+
+{% block javascript %}
+  <script defer src="{% static 'js/tabs.js' %}"></script>
+{% endblock javascript %}
