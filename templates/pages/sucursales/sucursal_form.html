@@ -48,14 +48,6 @@
         <h1 class="text-2xl font-semibold text-gray-900">Editar sucursal</h1>
         <p class="mt-1 text-sm text-gray-600">Revisa los datos principales y el personal asignado a la sucursal.</p>
       </div>
-      <div class="flex flex-wrap items-center justify-end gap-3">
-        <button
-          type="button"
-          class="inline-flex items-center rounded-md bg-gradient-to-br from-indigo-500 to-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:from-indigo-600 hover:to-blue-700"
-          @click="openModal = 'general'"
-        >Editar información</button>
-
-      </div>
     </div>
     {% if form.non_field_errors %}
       <div class="rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
@@ -111,6 +103,14 @@
             <h2 class="text-lg font-semibold text-gray-900">Información general</h2>
             <p class="mt-1 text-sm text-gray-500">Datos principales de contacto y ubicación de la sucursal.</p>
           </div>
+                <div class="flex flex-wrap items-center justify-end gap-3">
+        <button
+          type="button"
+          class="inline-flex items-center rounded-md bg-gradient-to-br from-indigo-500 to-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:from-indigo-600 hover:to-blue-700"
+          @click="openModal = 'general'"
+        >Editar información</button>
+
+      </div>
         </div>
         <dl class="mt-6 grid grid-cols-1 gap-6 sm:grid-cols-2">
         <div><dt class="text-sm font-medium text-gray-500">Nombre</dt><dd class="mt-1 text-base font-semibold text-gray-900">{{ form.name.value|default:form.instance.name|default:"-" }}</dd></div>
