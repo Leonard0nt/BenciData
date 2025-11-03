@@ -1,5 +1,5 @@
 from typing import Any, Dict, List
-
+from urllib.parse import urlencode
 from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.db.models import Prefetch, QuerySet
@@ -33,6 +33,14 @@ from .models import (
     Sucursal,
     SucursalStaff,
 )
+
+
+def redirect_to_modal(branch_id: int, modal_name: str) -> HttpResponseRedirect:
+    """Build a redirect response to reopen a specific modal on the branch page."""
+
+    base_url = reverse("sucursal_update", args=[branch_id])
+    query = urlencode({"modal": modal_name})
+    return HttpResponseRedirect(f"{base_url}?{query}")
 
 
 def get_admin_branch_ids(profile) -> List[int]:
@@ -225,7 +233,8 @@ class SucursalUpdateView(OwnerCompanyMixin, UpdateView):
     def get_context_data(self, **kwargs: Any) -> Dict[str, Any]:
         context = super().get_context_data(**kwargs)
         if self.object:
-            context["islands"] = self.object.branch_islands.all()
+            islands = list(self.object.branch_islands.all())
+            context["islands"] = islands
             context["island_create_form"] = IslandForm(
                 initial={"sucursal": self.object}, auto_id="new-island_%s"
             )
@@ -239,11 +248,19 @@ class SucursalUpdateView(OwnerCompanyMixin, UpdateView):
                 .prefetch_related("attendants__user_FK", "attendants__position_FK")
                 .order_by("start_time")
             )
-            context["shifts"] = shift_queryset
+            shifts = list(shift_queryset)
+            for shift in shifts:
+                shift.update_form = ShiftForm(
+                    instance=shift,
+                    sucursal=self.object,
+                    auto_id=f"edit-shift-{shift.pk}_%s",
+                )
+            context["shifts"] = shifts
             profile = getattr(self.request.user, "profile", None)
             can_manage_shifts = bool(
                 self.request.user.is_superuser
                 or (profile and profile.has_role("ADMINISTRATOR"))
+                or (profile and profile.has_role("OWNER"))
             )
             context["can_manage_shifts"] = can_manage_shifts
             if can_manage_shifts:
@@ -255,36 +272,235 @@ class SucursalUpdateView(OwnerCompanyMixin, UpdateView):
                 context["shift_create_url"] = reverse(
                     "sucursal_shift_create", args=[self.object.pk]
                 )
-            context["fuel_inventories"] = self.object.fuel_inventories.all()
+            fuel_inventories = list(self.object.fuel_inventories.all())
+            for inventory in fuel_inventories:
+                inventory.update_form = FuelInventoryForm(
+                    instance=inventory, auto_id=f"edit-inventory-{inventory.pk}_%s"
+                )
+            context["fuel_inventories"] = fuel_inventories
             context["fuel_inventory_create_form"] = FuelInventoryForm(
                 initial={"sucursal": self.object}, auto_id="new-inventory_%s"
             )
             context["fuel_inventory_create_url"] = reverse(
                 "sucursal_fuel_inventory_create", args=[self.object.pk]
             )
-            context["products"] = self.object.products.all()
+            products = list(self.object.products.all())
+            for product in products:
+                product.update_form = BranchProductForm(
+                    instance=product, auto_id=f"edit-product-{product.pk}_%s"
+                )
+            context["products"] = products
             context["product_create_form"] = BranchProductForm(
                 initial={"sucursal": self.object}, auto_id="new-product_%s"
             )
             context["product_create_url"] = reverse(
                 "sucursal_product_create", args=[self.object.pk]
             )
-            for island in context["islands"]:
+            for island in islands:
+                island.update_form = IslandForm(
+                    instance=island, auto_id=f"edit-island-{island.pk}_%s"
+                )
                 island.machine_create_form = MachineForm(
                     initial={"island": island}, auto_id=f"new-machine-{island.pk}_%s"
                 )
-                for machine in island.machines.all():
+                machines = list(island.machines.all())
+                for machine in machines:
+                    machine.update_form = MachineForm(
+                        instance=machine, auto_id=f"edit-machine-{machine.pk}_%s"
+                    )
                     machine.nozzle_create_form = NozzleForm(
                         auto_id=f"new-nozzle-{machine.pk}_%s",
                         initial={"machine": machine},
                     )
+                    nozzles = list(machine.nozzles.all())
+                    for nozzle in nozzles:
+                        nozzle.update_form = NozzleForm(
+                            instance=nozzle, auto_id=f"edit-nozzle-{nozzle.pk}_%s"
+                        )
+                    machine.nozzles_list = nozzles
+                island.machines_list = machines
         else:
             context.setdefault("islands", [])
             context.setdefault("shifts", [])
             context.setdefault("products", [])
         context.setdefault("can_manage_shifts", False)
+        if not context.get("active_modal"):
+            requested_modal = self.request.GET.get("modal")
+            if requested_modal:
+                context["active_modal"] = requested_modal
+        context.setdefault("active_modal", None)
         return context
 
+    def get_success_url(self) -> str:
+        if self.object:
+            return reverse("sucursal_update", args=[self.object.pk])
+        return super().get_success_url()
+
+    def post(self, request, *args, **kwargs):
+        self.object = self.get_object()
+        scope = request.POST.get("form_scope")
+        if scope == "shift-update":
+            return self._handle_shift_update(request)
+        if scope == "fuel-inventory-update":
+            return self._handle_fuel_inventory_update(request)
+        if scope == "product-update":
+            return self._handle_product_update(request)
+        if scope == "island-update":
+            return self._handle_island_update(request)
+        if scope == "machine-update":
+            return self._handle_machine_update(request)
+        if scope == "nozzle-update":
+            return self._handle_nozzle_update(request)
+        return super().post(request, *args, **kwargs)
+
+    def _get_branch_form(self) -> SucursalForm:
+        form_kwargs = self.get_form_kwargs()
+        form_kwargs.update({"data": None, "files": None, "instance": self.object})
+        return self.form_class(**form_kwargs)
+
+    def _render_with_inline_form(self, *, modal_name: str) -> Any:
+        context = self.get_context_data(form=self._get_branch_form())
+        context["active_modal"] = modal_name
+        return self.render_to_response(context)
+
+    def _handle_shift_update(self, request) -> Any:
+        shift_id = request.POST.get("object_id")
+        shift = get_object_or_404(self.object.shifts.all(), pk=shift_id)
+        form = ShiftForm(
+            request.POST,
+            instance=shift,
+            sucursal=self.object,
+            auto_id=f"edit-shift-{shift.pk}_%s",
+        )
+        if form.is_valid():
+            form.save()
+            messages.success(request, "Turno actualizado correctamente.")
+            return redirect("sucursal_update", pk=self.object.pk)
+        response = self._render_with_inline_form(
+            modal_name=f"shift-edit-{shift.pk}"
+        )
+        for shift_context in response.context_data.get("shifts", []):  # type: ignore[attr-defined]
+            if shift_context.pk == shift.pk:
+                shift_context.update_form = form
+                break
+        return response
+
+    def _handle_fuel_inventory_update(self, request) -> Any:
+        inventory_id = request.POST.get("object_id")
+        inventory = get_object_or_404(
+            self.object.fuel_inventories.all(), pk=inventory_id
+        )
+        form = FuelInventoryForm(
+            request.POST,
+            instance=inventory,
+            auto_id=f"edit-inventory-{inventory.pk}_%s",
+        )
+        if form.is_valid():
+            form.save()
+            messages.success(request, "Inventario actualizado correctamente.")
+            return redirect("sucursal_update", pk=self.object.pk)
+        response = self._render_with_inline_form(
+            modal_name=f"fuel-inventory-edit-{inventory.pk}"
+        )
+        for inventory_context in response.context_data.get("fuel_inventories", []):  # type: ignore[attr-defined]
+            if inventory_context.pk == inventory.pk:
+                inventory_context.update_form = form
+                break
+        return response
+
+    def _handle_product_update(self, request) -> Any:
+        product_id = request.POST.get("object_id")
+        product = get_object_or_404(self.object.products.all(), pk=product_id)
+        form = BranchProductForm(
+            request.POST,
+            instance=product,
+            auto_id=f"edit-product-{product.pk}_%s",
+        )
+        if form.is_valid():
+            form.save()
+            messages.success(request, "Producto actualizado correctamente.")
+            return redirect("sucursal_update", pk=self.object.pk)
+        response = self._render_with_inline_form(
+            modal_name=f"product-edit-{product.pk}"
+        )
+        for product_context in response.context_data.get("products", []):  # type: ignore[attr-defined]
+            if product_context.pk == product.pk:
+                product_context.update_form = form
+                break
+        return response
+
+    def _handle_island_update(self, request) -> Any:
+        island_id = request.POST.get("object_id")
+        island = get_object_or_404(self.object.branch_islands.all(), pk=island_id)
+        form = IslandForm(
+            request.POST,
+            instance=island,
+            auto_id=f"edit-island-{island.pk}_%s",
+        )
+        if form.is_valid():
+            form.save()
+            messages.success(request, "Isla actualizada correctamente.")
+            return redirect("sucursal_update", pk=self.object.pk)
+        response = self._render_with_inline_form(
+            modal_name=f"island-edit-{island.pk}"
+        )
+        for island_context in response.context_data.get("islands", []):  # type: ignore[attr-defined]
+            if island_context.pk == island.pk:
+                island_context.update_form = form
+                break
+        return response
+
+    def _handle_machine_update(self, request) -> Any:
+        machine_id = request.POST.get("object_id")
+        machine = get_object_or_404(
+            Machine.objects.filter(island__sucursal=self.object), pk=machine_id
+        )
+        form = MachineForm(
+            request.POST,
+            instance=machine,
+            auto_id=f"edit-machine-{machine.pk}_%s",
+        )
+        if form.is_valid():
+            form.save()
+            messages.success(request, "Máquina actualizada correctamente.")
+            return redirect("sucursal_update", pk=self.object.pk)
+        response = self._render_with_inline_form(
+            modal_name=f"machine-edit-{machine.pk}"
+        )
+        for island_context in response.context_data.get("islands", []):  # type: ignore[attr-defined]
+            machines = getattr(island_context, "machines_list", [])
+            for machine_context in machines:
+                if machine_context.pk == machine.pk:
+                    machine_context.update_form = form
+                    break
+        return response
+
+    def _handle_nozzle_update(self, request) -> Any:
+        nozzle_id = request.POST.get("object_id")
+        nozzle = get_object_or_404(
+            Nozzle.objects.filter(machine__island__sucursal=self.object), pk=nozzle_id
+        )
+        form = NozzleForm(
+            request.POST,
+            instance=nozzle,
+            auto_id=f"edit-nozzle-{nozzle.pk}_%s",
+        )
+        if form.is_valid():
+            form.save()
+            messages.success(request, "Pistola actualizada correctamente.")
+            return redirect("sucursal_update", pk=self.object.pk)
+        response = self._render_with_inline_form(
+            modal_name=f"nozzle-edit-{nozzle.pk}"
+        )
+        for island_context in response.context_data.get("islands", []):  # type: ignore[attr-defined]
+            machines = getattr(island_context, "machines_list", [])
+            for machine_context in machines:
+                nozzles = getattr(machine_context, "nozzles_list", [])
+                for nozzle_context in nozzles:
+                    if nozzle_context.pk == nozzle.pk:
+                        nozzle_context.update_form = form
+                        break
+        return response
 
 class SucursalDeleteView(OwnerCompanyMixin, DeleteView):
     model = Sucursal
@@ -374,7 +590,13 @@ class ShiftCreateView(BranchAccessMixin, CreateView):
 class ShiftUpdateView(ShiftAccessMixin, UpdateView):
     form_class = ShiftForm
     template_name = "pages/sucursales/related_form.html"
-    allowed_roles = ["ADMINISTRATOR","OWNER"]
+    allowed_roles = ["ADMINISTRATOR", "OWNER"]
+
+    def get(self, request, *args, **kwargs):
+        self.object = self.get_object()
+        return redirect_to_modal(
+            self.object.sucursal_id, f"shift-edit-{self.object.pk}"
+        )
 
     def get_form_kwargs(self) -> Dict[str, Any]:
         kwargs = super().get_form_kwargs()
@@ -446,6 +668,12 @@ class FuelInventoryCreateView(BranchAccessMixin, CreateView):
 class FuelInventoryUpdateView(FuelInventoryAccessMixin, UpdateView):
     form_class = FuelInventoryForm
     template_name = "pages/sucursales/related_form.html"
+
+    def get(self, request, *args, **kwargs):
+        self.object = self.get_object()
+        return redirect_to_modal(
+            self.object.sucursal_id, f"fuel-inventory-edit-{self.object.pk}"
+        )
 
     def form_valid(self, form: FuelInventoryForm) -> HttpResponseRedirect:
         form.instance.sucursal = self.object.sucursal
@@ -520,6 +748,13 @@ class BranchProductCreateView(BranchAccessMixin, CreateView):
 class BranchProductUpdateView(BranchProductAccessMixin, UpdateView):
     form_class = BranchProductForm
     template_name = "pages/sucursales/related_form.html"
+
+
+    def get(self, request, *args, **kwargs):
+        self.object = self.get_object()
+        return redirect_to_modal(
+            self.object.sucursal_id, f"product-edit-{self.object.pk}"
+        )
 
     def form_valid(self, form: BranchProductForm) -> HttpResponseRedirect:
         form.instance.sucursal = self.object.sucursal
@@ -641,6 +876,12 @@ class IslandUpdateView(IslandAccessMixin, UpdateView):
     form_class = IslandForm
     template_name = "pages/sucursales/related_form.html"
 
+    def get(self, request, *args, **kwargs):
+        self.object = self.get_object()
+        return redirect_to_modal(
+            self.object.sucursal_id, f"island-edit-{self.object.pk}"
+        )
+
     def form_valid(self, form: IslandForm) -> HttpResponseRedirect:
         form.instance.sucursal = self.object.sucursal
         return super().form_valid(form)
@@ -705,6 +946,12 @@ class MachineCreateView(BranchAccessMixin, CreateView):
 class MachineUpdateView(MachineAccessMixin, UpdateView):
     form_class = MachineForm
     template_name = "pages/sucursales/related_form.html"
+
+    def get(self, request, *args, **kwargs):
+        self.object = self.get_object()
+        return redirect_to_modal(
+            self.object.island.sucursal_id, f"machine-edit-{self.object.pk}"
+        )
 
     def form_valid(self, form: MachineForm) -> HttpResponseRedirect:
         form.instance.island = self.object.island
@@ -780,6 +1027,13 @@ class NozzleCreateView(OwnerCompanyMixin, CreateView):
 class NozzleUpdateView(NozzleAccessMixin, UpdateView):
     form_class = NozzleForm
     template_name = "pages/sucursales/related_form.html"
+
+    def get(self, request, *args, **kwargs):
+        self.object = self.get_object()
+        return redirect_to_modal(
+            self.object.machine.island.sucursal_id,
+            f"nozzle-edit-{self.object.pk}",
+        )
 
     def form_valid(self, form: NozzleForm) -> HttpResponseRedirect:
         form.instance.machine = self.object.machine
