@@ -23,6 +23,10 @@
   x-data="{ openModal: null }"
   @keydown.escape.window="openModal = null"
   x-init="
+      const activeModal = $el.dataset.activeModal;
+    if (activeModal) {
+      openModal = activeModal;
+    }
     {% if form.errors %}
       {% if form.name.errors or form.address.errors or form.city.errors or form.region.errors or form.phone.errors or form.email.errors %}
         openModal = 'general';
@@ -31,6 +35,7 @@
       {% endif %}
     {% endif %}
   "
+  data-active-modal="{{ active_modal|default_if_none:'' }}"
 >
 
 {% if form.instance.pk %}
@@ -263,7 +268,11 @@
                 </div>
                 {% if can_manage_shifts %}
                   <div class="flex items-center gap-2">
-                    <a href="{% url 'sucursal_shift_update' shift.pk %}" class="inline-flex items-center rounded-md border border-gray-300 px-3 py-1 text-xs font-medium text-gray-700 hover:bg-gray-50">Editar</a>
+                    <a
+                      href="{% url 'sucursal_shift_update' shift.pk %}"
+                      class="inline-flex items-center rounded-md border border-gray-300 px-3 py-1 text-xs font-medium text-gray-700 hover:bg-gray-50"
+                      @click.prevent="openModal = 'shift-edit-{{ shift.pk }}'"
+                    >Editar</a>
                     <form method="post" action="{% url 'sucursal_shift_delete' shift.pk %}">
                       {% csrf_token %}
                       <button type="submit" class="inline-flex items-center rounded-md border border-red-200 bg-red-50 px-3 py-1 text-xs font-medium text-red-600 hover:bg-red-100">Eliminar</button>
@@ -304,6 +313,60 @@
                 </div>
               {% endwith %}
             </div>
+
+            <!-- Modal: editar turno -->
+            <div
+              x-cloak
+              x-show="openModal === 'shift-edit-{{ shift.pk }}'"
+              x-transition.opacity
+              class="fixed inset-0 z-50 flex items-center justify-center bg-transparent px-4 py-6 sm:px-6 lg:px-8"
+              @keydown.escape.window="openModal = null"
+              @click.self="openModal = null"
+              role="dialog"
+              aria-modal="true"
+            >
+              <div class="modal-panel w-full bg-white shadow-2xl flex flex-col" x-transition.scale.origin.center>
+                <div class="flex items-start justify-between border-b border-gray-200 px-6 py-4 shrink-0">
+                  <div>
+                    <h3 class="text-lg font-semibold text-gray-900">Editar turno</h3>
+                    <p class="mt-1 text-sm text-gray-500">Actualiza los datos y horarios del turno seleccionado.</p>
+                  </div>
+                  <button type="button" class="rounded-md p-1 text-gray-400 hover:text-gray-600" @click="openModal = null">
+                    <span class="sr-only">Cerrar modal</span>
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="h-5 w-5"><path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd"/></svg>
+                  </button>
+                </div>
+                <div class="px-6 py-6 overflow-y-auto">
+                  <form method="post" class="space-y-6 mx-auto w-full max-w-[36rem]">
+                    {% csrf_token %}
+                    <input type="hidden" name="form_scope" value="shift-update" />
+                    <input type="hidden" name="object_id" value="{{ shift.pk }}" />
+                    {% for hidden in shift.update_form.hidden_fields %}{{ hidden }}{% endfor %}
+                    <div class="grid grid-cols-1 gap-6 md:grid-cols-2">
+                      {% for field in shift.update_form.visible_fields %}
+                        <div>
+                          <label class="block text-sm font-medium text-gray-700 mb-1" for="{{ field.id_for_label }}">{{ field.label }}</label>
+                          {{ field }}
+                          {% if field.help_text %}<p class="mt-1 text-xs text-gray-500">{{ field.help_text }}</p>{% endif %}
+                          {% if field.errors %}<ul class="mt-1 space-y-1 text-xs text-red-600">{% for e in field.errors %}<li>{{ e }}</li>{% endfor %}</ul>{% endif %}
+                        </div>
+                      {% endfor %}
+                    </div>
+                    {% if shift.update_form.non_field_errors %}
+                      <ul class="space-y-1 text-sm text-red-600">
+                        {% for e in shift.update_form.non_field_errors %}<li>{{ e }}</li>{% endfor %}
+                      </ul>
+                    {% endif %}
+                    <div class="flex justify-end gap-3">
+                      <button type="button" class="inline-flex items-center rounded-md border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100" @click="openModal = null">Cancelar</button>
+                      <button type="submit" class="inline-flex items-center rounded-md bg-gradient-to-br from-indigo-500 to-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:from-indigo-600 hover:to-blue-700">Guardar cambios</button>
+                    </div>
+                  </form>
+                </div>
+                <div class="border-t border-gray-200 bg-gray-50 px-6 py-5 shrink-0"></div>
+              </div>
+            </div>
+
           {% endfor %}
         </div>
       {% else %}
@@ -330,7 +393,11 @@
                   <p class="mt-2 text-sm text-gray-600">{{ inventory.fuel_type }}</p>
                 </div>
                 <div class="flex items-center gap-2">
-                  <a href="{% url 'sucursal_fuel_inventory_update' inventory.pk %}" class="inline-flex items-center rounded-md border border-gray-300 px-3 py-1 text-xs font-medium text-gray-700 hover:bg-gray-50">Editar</a>
+                  <a
+                    href="{% url 'sucursal_fuel_inventory_update' inventory.pk %}"
+                    class="inline-flex items-center rounded-md border border-gray-300 px-3 py-1 text-xs font-medium text-gray-700 hover:bg-gray-50"
+                    @click.prevent="openModal = 'fuel-inventory-edit-{{ inventory.pk }}'"
+                  >Editar</a>
                   <form method="post" action="{% url 'sucursal_fuel_inventory_delete' inventory.pk %}">
                     {% csrf_token %}
                     <button type="submit" class="inline-flex items-center rounded-md border border-red-200 bg-red-50 px-3 py-2 text-xs font-medium text-red-600 hover:bg-red-100">Eliminar</button>
@@ -342,6 +409,60 @@
                 <div><dt class="font-medium text-gray-700">Litraje disponible</dt><dd>{{ inventory.liters }} L</dd></div>
               </dl>
             </div>
+
+            <!-- Modal: editar inventario -->
+            <div
+              x-cloak
+              x-show="openModal === 'fuel-inventory-edit-{{ inventory.pk }}'"
+              x-transition.opacity
+              class="fixed inset-0 z-50 flex items-center justify-center bg-transparent px-4 py-6 sm:px-6 lg:px-8"
+              @keydown.escape.window="openModal = null"
+              @click.self="openModal = null"
+              role="dialog"
+              aria-modal="true"
+            >
+              <div class="modal-panel w-full bg-white shadow-2xl flex flex-col" x-transition.scale.origin.center>
+                <div class="flex items-start justify-between border-b border-gray-200 px-6 py-4 shrink-0">
+                  <div>
+                    <h3 class="text-lg font-semibold text-gray-900">Editar inventario</h3>
+                    <p class="mt-1 text-sm text-gray-500">Modifica la información del inventario seleccionado.</p>
+                  </div>
+                  <button type="button" class="rounded-md p-1 text-gray-400 hover:text-gray-600" @click="openModal = null">
+                    <span class="sr-only">Cerrar modal</span>
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="h-5 w-5"><path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd"/></svg>
+                  </button>
+                </div>
+                <div class="px-6 py-6 overflow-y-auto">
+                  <form method="post" class="space-y-6 mx-auto w-full max-w-[36rem]">
+                    {% csrf_token %}
+                    <input type="hidden" name="form_scope" value="fuel-inventory-update" />
+                    <input type="hidden" name="object_id" value="{{ inventory.pk }}" />
+                    {% for hidden in inventory.update_form.hidden_fields %}{{ hidden }}{% endfor %}
+                    <div class="grid grid-cols-1 gap-6 md:grid-cols-2">
+                      {% for field in inventory.update_form.visible_fields %}
+                        <div>
+                          <label class="block text-sm font-medium text-gray-700 mb-1" for="{{ field.id_for_label }}">{{ field.label }}</label>
+                          {{ field }}
+                          {% if field.help_text %}<p class="mt-1 text-xs text-gray-500">{{ field.help_text }}</p>{% endif %}
+                          {% if field.errors %}<ul class="mt-1 space-y-1 text-xs text-red-600">{% for e in field.errors %}<li>{{ e }}</li>{% endfor %}</ul>{% endif %}
+                        </div>
+                      {% endfor %}
+                    </div>
+                    {% if inventory.update_form.non_field_errors %}
+                      <ul class="space-y-1 text-sm text-red-600">
+                        {% for e in inventory.update_form.non_field_errors %}<li>{{ e }}</li>{% endfor %}
+                      </ul>
+                    {% endif %}
+                    <div class="flex justify-end gap-3">
+                      <button type="button" class="inline-flex items-center rounded-md border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100" @click="openModal = null">Cancelar</button>
+                      <button type="submit" class="inline-flex items-center rounded-md bg-gradient-to-br from-indigo-500 to-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:from-indigo-600 hover:to-blue-700">Guardar cambios</button>
+                    </div>
+                  </form>
+                </div>
+                <div class="border-t border-gray-200 bg-gray-50 px-6 py-5 shrink-0"></div>
+              </div>
+            </div>
+
           {% endfor %}
         </div>
       {% else %}
@@ -369,7 +490,11 @@
                   <p class="mt-2 text-sm text-gray-600">Lote: {{ product.batch_number }}</p>
                 </div>
                 <div class="flex items-center gap-2">
-                  <a href="{% url 'sucursal_product_update' product.pk %}" class="inline-flex items-center rounded-md border border-gray-300 px-3 py-1 text-xs font-medium text-gray-700 hover:bg-gray-50">Editar</a>
+                  <a
+                    href="{% url 'sucursal_product_update' product.pk %}"
+                    class="inline-flex items-center rounded-md border border-gray-300 px-3 py-1 text-xs font-medium text-gray-700 hover:bg-gray-50"
+                    @click.prevent="openModal = 'product-edit-{{ product.pk }}'"
+                  >Editar</a>
                   <form method="post" action="{% url 'sucursal_product_delete' product.pk %}">
                     {% csrf_token %}
                     <button type="submit" class="inline-flex items-center rounded-md border border-red-200 bg-red-50 px-3 py-1 text-xs font-medium text-red-600 hover:bg-red-100">Eliminar</button>
@@ -382,6 +507,60 @@
                 <div><dt class="font-medium text-gray-700">Fecha de llegada</dt><dd>{{ product.arrival_date|date:"d/m/Y" }}</dd></div>
               </dl>
             </div>
+
+            <!-- Modal: editar producto -->
+            <div
+              x-cloak
+              x-show="openModal === 'product-edit-{{ product.pk }}'"
+              x-transition.opacity
+              class="fixed inset-0 z-50 flex items-center justify-center bg-transparent px-4 py-6 sm:px-6 lg:px-8"
+              @keydown.escape.window="openModal = null"
+              @click.self="openModal = null"
+              role="dialog"
+              aria-modal="true"
+            >
+              <div class="modal-panel w-full bg-white shadow-2xl flex flex-col" x-transition.scale.origin.center>
+                <div class="flex items-start justify-between border-b border-gray-200 px-6 py-4 shrink-0">
+                  <div>
+                    <h3 class="text-lg font-semibold text-gray-900">Editar producto</h3>
+                    <p class="mt-1 text-sm text-gray-500">Actualiza los detalles del producto seleccionado.</p>
+                  </div>
+                  <button type="button" class="rounded-md p-1 text-gray-400 hover:text-gray-600" @click="openModal = null">
+                    <span class="sr-only">Cerrar modal</span>
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="h-5 w-5"><path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd"/></svg>
+                  </button>
+                </div>
+                <div class="px-6 py-6 overflow-y-auto">
+                  <form method="post" class="space-y-6 mx-auto w-full max-w-[36rem]">
+                    {% csrf_token %}
+                    <input type="hidden" name="form_scope" value="product-update" />
+                    <input type="hidden" name="object_id" value="{{ product.pk }}" />
+                    {% for hidden in product.update_form.hidden_fields %}{{ hidden }}{% endfor %}
+                    <div class="grid grid-cols-1 gap-6 md:grid-cols-2">
+                      {% for field in product.update_form.visible_fields %}
+                        <div>
+                          <label class="block text-sm font-medium text-gray-700 mb-1" for="{{ field.id_for_label }}">{{ field.label }}</label>
+                          {{ field }}
+                          {% if field.help_text %}<p class="mt-1 text-xs text-gray-500">{{ field.help_text }}</p>{% endif %}
+                          {% if field.errors %}<ul class="mt-1 space-y-1 text-xs text-red-600">{% for e in field.errors %}<li>{{ e }}</li>{% endfor %}</ul>{% endif %}
+                        </div>
+                      {% endfor %}
+                    </div>
+                    {% if product.update_form.non_field_errors %}
+                      <ul class="space-y-1 text-sm text-red-600">
+                        {% for e in product.update_form.non_field_errors %}<li>{{ e }}</li>{% endfor %}
+                      </ul>
+                    {% endif %}
+                    <div class="flex justify-end gap-3">
+                      <button type="button" class="inline-flex items-center rounded-md border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100" @click="openModal = null">Cancelar</button>
+                      <button type="submit" class="inline-flex items-center rounded-md bg-gradient-to-br from-indigo-500 to-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:from-indigo-600 hover:to-blue-700">Guardar cambios</button>
+                    </div>
+                  </form>
+                </div>
+                <div class="border-t border-gray-200 bg-gray-50 px-6 py-5 shrink-0"></div>
+              </div>
+            </div>
+
           {% endfor %}
         </div>
       {% else %}
@@ -409,7 +588,11 @@
                   <p class="text-sm text-gray-500 mt-2">Máquinas: {{ island.machines.count }}</p>
                 </div>
                 <div class="flex flex-wrap items-center gap-2">
-                  <a href="{% url 'sucursal_island_update' form.instance.pk island.pk %}" class="inline-flex items-center rounded-md border border-gray-300 px-3 py-1 text-xs font-medium text-gray-700 hover:bg-gray-50">Editar</a>
+                  <a
+                    href="{% url 'sucursal_island_update' form.instance.pk island.pk %}"
+                    class="inline-flex items-center rounded-md border border-gray-300 px-3 py-1 text-xs font-medium text-gray-700 hover:bg-gray-50"
+                    @click.prevent="openModal = 'island-edit-{{ island.pk }}'"
+                  >Editar</a>
                   <form method="post" action="{% url 'sucursal_island_delete' form.instance.pk island.pk %}">
                     {% csrf_token %}
                     <button type="submit" class="inline-flex items-center rounded-md border border-red-200 bg-red-50 px-3 py-1 text-xs font-medium text-red-600 hover:bg-red-100">Eliminar</button>
@@ -420,9 +603,9 @@
                 </div>
               </div>
 
-              {% if island.machines.all %}
+              {% if island.machines_list %}
                 <div class="mt-4 space-y-4">
-                  {% for machine in island.machines.all %}
+                  {% for machine in island.machines_list %}
                     <div class="rounded-md bg-gray-50 p-4">
                       <div class="flex items-start justify-between gap-4">
                         <div>
@@ -430,7 +613,11 @@
                           <span class="text-sm text-gray-500">{{ machine.fuel_type }}</span>
                         </div>
                         <div class="flex flex-wrap items-center gap-2">
-                          <a href="{% url 'sucursal_machine_update' machine.pk %}" class="inline-flex items-center rounded-md border border-gray-300 px-3 py-1 text-xs font-medium text-gray-700 hover:bg-gray-100">Editar</a>
+                          <a
+                            href="{% url 'sucursal_machine_update' machine.pk %}"
+                            class="inline-flex items-center rounded-md border border-gray-300 px-3 py-1 text-xs font-medium text-gray-700 hover:bg-gray-100"
+                            @click.prevent="openModal = 'machine-edit-{{ machine.pk }}'"
+                          >Editar</a>
                           <form method="post" action="{% url 'sucursal_machine_delete' machine.pk %}">
                             {% csrf_token %}
                             <button type="submit" class="inline-flex items-center rounded-md border border-red-200 bg-red-50 px-3 py-1 text-xs font-medium text-red-600 hover:bg-red-100">Eliminar</button>
@@ -448,9 +635,9 @@
 
                       <p class="text-sm text-gray-500 mt-2">Pistolas: {{ machine.nozzles.count }}</p>
 
-                      {% if machine.nozzles.all %}
+                      {% if machine.nozzles_list %}
                         <ul class="mt-2 space-y-2">
-                          {% for nozzle in machine.nozzles.all %}
+                          {% for nozzle in machine.nozzles_list %}
                             <li class="rounded border border-gray-200 bg-white px-3 py-2">
                               <div class="flex items-start justify-between gap-4">
                                 <div>
@@ -459,7 +646,11 @@
                                   {% if nozzle.description %}<p class="mt-1 text-xs text-gray-500">{{ nozzle.description }}</p>{% endif %}
                                 </div>
                                 <div class="flex flex-wrap items-center gap-2">
-                                  <a href="{% url 'sucursal_nozzle_update' nozzle.pk %}" class="inline-flex items-center rounded-md border border-gray-300 px-3 py-1 text-xs font-medium text-gray-700 hover:bg-gray-100">Editar</a>
+                                  <a
+                                    href="{% url 'sucursal_nozzle_update' nozzle.pk %}"
+                                    class="inline-flex items-center rounded-md border border-gray-300 px-3 py-1 text-xs font-medium text-gray-700 hover:bg-gray-100"
+                                    @click.prevent="openModal = 'nozzle-edit-{{ nozzle.pk }}'"
+                                  >Editar</a>
                                   <form method="post" action="{% url 'sucursal_nozzle_delete' nozzle.pk %}">
                                     {% csrf_token %}
                                     <button type="submit" class="inline-flex items-center rounded-md border border-red-200 bg-red-50 px-3 py-1 text-xs font-medium text-red-600 hover:bg-red-100">Eliminar</button>
@@ -467,11 +658,118 @@
                                 </div>
                               </div>
                             </li>
+
+                            <!-- Modal: editar pistola -->
+                            <div
+                              x-cloak
+                              x-show="openModal === 'nozzle-edit-{{ nozzle.pk }}'"
+                              x-transition.opacity
+                              class="fixed inset-0 z-50 flex items-center justify-center bg-transparent px-4 py-6 sm:px-6 lg:px-8"
+                              @keydown.escape.window="openModal = null"
+                              @click.self="openModal = null"
+                              role="dialog"
+                              aria-modal="true"
+                            >
+                              <div class="modal-panel w-full bg-white shadow-2xl flex flex-col" x-transition.scale.origin.center>
+                                <div class="flex items-start justify-between border-b border-gray-200 px-6 py-4 shrink-0">
+                                  <div>
+                                    <h3 class="text-lg font-semibold text-gray-900">Editar pistola</h3>
+                                    <p class="mt-1 text-sm text-gray-500">Ajusta los datos de la pistola seleccionada.</p>
+                                  </div>
+                                  <button type="button" class="rounded-md p-1 text-gray-400 hover:text-gray-600" @click="openModal = null">
+                                    <span class="sr-only">Cerrar modal</span>
+                                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="h-5 w-5"><path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd"/></svg>
+                                  </button>
+                                </div>
+                                <div class="px-6 py-6 overflow-y-auto">
+                                  <form method="post" class="space-y-6 mx-auto w-full max-w-[36rem]">
+                                    {% csrf_token %}
+                                    <input type="hidden" name="form_scope" value="nozzle-update" />
+                                    <input type="hidden" name="object_id" value="{{ nozzle.pk }}" />
+                                    {% for hidden in nozzle.update_form.hidden_fields %}{{ hidden }}{% endfor %}
+                                    <div class="grid grid-cols-1 gap-6 md:grid-cols-2">
+                                      {% for field in nozzle.update_form.visible_fields %}
+                                        <div>
+                                          <label class="block text-sm font-medium text-gray-700 mb-1" for="{{ field.id_for_label }}">{{ field.label }}</label>
+                                          {{ field }}
+                                          {% if field.help_text %}<p class="mt-1 text-xs text-gray-500">{{ field.help_text }}</p>{% endif %}
+                                          {% if field.errors %}<ul class="mt-1 space-y-1 text-xs text-red-600">{% for e in field.errors %}<li>{{ e }}</li>{% endfor %}</ul>{% endif %}
+                                        </div>
+                                      {% endfor %}
+                                    </div>
+                                    {% if nozzle.update_form.non_field_errors %}
+                                      <ul class="space-y-1 text-sm text-red-600">
+                                        {% for e in nozzle.update_form.non_field_errors %}<li>{{ e }}</li>{% endfor %}
+                                      </ul>
+                                    {% endif %}
+                                    <div class="flex justify-end gap-3">
+                                      <button type="button" class="inline-flex items-center rounded-md border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100" @click="openModal = null">Cancelar</button>
+                                      <button type="submit" class="inline-flex items-center rounded-md bg-gradient-to-br from-indigo-500 to-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:from-indigo-600 hover:to-blue-700">Guardar cambios</button>
+                                    </div>
+                                  </form>
+                                </div>
+                                <div class="border-t border-gray-200 bg-gray-50 px-6 py-5 shrink-0"></div>
+                              </div>
+                            </div>
+
                           {% endfor %}
                         </ul>
                       {% else %}
                         <p class="mt-2 text-sm text-gray-500">Aún no hay pistolas asociadas.</p>
                       {% endif %}
+                    </div>
+
+                    <!-- Modal: editar máquina -->
+                    <div
+                      x-cloak
+                      x-show="openModal === 'machine-edit-{{ machine.pk }}'"
+                      x-transition.opacity
+                      class="fixed inset-0 z-50 flex items-center justify-center bg-transparent px-4 py-6 sm:px-6 lg:px-8"
+                      @keydown.escape.window="openModal = null"
+                      @click.self="openModal = null"
+                      role="dialog"
+                      aria-modal="true"
+                    >
+                      <div class="modal-panel w-full bg-white shadow-2xl flex flex-col" x-transition.scale.origin.center>
+                        <div class="flex items-start justify-between border-b border-gray-200 px-6 py-4 shrink-0">
+                          <div>
+                            <h3 class="text-lg font-semibold text-gray-900">Editar máquina</h3>
+                            <p class="mt-1 text-sm text-gray-500">Actualiza los datos de la máquina seleccionada.</p>
+                          </div>
+                          <button type="button" class="rounded-md p-1 text-gray-400 hover:text-gray-600" @click="openModal = null">
+                            <span class="sr-only">Cerrar modal</span>
+                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="h-5 w-5"><path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd"/></svg>
+                          </button>
+                        </div>
+                        <div class="px-6 py-6 overflow-y-auto">
+                          <form method="post" class="space-y-6 mx-auto w-full max-w-[36rem]">
+                            {% csrf_token %}
+                            <input type="hidden" name="form_scope" value="machine-update" />
+                            <input type="hidden" name="object_id" value="{{ machine.pk }}" />
+                            {% for hidden in machine.update_form.hidden_fields %}{{ hidden }}{% endfor %}
+                            <div class="grid grid-cols-1 gap-6 md:grid-cols-2">
+                              {% for field in machine.update_form.visible_fields %}
+                                <div>
+                                  <label class="block text-sm font-medium text-gray-700 mb-1" for="{{ field.id_for_label }}">{{ field.label }}</label>
+                                  {{ field }}
+                                  {% if field.help_text %}<p class="mt-1 text-xs text-gray-500">{{ field.help_text }}</p>{% endif %}
+                                  {% if field.errors %}<ul class="mt-1 space-y-1 text-xs text-red-600">{% for e in field.errors %}<li>{{ e }}</li>{% endfor %}</ul>{% endif %}
+                                </div>
+                              {% endfor %}
+                            </div>
+                            {% if machine.update_form.non_field_errors %}
+                              <ul class="space-y-1 text-sm text-red-600">
+                                {% for e in machine.update_form.non_field_errors %}<li>{{ e }}</li>{% endfor %}
+                              </ul>
+                            {% endif %}
+                            <div class="flex justify-end gap-3">
+                              <button type="button" class="inline-flex items-center rounded-md border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100" @click="openModal = null">Cancelar</button>
+                              <button type="submit" class="inline-flex items-center rounded-md bg-gradient-to-br from-indigo-500 to-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:from-indigo-600 hover:to-blue-700">Guardar cambios</button>
+                            </div>
+                          </form>
+                        </div>
+                        <div class="border-t border-gray-200 bg-gray-50 px-6 py-5 shrink-0"></div>
+                      </div>
                     </div>
 
                     <!-- Modal: crear pistola -->
@@ -513,6 +811,60 @@
                 <p class="mt-4 text-sm text-gray-500">Aún no hay máquinas asociadas a esta isla.</p>
               {% endif %}
             </div>
+
+            <!-- Modal: editar isla -->
+            <div
+              x-cloak
+              x-show="openModal === 'island-edit-{{ island.pk }}'"
+              x-transition.opacity
+              class="fixed inset-0 z-50 flex items-center justify-center bg-transparent px-4 py-6 sm:px-6 lg:px-8"
+              @keydown.escape.window="openModal = null"
+              @click.self="openModal = null"
+              role="dialog"
+              aria-modal="true"
+            >
+              <div class="modal-panel w-full bg-white shadow-2xl flex flex-col" x-transition.scale.origin.center>
+                <div class="flex items-start justify-between border-b border-gray-200 px-6 py-4 shrink-0">
+                  <div>
+                    <h3 class="text-lg font-semibold text-gray-900">Editar isla</h3>
+                    <p class="mt-1 text-sm text-gray-500">Modifica la información general de la isla.</p>
+                  </div>
+                  <button type="button" class="rounded-md p-1 text-gray-400 hover:text-gray-600" @click="openModal = null">
+                    <span class="sr-only">Cerrar modal</span>
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="h-5 w-5"><path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd"/></svg>
+                  </button>
+                </div>
+                <div class="px-6 py-6 overflow-y-auto">
+                  <form method="post" class="space-y-6 mx-auto w-full max-w-[36rem]">
+                    {% csrf_token %}
+                    <input type="hidden" name="form_scope" value="island-update" />
+                    <input type="hidden" name="object_id" value="{{ island.pk }}" />
+                    {% for hidden in island.update_form.hidden_fields %}{{ hidden }}{% endfor %}
+                    <div class="grid grid-cols-1 gap-6 md:grid-cols-2">
+                      {% for field in island.update_form.visible_fields %}
+                        <div>
+                          <label class="block text-sm font-medium text-gray-700 mb-1" for="{{ field.id_for_label }}">{{ field.label }}</label>
+                          {{ field }}
+                          {% if field.help_text %}<p class="mt-1 text-xs text-gray-500">{{ field.help_text }}</p>{% endif %}
+                          {% if field.errors %}<ul class="mt-1 space-y-1 text-xs text-red-600">{% for e in field.errors %}<li>{{ e }}</li>{% endfor %}</ul>{% endif %}
+                        </div>
+                      {% endfor %}
+                    </div>
+                    {% if island.update_form.non_field_errors %}
+                      <ul class="space-y-1 text-sm text-red-600">
+                        {% for e in island.update_form.non_field_errors %}<li>{{ e }}</li>{% endfor %}
+                      </ul>
+                    {% endif %}
+                    <div class="flex justify-end gap-3">
+                      <button type="button" class="inline-flex items-center rounded-md border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100" @click="openModal = null">Cancelar</button>
+                      <button type="submit" class="inline-flex items-center rounded-md bg-gradient-to-br from-indigo-500 to-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:from-indigo-600 hover:to-blue-700">Guardar cambios</button>
+                    </div>
+                  </form>
+                </div>
+                <div class="border-t border-gray-200 bg-gray-50 px-6 py-5 shrink-0"></div>
+              </div>
+            </div>
+
 
             <!-- Modal: crear máquina -->
             {% if island.machine_create_form %}
