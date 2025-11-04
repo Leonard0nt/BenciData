@@ -7,6 +7,7 @@ from django.contrib.auth.forms import UserCreationForm,  PasswordChangeForm
 from django.core.exceptions import ValidationError
 from django.contrib.auth.password_validation import validate_password
 from allauth.account.forms import LoginForm
+from django.utils.text import slugify
 from crispy_forms.helper import FormHelper
 from crispy_forms.layout import Layout, Div
 
@@ -36,15 +37,25 @@ class UserUpdateForm(forms.ModelForm):
         self.helper = FormHelper()
         self.helper.form_tag = False
 
-        self.helper.layout = Layout(
-            "username",
-            "email",
-            Div(
-                Div("first_name", css_class="flex-1"),
-                Div("last_name",  css_class="flex-1"),
-                css_class="flex gap-4",
-            ),
-        )
+        layout_fields = []
+        if "username" in self.fields:
+            layout_fields.append("username")
+
+        layout_fields.append("email")
+
+        name_fields = []
+        if "first_name" in self.fields:
+            name_fields.append(Div("first_name", css_class="flex-1"))
+        if "last_name" in self.fields:
+            name_fields.append(Div("last_name", css_class="flex-1"))
+
+        name_div = Div(*name_fields, css_class="flex gap-4") if name_fields else None
+
+        layout_items = layout_fields
+        if name_div is not None:
+            layout_items.append(name_div)
+
+        self.helper.layout = Layout(*layout_items)
 
     class Meta:
         model = User
@@ -62,7 +73,15 @@ class UserCreateForm(UserCreationForm, UserUpdateForm):
 
     class Meta:
         model = User
-        fields = UserUpdateForm.Meta.fields + ["password1", "password2"]
+        fields = [
+            field
+            for field in UserUpdateForm.Meta.fields
+            if field != "username"
+        ] + ["password1", "password2"]
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields.pop("username", None)
 
     def clean_password1(self):
         password1 = self.cleaned_data.get("password1")
@@ -78,6 +97,33 @@ class UserCreateForm(UserCreationForm, UserUpdateForm):
             raise ValidationError("Passwords do not match")
 
         return cleaned_data
+
+    def save(self, commit=True):
+        user = super().save(commit=False)
+
+        first_name = (self.cleaned_data.get("first_name") or "").strip()
+        last_name = (self.cleaned_data.get("last_name") or "").strip()
+        email = (self.cleaned_data.get("email") or "").strip()
+
+        base_username = " ".join(part for part in [first_name, last_name] if part)
+        if not base_username and email:
+            base_username = email.split("@")[0]
+
+        base_username = slugify(base_username) or "usuario"
+
+        username = base_username
+        counter = 1
+        while User.objects.filter(username=username).exists():
+            username = f"{base_username}-{counter}"
+            counter += 1
+
+        user.username = username
+
+        if commit:
+            user.save()
+            self.save_m2m()
+
+        return user
 
 
 class ProfileUpdateForm(forms.ModelForm):
