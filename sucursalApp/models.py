@@ -8,7 +8,8 @@ from django.db.models.signals import m2m_changed
 from django.dispatch import receiver
 
 from UsuarioApp.choices import PERMISOS
-
+from django.db.models.signals import m2m_changed
+from django.dispatch import receiver
 
 class Sucursal(models.Model):
     """Representa una sucursal perteneciente a una empresa."""
@@ -287,8 +288,31 @@ class Shift(models.Model):
         return f"Turno {self.code} - {self.sucursal.name}"
 
     def save(self, *args, **kwargs):
+        previous_manager_id = None
+        if self.pk:
+            previous_manager_id = (
+                Shift.objects.filter(pk=self.pk)
+                .values_list("manager_id", flat=True)
+                .first()
+            )
+
         super().save(*args, **kwargs)
         self._ensure_manager_is_head_attendant()
+        if previous_manager_id and previous_manager_id != self.manager_id:
+            _cleanup_branch_attendants(self.sucursal, (previous_manager_id,))
+
+    def delete(self, *args, **kwargs):
+        branch = self.sucursal
+        attendants_ids = list(self.attendants.values_list("pk", flat=True))
+        manager_id = self.manager_id
+
+        super().delete(*args, **kwargs)
+
+        affected_ids: list[int] = attendants_ids
+        if manager_id:
+            affected_ids.append(manager_id)
+        _cleanup_branch_attendants(branch, affected_ids)
+
 
     def _ensure_manager_is_head_attendant(self) -> None:
         if not self.manager_id:
@@ -316,6 +340,81 @@ class Shift(models.Model):
             assignment.role = "HEAD_ATTENDANT"
             assignment.save(update_fields=["role"])
 
+def _cleanup_branch_attendants(
+    branch: Sucursal, profile_ids: Iterable[int] | None = None
+) -> None:
+    """Remove attendant assignments no longer linked to branch shifts."""
+
+    staff_queryset = SucursalStaff.objects.filter(
+        sucursal=branch, role__in=("ATTENDANT", "HEAD_ATTENDANT")
+    )
+    if profile_ids is not None:
+        profile_ids = tuple(profile_ids)
+        if not profile_ids:
+            return
+        staff_queryset = staff_queryset.filter(profile_id__in=profile_ids)
+
+    if not staff_queryset.exists():
+        return
+
+    active_manager_ids = set(
+        Shift.objects.filter(sucursal=branch)
+        .exclude(manager_id__isnull=True)
+        .values_list("manager_id", flat=True)
+    )
+    active_attendant_ids = set(
+        Shift.objects.filter(sucursal=branch, attendants__isnull=False)
+        .values_list("attendants__id", flat=True)
+        .distinct()
+    )
+    active_profile_ids = active_manager_ids | active_attendant_ids
+
+    for assignment in staff_queryset:
+        if assignment.profile_id not in active_profile_ids:
+            assignment.delete()
+
+
+@receiver(m2m_changed, sender=Shift.attendants.through)
+def ensure_attendants_are_branch_staff(
+    sender,
+    instance: Shift,
+    action: str,
+    pk_set,
+    **_,
+) -> None:
+    """Ensure attendants belong to the branch staff when added to a shift."""
+
+    if action == "post_add" and pk_set:
+        from UsuarioApp.models import Profile
+
+        attendants = Profile.objects.filter(pk__in=pk_set).select_related("position_FK")
+
+        for attendant in attendants:
+            role = "ATTENDANT"
+            if attendant.position_FK and attendant.position_FK.permission_code in (
+                "ATTENDANT",
+                "HEAD_ATTENDANT",
+            ):
+                role = attendant.position_FK.permission_code
+
+            assignment, created = SucursalStaff.objects.get_or_create(
+                sucursal=instance.sucursal,
+                profile=attendant,
+                defaults={"role": role},
+            )
+
+            if not created and (
+                assignment.role is None
+                or assignment.role in ("ATTENDANT", "HEAD_ATTENDANT")
+            ) and assignment.role != role:
+                assignment.role = role
+                assignment.save(update_fields=["role"])
+        return
+
+    if action == "post_remove" and pk_set:
+        _cleanup_branch_attendants(instance.sucursal, pk_set)
+    elif action == "post_clear":
+        _cleanup_branch_attendants(instance.sucursal)
 
 @receiver(m2m_changed, sender=Shift.attendants.through)
 def ensure_attendants_are_branch_staff(
