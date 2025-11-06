@@ -315,6 +315,58 @@ class Shift(models.Model):
             assignment.save(update_fields=["role"])
 
 
+class ServiceSession(models.Model):
+    """Representa el inicio de un servicio para un turno específico."""
+
+    shift = models.ForeignKey(
+        Shift,
+        on_delete=models.PROTECT,
+        related_name="service_sessions",
+        verbose_name="Turno",
+    )
+    attendants = models.ManyToManyField(
+        "UsuarioApp.Profile",
+        related_name="service_sessions",
+        verbose_name="Bomberos asignados",
+        blank=True,
+    )
+    coins_amount = models.DecimalField(
+        "Dinero en monedas",
+        max_digits=12,
+        decimal_places=2,
+        default=0,
+    )
+    cash_amount = models.DecimalField(
+        "Dinero en efectivo",
+        max_digits=12,
+        decimal_places=2,
+        default=0,
+    )
+    initial_budget = models.DecimalField(
+        "Presupuesto inicial",
+        max_digits=12,
+        decimal_places=2,
+        editable=False,
+        default=0,
+    )
+    started_at = models.DateTimeField(
+        "Fecha de inicio",
+        auto_now_add=True,
+    )
+
+    class Meta:
+        verbose_name = "Inicio de servicio"
+        verbose_name_plural = "Inicios de servicio"
+        ordering = ("-started_at",)
+
+    def __str__(self) -> str:
+        return f"Servicio {self.shift.code} - {self.started_at:%Y-%m-%d %H:%M}"
+
+    def save(self, *args, **kwargs):
+        self.initial_budget = (self.coins_amount or 0) + (self.cash_amount or 0)
+        super().save(*args, **kwargs)
+
+
 class BranchProduct(models.Model):
     """Registra los productos disponibles en una sucursal."""
 

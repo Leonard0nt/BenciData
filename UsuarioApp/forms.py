@@ -83,6 +83,11 @@ class UserCreateForm(UserCreationForm, UserUpdateForm):
         super().__init__(*args, **kwargs)
         self.fields.pop("username", None)
 
+        field_class = "bg-white focus:outline-none border border-gray-300 rounded-lg py-2 px-4 block w-full leading-normal text-gray-700 mb-3"
+        for name in ["first_name", "last_name", "email", "password1", "password2"]:
+            if name in self.fields:
+                self.fields[name].widget.attrs.setdefault("class", field_class)
+
     def clean_password1(self):
         password1 = self.cleaned_data.get("password1")
         validate_password(password1)
@@ -329,5 +334,9 @@ class ProfileCreateForm(ProfileUpdateForm):
                 queryset = Position.objects.exclude(
                     permission_code__in=["OWNER", "ADMINISTRATOR", "HEAD_ATTENDANT"]
                 )
+
+            if profile.is_admin() and getattr(profile, "current_branch_id", None):
+                self.fields["current_branch"].initial = profile.current_branch_id
+                self.fields["current_branch"].widget = forms.HiddenInput()
 
         self.fields["position_FK"].queryset = queryset

@@ -7,6 +7,7 @@ from .models import (
     Machine,
     Nozzle,
     Shift,
+    ServiceSession,
     Sucursal,
     SucursalStaff,
 )
@@ -148,3 +149,12 @@ class ShiftAdmin(admin.ModelAdmin):
         "sucursal__name",
         "manager__user_FK__username",
     )
+
+
+@admin.register(ServiceSession)
+class ServiceSessionAdmin(admin.ModelAdmin):
+    list_display = ("shift", "started_at", "initial_budget")
+    list_filter = ("shift__sucursal", "started_at")
+    search_fields = ("shift__code", "shift__sucursal__name")
+    date_hierarchy = "started_at"
+    filter_horizontal = ("attendants",)

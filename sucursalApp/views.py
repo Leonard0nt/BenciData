@@ -6,6 +6,7 @@ from django.db.models import Prefetch, QuerySet
 from django.http import Http404, HttpResponseRedirect
 from django.shortcuts import get_object_or_404, redirect
 from django.urls import reverse, reverse_lazy
+from django.utils import timezone
 
 from django.views import View
 
@@ -21,6 +22,7 @@ from .forms import (
     MachineForm,
     NozzleForm,
     ShiftForm,
+    ServiceSessionForm,
     SucursalForm,
 )
 from .models import (
@@ -30,6 +32,7 @@ from .models import (
     Machine,
     Nozzle,
     Shift,
+    ServiceSession,
     Sucursal,
     SucursalStaff,
 )
@@ -1062,3 +1065,74 @@ class NozzleDeleteView(NozzleAccessMixin, View):
         nozzle.delete()
         return HttpResponseRedirect(success_url)
 
+class ServiceSessionCreateView(OwnerCompanyMixin, CreateView):
+    model = ServiceSession
+    form_class = ServiceSessionForm
+    template_name = "pages/service_sessions/service_session_start.html"
+    allowed_roles = ["OWNER", "ADMINISTRATOR"]
+
+    def get_success_url(self):
+        shift = getattr(self.object, "shift", None)
+        if shift:
+            return f"{reverse('service_session_start')}?shift={shift.pk}"
+        return reverse("service_session_start")
+
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        branch_ids = self.get_managed_branch_ids()
+        available_shifts = (
+            Shift.objects.filter(sucursal_id__in=branch_ids)
+            .select_related("sucursal")
+            .order_by("sucursal__name", "code")
+        )
+
+        detailed_shifts = available_shifts.select_related(
+            "manager__user_FK",
+            "manager__position_FK",
+        ).prefetch_related("attendants__user_FK", "attendants__position_FK")
+
+        shift_id = (
+            self.request.POST.get("shift")
+            if self.request.method == "POST"
+            else self.request.GET.get("shift")
+        )
+
+        selected_shift = None
+        if shift_id:
+            selected_shift = detailed_shifts.filter(pk=shift_id).first()
+        elif self.request.method == "GET":
+            selected_shift = detailed_shifts.first()
+
+        self.available_shifts = available_shifts
+        self.selected_shift = selected_shift
+
+        kwargs.update(
+            {
+                "shift": selected_shift,
+                "available_shifts": available_shifts,
+                "branch_ids": branch_ids,
+            }
+        )
+        return kwargs
+
+    def form_valid(self, form):
+        response = super().form_valid(form)
+        messages.success(
+            self.request,
+            "Servicio iniciado correctamente. Puedes cerrar el turno desde esta misma pantalla más adelante.",
+        )
+        return response
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        form = context.get("form")
+        context.update(
+            {
+                "selected_shift": getattr(self, "selected_shift", None),
+                "current_attendants": getattr(form, "current_attendants", []),
+                "available_replacements": getattr(form, "available_replacements", []),
+                "current_datetime": timezone.localtime(),
+                "has_shifts": self.available_shifts.exists(),
+            }
+        )
+        return context
