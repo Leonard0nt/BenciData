@@ -228,12 +228,18 @@ class ProfileUpdateForm(forms.ModelForm):
 
         params = {"access_key": api_key, "number": phone}
         try:
-            resp = requests.get("http://apilayer.net/api/validate", params=params, timeout=5)
+            resp = requests.get(
+                "http://apilayer.net/api/validate", params=params, timeout=5
+            )
             data = resp.json()
-            if not data.get("valid"):
-                raise forms.ValidationError("Número telefónico inválido.")
         except Exception:
-            raise forms.ValidationError("Error al validar el número.")
+            return phone
+
+        if data.get("success") is False:
+            return phone
+
+        if data.get("valid") is False:
+            return phone
         return phone
 
     class Meta:

@@ -629,7 +629,16 @@ class UserDeleteView(
             return redirect("User")
 
         target_name = target_user.get_full_name() or target_user.username
-        target_user.delete()
+
+        target_profile = getattr(target_user, "profile", None)
+        if target_profile is not None:
+            if target_profile.current_branch_id is not None:
+                target_profile.current_branch = None
+                target_profile.save(update_fields=["current_branch"])
+            SucursalStaff.objects.filter(profile=target_profile).delete()
+
+        target_user.is_active = False
+        target_user.save(update_fields=["is_active"])
 
         messages.success(
             request,

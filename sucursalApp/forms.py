@@ -185,6 +185,7 @@ class ShiftForm(forms.ModelForm):
             attendants_queryset = queryset.filter(
                 position_FK__permission_code__in=["ATTENDANT", "HEAD_ATTENDANT"]
             )
+            attendants_field.required = False
             attendants_field.queryset = attendants_queryset.order_by(
                 "user_FK__first_name", "user_FK__last_name", "user_FK__username"
             )
