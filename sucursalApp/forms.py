@@ -189,6 +189,11 @@ class ShiftForm(forms.ModelForm):
             attendants_field.queryset = attendants_queryset.order_by(
                 "user_FK__first_name", "user_FK__last_name", "user_FK__username"
             )
+            attendants_field.widget = forms.CheckboxSelectMultiple(
+                attrs={
+                    "class": "grid gap-2",
+                }
+            )
     class Meta:
         model = Shift
         fields = [
@@ -218,8 +223,8 @@ class ShiftForm(forms.ModelForm):
             ),
             "manager": forms.Select(attrs={"class": "w-full border rounded p-2"}
             ),
-            "attendants": forms.SelectMultiple(
-                attrs={"class": "w-full border rounded p-2"}
+            "attendants": forms.CheckboxSelectMultiple(
+                attrs={"class": "grid gap-2"}
             ),
         }
     def clean(self):
