@@ -2,6 +2,43 @@
 {% load static %}
 
 {% block content_main %}
+<style>
+  .profile-checkbox-grid{
+    display:grid;
+    gap:0.5rem;
+    max-height:20rem;
+    overflow-y:auto;
+    padding-right:0.25rem;
+    grid-template-columns:repeat(auto-fit,minmax(12rem,1fr));
+  }
+  @media (max-width: 639px){
+    .profile-checkbox-grid{
+      grid-template-columns:1fr;
+      max-height:none;
+    }
+  }
+  .profile-checkbox-grid::-webkit-scrollbar{
+    width:0.5rem;
+  }
+  .profile-checkbox-grid::-webkit-scrollbar-thumb{
+    background-color:rgba(79,70,229,0.35);
+    border-radius:9999px;
+  }
+  .profile-checkbox-option{
+    align-items:flex-start;
+    gap:0.5rem;
+    transition:border-color 0.2s ease, background-color 0.2s ease;
+  }
+  .profile-checkbox-option input[type="checkbox"]{
+    flex-shrink:0;
+    margin-top:0.15rem;
+    accent-color:#4f46e5;
+  }
+  .profile-checkbox-option input[type="checkbox"]:checked + span{
+    font-weight:600;
+    color:#1f2937;
+  }
+</style>
 <div class="mx-auto max-w-6xl space-y-8">
   <div class="flex flex-col gap-4 border-b border-gray-200 pb-6 md:flex-row md:items-center md:justify-between">
     <div>
@@ -105,7 +142,18 @@
         <div class="space-y-6">
           <div>
             <label for="{{ form.attendants.id_for_label }}" class="block text-sm font-medium text-gray-700">{{ form.attendants.label }}</label>
-            {{ form.attendants }}
+            <div class="profile-checkbox-grid">
+              {% if form.attendants|length %}
+                {% for checkbox in form.attendants %}
+                  <label for="{{ checkbox.id_for_label }}" class="profile-checkbox-option flex rounded border border-gray-200 px-3 py-2 text-sm text-gray-700 hover:border-indigo-300 hover:bg-indigo-50">
+                    {{ checkbox.tag }}
+                    <span class="leading-snug">{{ checkbox.choice_label }}</span>
+                  </label>
+                {% endfor %}
+              {% else %}
+                <p class="col-span-full text-sm text-gray-500">No hay bomberos disponibles para iniciar el servicio. Asegúrate de que existan perfiles asignados a la sucursal.</p>
+              {% endif %}
+            </div>
             {% if form.attendants.help_text %}
               <p class="mt-2 text-xs text-gray-500">{{ form.attendants.help_text }}</p>
             {% endif %}

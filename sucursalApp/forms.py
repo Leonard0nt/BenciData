@@ -21,19 +21,25 @@ class SucursalForm(forms.ModelForm):
     administrators = forms.ModelMultipleChoiceField(
         queryset=Profile.objects.none(),
         required=False,
-        widget=forms.SelectMultiple(attrs={"class": "w-full border rounded p-2"}),
+        widget=forms.CheckboxSelectMultiple(
+            attrs={"class": "profile-checkbox-grid"}
+        ),
         label="Administradores",
     )
     accountants = forms.ModelMultipleChoiceField(
         queryset=Profile.objects.none(),
         required=False,
-        widget=forms.SelectMultiple(attrs={"class": "w-full border rounded p-2"}),
+        widget=forms.CheckboxSelectMultiple(
+            attrs={"class": "profile-checkbox-grid"}
+        ),
         label="Contadores",
     )
     firefighters = forms.ModelMultipleChoiceField(
         queryset=Profile.objects.none(),
         required=False,
-        widget=forms.SelectMultiple(attrs={"class": "w-full border rounded p-2"}),
+        widget=forms.CheckboxSelectMultiple(
+            attrs={"class": "profile-checkbox-grid"}
+        ),
         label="Bomberos",
         help_text="Incluye perfiles con rol de bombero.",
     )
@@ -77,6 +83,12 @@ class SucursalForm(forms.ModelForm):
                     "profile_id", flat=True
                 )
                 self.fields[field_name].initial = list(initial_ids)
+            widget = self.fields[field_name].widget
+            base_class = widget.attrs.get("class", "")
+            extra_class = "profile-checkbox-grid"
+            if extra_class not in base_class:
+                widget.attrs["class"] = f"{base_class} {extra_class}".strip()
+            widget.choices = self.fields[field_name].choices
 
     def save(self, commit: bool = True):
         instance = super().save(commit=False)
@@ -190,6 +202,13 @@ class ShiftForm(forms.ModelForm):
                 "user_FK__first_name", "user_FK__last_name", "user_FK__username"
             )
             base_class = attendants_field.widget.attrs.get("class", "")
+            required_class = "profile-checkbox-grid"
+            if required_class not in base_class:
+                attendants_field.widget.attrs["class"] = (
+                    f"{base_class} {required_class}".strip()
+                )
+            attendants_field.widget.choices = attendants_field.choices
+            base_class = attendants_field.widget.attrs.get("class", "")
             extra_classes = "grid gap-2"
             if extra_classes not in base_class:
                 attendants_field.widget.attrs["class"] = (
@@ -227,7 +246,7 @@ class ShiftForm(forms.ModelForm):
             "manager": forms.Select(attrs={"class": "w-full border rounded p-2"}
             ),
             "attendants": forms.CheckboxSelectMultiple(
-                attrs={"class": "attendant-checkboxes grid gap-2 sm:grid-cols-2"}
+                attrs={"class": "profile-checkbox-grid"}
             )
         }
     def clean(self):
@@ -248,11 +267,8 @@ class ServiceSessionForm(forms.ModelForm):
     attendants = forms.ModelMultipleChoiceField(
         queryset=Profile.objects.none(),
         required=False,
-        widget=forms.SelectMultiple(
-            attrs={
-                "class": "w-full border rounded p-2 min-h-[10rem]",
-                "size": "10",
-            }
+        widget=forms.CheckboxSelectMultiple(
+            attrs={"class": "profile-checkbox-grid"}
         ),
         label="Bomberos asignados",
         help_text="Selecciona los bomberos que trabajarán en este turno.",
@@ -337,18 +353,26 @@ class ServiceSessionForm(forms.ModelForm):
         current_ids = list(current_attendants_qs.values_list("pk", flat=True))
         available_ids = list(available_for_replacement_qs.values_list("pk", flat=True))
         combined_ids = current_ids + [pk for pk in available_ids if pk not in current_ids]
+        attendants_field = self.fields["attendants"]
 
         if combined_ids:
-            self.fields["attendants"].queryset = base_queryset.filter(pk__in=combined_ids).order_by(
+            attendants_field.queryset = base_queryset.filter(pk__in=combined_ids).order_by(
                 "user_FK__first_name",
                 "user_FK__last_name",
                 "user_FK__username",
             )
         else:
-            self.fields["attendants"].queryset = base_queryset.none()
+            attendants_field.queryset = base_queryset.none()
 
         if current_ids:
-            self.fields["attendants"].initial = current_ids
+            attendants_field.initial = current_ids
+
+        widget = attendants_field.widget
+        base_class = widget.attrs.get("class", "")
+        required_class = "profile-checkbox-grid"
+        if required_class not in base_class:
+            widget.attrs["class"] = f"{base_class} {required_class}".strip()
+        widget.choices = attendants_field.choices
 
         self.current_attendants = list(current_attendants_qs)
         self.available_replacements = list(
