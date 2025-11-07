@@ -189,11 +189,14 @@ class ShiftForm(forms.ModelForm):
             attendants_field.queryset = attendants_queryset.order_by(
                 "user_FK__first_name", "user_FK__last_name", "user_FK__username"
             )
-            attendants_field.widget = forms.CheckboxSelectMultiple(
-                attrs={
-                    "class": "grid gap-2",
-                }
-            )
+            base_class = attendants_field.widget.attrs.get("class", "")
+            extra_classes = "grid gap-2"
+            if extra_classes not in base_class:
+                attendants_field.widget.attrs["class"] = (
+                    f"{base_class} {extra_classes}".strip()
+                )
+            attendants_field.widget.choices = attendants_field.choices
+
     class Meta:
         model = Shift
         fields = [
@@ -224,8 +227,8 @@ class ShiftForm(forms.ModelForm):
             "manager": forms.Select(attrs={"class": "w-full border rounded p-2"}
             ),
             "attendants": forms.CheckboxSelectMultiple(
-                attrs={"class": "grid gap-2"}
-            ),
+                attrs={"class": "attendant-checkboxes grid gap-2 sm:grid-cols-2"}
+            )
         }
     def clean(self):
         cleaned_data = super().clean()
