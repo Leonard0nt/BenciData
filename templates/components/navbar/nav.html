@@ -42,13 +42,16 @@
           </li>
           {% if user.profile.is_admin %}
           <li>
-            <a href="{% url 'service_session_start' %}" class=" menu-item {% if '/servicios/inicio/' in request.path %} text-white bg-current {% else %} text-gray-400 hover:text-white hover:bg-gray-800 {% endif %}" class=" menu-item text-gray-400 hover:text-white hover:bg-gray-800">
+            {% url 'service_session_start' as service_session_start_url %}
+            {% with service_session_target=service_session_link|default:service_session_start_url %}
+            <a href="{{ service_session_target }}" class=" menu-item {% if '/servicios/' in request.path %} text-white bg-current {% else %} text-gray-400 hover:text-white hover:bg-gray-800 {% endif %}">
               <svg class="h-6 w-6 shrink-0" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" aria-hidden="true">
                 <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h6" />
                 <path stroke-linecap="round" stroke-linejoin="round" d="M21 12a9 9 0 11-9-9" />
               </svg>
               Inicio de servicio
             </a>
+            {% endwith %}
           </li>
           {% endif %}
         {% endif %}
