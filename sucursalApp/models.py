@@ -506,6 +506,48 @@ class ServiceSession(models.Model):
         super().save(*args, **kwargs)
 
 
+class ServiceSessionFuelLoad(models.Model):
+    """Registra las cargas de combustible realizadas durante un servicio."""
+
+    service_session = models.ForeignKey(
+        ServiceSession,
+        on_delete=models.CASCADE,
+        related_name="fuel_loads",
+        verbose_name="Servicio",
+    )
+    inventory = models.ForeignKey(
+        "FuelInventory",
+        on_delete=models.CASCADE,
+        related_name="fuel_loads",
+        verbose_name="Inventario",
+    )
+    liters_added = models.DecimalField(
+        "Litros cargados (L)", max_digits=12, decimal_places=2
+    )
+    invoice_number = models.CharField("Número de factura", max_length=100)
+    responsible = models.ForeignKey(
+        "UsuarioApp.Profile",
+        on_delete=models.PROTECT,
+        related_name="fuel_loads",
+        verbose_name="Responsable",
+    )
+    driver_name = models.CharField("Nombre del chofer", max_length=150)
+    license_plate = models.CharField("Patente", max_length=20)
+    date = models.DateField("Fecha")
+    created_at = models.DateTimeField("Fecha de creación", auto_now_add=True)
+    updated_at = models.DateTimeField("Fecha de actualización", auto_now=True)
+
+    class Meta:
+        verbose_name = "Carga de combustible"
+        verbose_name_plural = "Cargas de combustible"
+        ordering = ("-date", "-created_at")
+
+    def __str__(self) -> str:
+        return (
+            f"{self.inventory.code} - {self.liters_added} L ({self.date:%Y-%m-%d})"
+        )
+
+
 class BranchProduct(models.Model):
     """Registra los productos disponibles en una sucursal."""
 

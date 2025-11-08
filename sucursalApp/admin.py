@@ -8,6 +8,7 @@ from .models import (
     Nozzle,
     Shift,
     ServiceSession,
+    ServiceSessionFuelLoad,
     Sucursal,
     SucursalStaff,
 )
@@ -158,3 +159,24 @@ class ServiceSessionAdmin(admin.ModelAdmin):
     search_fields = ("shift__code", "shift__sucursal__name")
     date_hierarchy = "started_at"
     filter_horizontal = ("attendants",)
+
+
+@admin.register(ServiceSessionFuelLoad)
+class ServiceSessionFuelLoadAdmin(admin.ModelAdmin):
+    list_display = (
+        "service_session",
+        "inventory",
+        "liters_added",
+        "invoice_number",
+        "date",
+    )
+    list_filter = (
+        "inventory__sucursal",
+        "inventory__fuel_type",
+        "date",
+    )
+    search_fields = (
+        "invoice_number",
+        "driver_name",
+        "license_plate",
+    )

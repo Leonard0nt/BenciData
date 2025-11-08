@@ -21,6 +21,7 @@ from .forms import (
     IslandForm,
     MachineForm,
     NozzleForm,
+    ServiceSessionFuelLoadForm,
     ShiftForm,
     ServiceSessionForm,
     SucursalForm,
@@ -31,6 +32,7 @@ from .models import (
     Island,
     Machine,
     Nozzle,
+    ServiceSessionFuelLoad,
     Shift,
     ServiceSession,
     Sucursal,
@@ -1155,6 +1157,13 @@ class ServiceSessionDetailView(OwnerCompanyMixin, DetailView):
             .prefetch_related(
                 "attendants__user_FK",
                 "attendants__position_FK",
+                Prefetch(
+                    "fuel_loads",
+                    queryset=ServiceSessionFuelLoad.objects.select_related(
+                        "inventory",
+                        "responsible__user_FK",
+                    ),
+                ),
             )
         )
 
@@ -1167,10 +1176,36 @@ class ServiceSessionDetailView(OwnerCompanyMixin, DetailView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
+        fuel_load_form = kwargs.get("fuel_load_form")
+        if fuel_load_form is None:
+            fuel_load_form = ServiceSessionFuelLoadForm(
+                service_session=self.object
+            )
+
+        branch = self.object.shift.sucursal
         context.update(
             {
                 "shift": self.object.shift,
                 "attendants": self.object.attendants.all(),
+                "fuel_inventories": branch.fuel_inventories.all(),
+                "fuel_loads": self.object.fuel_loads.all(),
+                "fuel_load_form": fuel_load_form,
+                "fuel_responsible": self.object.shift.manager,
+                "service_date": self.object.started_at.date(),
             }
         )
         return context
+
+    def post(self, request, *args, **kwargs):
+        self.object = self.get_object()
+        form = ServiceSessionFuelLoadForm(
+            data=request.POST,
+            service_session=self.object,
+        )
+        if form.is_valid():
+            form.save()
+            messages.success(request, "Carga de combustible registrada correctamente.")
+            return redirect("service_session_detail", pk=self.object.pk)
+
+        context = self.get_context_data(fuel_load_form=form)
+        return self.render_to_response(context)

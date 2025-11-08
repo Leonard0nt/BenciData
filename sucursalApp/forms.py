@@ -1,9 +1,11 @@
 from typing import Optional
 
 from django import forms
+from django.db import transaction
+from django.db.models import F, Q, Count
 
 from UsuarioApp.models import Profile
-from django.db.models import Q, Count
+
 
 from .models import (
     BranchProduct,
@@ -12,6 +14,7 @@ from .models import (
     Machine,
     Nozzle,
     Shift,
+    ServiceSessionFuelLoad,
     ServiceSession,
     Sucursal,
     SucursalStaff,
@@ -445,3 +448,124 @@ class BranchProductForm(forms.ModelForm):
                 attrs={"class": "w-full border rounded p-2", "step": "0.01"}
             ),
         }
+
+
+class ServiceSessionFuelLoadForm(forms.ModelForm):
+    class Meta:
+        model = ServiceSessionFuelLoad
+        fields = [
+            "inventory",
+            "liters_added",
+            "invoice_number",
+            "responsible",
+            "driver_name",
+            "license_plate",
+            "date",
+        ]
+        widgets = {
+            "inventory": forms.Select(
+                attrs={
+                    "class": "block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500",
+                }
+            ),
+            "liters_added": forms.NumberInput(
+                attrs={
+                    "class": "block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500",
+                    "step": "0.01",
+                    "min": "0",
+                }
+            ),
+            "invoice_number": forms.TextInput(
+                attrs={
+                    "class": "block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500",
+                }
+            ),
+            "responsible": forms.HiddenInput(),
+            "driver_name": forms.TextInput(
+                attrs={
+                    "class": "block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500",
+                }
+            ),
+            "license_plate": forms.TextInput(
+                attrs={
+                    "class": "block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500",
+                }
+            ),
+            "date": forms.HiddenInput(),
+        }
+
+    def __init__(self, *args, service_session: ServiceSession, **kwargs):
+        self.service_session = service_session
+        super().__init__(*args, **kwargs)
+        branch = service_session.shift.sucursal
+        self.fields["inventory"].queryset = branch.fuel_inventories.all()
+        manager = service_session.shift.manager
+        if manager:
+            self.initial.setdefault("responsible", manager.pk)
+        self.initial.setdefault("date", service_session.started_at.date())
+
+    def clean_inventory(self):
+        inventory = self.cleaned_data.get("inventory")
+        if not inventory:
+            return inventory
+        branch = self.service_session.shift.sucursal
+        if inventory.sucursal_id != branch.pk:
+            raise forms.ValidationError(
+                "El inventario seleccionado no pertenece a la sucursal del servicio."
+            )
+        return inventory
+
+    def clean_responsible(self):
+        responsible = self.cleaned_data.get("responsible")
+        manager = self.service_session.shift.manager
+        if manager is None:
+            raise forms.ValidationError(
+                "El servicio no tiene un encargado asignado."
+            )
+        if responsible != manager:
+            raise forms.ValidationError(
+                "El responsable debe coincidir con el encargado del turno."
+            )
+        return responsible
+
+    def clean_liters_added(self):
+        liters = self.cleaned_data.get("liters_added")
+        if liters is not None and liters <= 0:
+            raise forms.ValidationError("Debes ingresar una cantidad de litros mayor a 0.")
+        return liters
+
+    def clean(self):
+        cleaned_data = super().clean()
+        inventory = cleaned_data.get("inventory")
+        liters = cleaned_data.get("liters_added")
+        if inventory and liters is not None:
+            projected_total = inventory.liters + liters
+            if projected_total > inventory.capacity:
+                raise forms.ValidationError(
+                    "La carga supera la capacidad máxima del tanque seleccionado."
+                )
+        return cleaned_data
+
+    def clean_date(self):
+        date = self.cleaned_data.get("date")
+        expected_date = self.service_session.started_at.date()
+        if date and date != expected_date:
+            raise forms.ValidationError(
+                "La fecha debe coincidir con la fecha del servicio."
+            )
+        return expected_date
+
+    def save(self, commit: bool = True):
+        instance: ServiceSessionFuelLoad = super().save(commit=False)
+        instance.service_session = self.service_session
+        instance.responsible = self.service_session.shift.manager
+        instance.date = self.service_session.started_at.date()
+
+        if commit:
+            with transaction.atomic():
+                instance.save()
+                FuelInventory.objects.filter(pk=instance.inventory.pk).update(
+                    liters=F("liters") + instance.liters_added
+                )
+                instance.inventory.refresh_from_db(fields=["liters"])
+        return instance

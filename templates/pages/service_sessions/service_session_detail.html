@@ -111,11 +111,197 @@
     </section>
   </div>
 
-  <div id="tab-inventario" class="tab-content mt-8 space-y-6 hidden">
-    <section class="rounded-xl border border-dashed border-gray-300 bg-white p-6 text-center text-sm text-gray-500">
-      <h2 class="text-lg font-semibold text-gray-900">Inventario del servicio</h2>
-      <p class="mt-2 text-sm text-gray-600">Aquí podrás registrar y revisar el inventario utilizado durante el servicio.</p>
+  <div
+    id="tab-inventario"
+    class="tab-content mt-8 space-y-6 hidden"
+    x-data="{ openModal: null }"
+    @keydown.escape.window="openModal = null"
+  >
+    <section class="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
+      <div class="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <h2 class="text-lg font-semibold text-gray-900">Inventario del servicio</h2>
+          <p class="mt-1 text-sm text-gray-600">Aquí podrás registrar y revisar el inventario utilizado durante el servicio.</p>
+        </div>
+        {% if fuel_inventories %}
+          <button
+            type="button"
+            class="inline-flex items-center rounded-md bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500"
+            @click="openModal = 'fuel-load'"
+          >
+            Agregar combustible
+          </button>
+        {% endif %}
+      </div>
+
+      {% if fuel_inventories %}
+        <div class="mt-6 overflow-hidden rounded-lg border border-gray-200">
+          <table class="min-w-full divide-y divide-gray-200">
+            <thead class="bg-gray-50">
+              <tr class="text-left text-xs font-semibold uppercase tracking-wide text-gray-500">
+                <th scope="col" class="px-4 py-3">Tanque</th>
+                <th scope="col" class="px-4 py-3">Tipo de combustible</th>
+                <th scope="col" class="px-4 py-3 text-right">Capacidad total (L)</th>
+                <th scope="col" class="px-4 py-3 text-right">Cantidad actual (L)</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-200 bg-white text-sm">
+              {% for inventory in fuel_inventories %}
+                <tr>
+                  <td class="px-4 py-3 font-medium text-gray-900">{{ inventory.code }}</td>
+                  <td class="px-4 py-3 text-gray-700">{{ inventory.fuel_type }}</td>
+                  <td class="px-4 py-3 text-right text-gray-700">{{ inventory.capacity|floatformat:2 }}</td>
+                  <td class="px-4 py-3 text-right text-gray-900">{{ inventory.liters|floatformat:2 }}</td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+
+        {% if fuel_loads %}
+          <div class="mt-8">
+            <h3 class="text-sm font-semibold uppercase tracking-wide text-gray-500">Historial de cargas</h3>
+            <div class="mt-3 overflow-hidden rounded-lg border border-gray-200">
+              <table class="min-w-full divide-y divide-gray-200">
+                <thead class="bg-gray-50">
+                  <tr class="text-left text-xs font-semibold uppercase tracking-wide text-gray-500">
+                    <th scope="col" class="px-4 py-3">Fecha</th>
+                    <th scope="col" class="px-4 py-3">Tanque</th>
+                    <th scope="col" class="px-4 py-3">Litros cargados</th>
+                    <th scope="col" class="px-4 py-3">Factura</th>
+                    <th scope="col" class="px-4 py-3">Chofer</th>
+                    <th scope="col" class="px-4 py-3">Patente</th>
+                  </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-200 bg-white text-sm">
+                  {% for fuel_load in fuel_loads %}
+                    <tr>
+                      <td class="px-4 py-3 text-gray-700">{{ fuel_load.date|date:"d/m/Y" }}</td>
+                      <td class="px-4 py-3 font-medium text-gray-900">{{ fuel_load.inventory.code }}</td>
+                      <td class="px-4 py-3 text-gray-900">{{ fuel_load.liters_added|floatformat:2 }} L</td>
+                      <td class="px-4 py-3 text-gray-700">{{ fuel_load.invoice_number }}</td>
+                      <td class="px-4 py-3 text-gray-700">{{ fuel_load.driver_name }}</td>
+                      <td class="px-4 py-3 text-gray-700">{{ fuel_load.license_plate }}</td>
+                    </tr>
+                  {% endfor %}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        {% endif %}
+      {% else %}
+        <div class="mt-6 rounded-lg border border-dashed border-gray-300 bg-gray-50 p-6 text-center">
+          <p class="text-sm text-gray-600">Aún no se han registrado inventarios de combustible para esta sucursal.</p>
+        </div>
+      {% endif %}
     </section>
+
+    <div
+      x-cloak
+      x-show="openModal === 'fuel-load'"
+      x-transition.opacity
+      class="fixed inset-0 z-50 flex items-center justify-center bg-gray-900/60 px-4 py-6"
+      @click.self="openModal = null"
+    >
+      <div class="w-full max-w-2xl rounded-xl bg-white p-6 shadow-2xl" @click.away="openModal = null">
+        <div class="flex items-center justify-between">
+          <div>
+            <h3 class="text-lg font-semibold text-gray-900">Registrar carga de combustible</h3>
+            <p class="mt-1 text-sm text-gray-500">Ingresa la información de la carga realizada durante el servicio.</p>
+          </div>
+          <button type="button" class="rounded-md p-1 text-gray-400 hover:text-gray-600" @click="openModal = null">
+            <span class="sr-only">Cerrar</span>
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="h-5 w-5">
+              <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd" />
+            </svg>
+          </button>
+        </div>
+
+        <form method="post" action="{% url 'service_session_detail' service_session.pk %}" class="mt-6 space-y-6">
+          {% csrf_token %}
+          {{ fuel_load_form.responsible }}
+          {{ fuel_load_form.date }}
+
+          {% if fuel_load_form.non_field_errors %}
+            <div class="rounded-md border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+              {% for error in fuel_load_form.non_field_errors %}
+                <p>{{ error }}</p>
+              {% endfor %}
+            </div>
+          {% endif %}
+
+          <div class="grid gap-4 sm:grid-cols-2">
+            <div class="sm:col-span-2">
+              <label for="{{ fuel_load_form.inventory.id_for_label }}" class="block text-sm font-medium text-gray-700">Tanque de combustible</label>
+              {{ fuel_load_form.inventory }}
+              {% if fuel_load_form.inventory.errors %}
+                <p class="mt-1 text-sm text-red-600">{{ fuel_load_form.inventory.errors|striptags }}</p>
+              {% endif %}
+            </div>
+            <div>
+              <label for="{{ fuel_load_form.liters_added.id_for_label }}" class="block text-sm font-medium text-gray-700">Litros a cargar</label>
+              {{ fuel_load_form.liters_added }}
+              {% if fuel_load_form.liters_added.errors %}
+                <p class="mt-1 text-sm text-red-600">{{ fuel_load_form.liters_added.errors|striptags }}</p>
+              {% endif %}
+            </div>
+            <div>
+              <label for="{{ fuel_load_form.invoice_number.id_for_label }}" class="block text-sm font-medium text-gray-700">Número de factura</label>
+              {{ fuel_load_form.invoice_number }}
+              {% if fuel_load_form.invoice_number.errors %}
+                <p class="mt-1 text-sm text-red-600">{{ fuel_load_form.invoice_number.errors|striptags }}</p>
+              {% endif %}
+            </div>
+            <div>
+              <span class="block text-sm font-medium text-gray-700">Responsable</span>
+              {% if fuel_responsible %}
+                <p class="mt-2 rounded-md border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-700">
+                  {{ fuel_responsible.user_FK.get_full_name|default:fuel_responsible.user_FK.username }}
+                </p>
+              {% else %}
+                <p class="mt-2 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-700">
+                  No hay un encargado asignado al turno.
+                </p>
+              {% endif %}
+            </div>
+            <div>
+              <label for="{{ fuel_load_form.driver_name.id_for_label }}" class="block text-sm font-medium text-gray-700">Nombre del chofer</label>
+              {{ fuel_load_form.driver_name }}
+              {% if fuel_load_form.driver_name.errors %}
+                <p class="mt-1 text-sm text-red-600">{{ fuel_load_form.driver_name.errors|striptags }}</p>
+              {% endif %}
+            </div>
+            <div>
+              <label for="{{ fuel_load_form.license_plate.id_for_label }}" class="block text-sm font-medium text-gray-700">Patente</label>
+              {{ fuel_load_form.license_plate }}
+              {% if fuel_load_form.license_plate.errors %}
+                <p class="mt-1 text-sm text-red-600">{{ fuel_load_form.license_plate.errors|striptags }}</p>
+              {% endif %}
+            </div>
+            <div>
+              <span class="block text-sm font-medium text-gray-700">Fecha</span>
+              <p class="mt-2 rounded-md border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-700">{{ service_date|date:"d \d\e F \d\e Y" }}</p>
+            </div>
+          </div>
+
+          <div class="flex flex-wrap items-center justify-end gap-3">
+            <button
+              type="button"
+              class="inline-flex items-center rounded-md border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+              @click="openModal = null"
+            >
+              Cancelar
+            </button>
+            <button
+              type="submit"
+              class="inline-flex items-center rounded-md bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500"
+            >
+              Guardar carga
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
   </div>
 </div>
 {% endblock %}
