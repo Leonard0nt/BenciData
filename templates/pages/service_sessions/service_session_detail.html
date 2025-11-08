@@ -1,0 +1,121 @@
+{% extends 'components/Layout/base_pages.html' %}
+{% load static %}
+
+{% block content_pages %}
+<div class="mx-auto max-w-6xl space-y-8">
+  <section class="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
+    <div class="flex flex-wrap items-start justify-between gap-4">
+      <div>
+        <p class="text-sm font-semibold uppercase tracking-wide text-indigo-600">Servicio en ejecución</p>
+        <h1 class="mt-1 text-3xl font-bold text-gray-900">
+          Turno {{ shift.code }} · {{ shift.sucursal.name }}
+        </h1>
+        <p class="mt-2 text-sm text-gray-600">
+          Iniciado el {{ service_session.started_at|date:"d \d\e F \d\e Y" }} a las {{ service_session.started_at|date:"H:i" }} hrs.
+        </p>
+      </div>
+      <div class="rounded-lg border border-indigo-100 bg-indigo-50 px-4 py-3 text-sm text-indigo-700 shadow-sm">
+        <p class="text-xs font-semibold uppercase tracking-wide text-indigo-600">Presupuesto inicial</p>
+        <p class="mt-1 text-2xl font-bold text-indigo-900">
+          $ {{ service_session.initial_budget|floatformat:2 }}
+        </p>
+        <p class="mt-2 text-xs text-indigo-700">Monedas: $ {{ service_session.coins_amount|floatformat:2 }} · Efectivo: $ {{ service_session.cash_amount|floatformat:2 }}</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
+    <div class="flex flex-wrap items-start justify-between gap-4">
+      <div>
+        <h2 class="text-lg font-semibold text-gray-900">Equipo asignado</h2>
+        <p class="mt-1 text-sm text-gray-600">Encargado y bomberos disponibles para este servicio.</p>
+      </div>
+    </div>
+    <div class="mt-6 grid gap-6 lg:grid-cols-2">
+      <div class="rounded-lg border border-gray-100 bg-gray-50 p-4">
+        <h3 class="text-sm font-semibold uppercase tracking-wide text-gray-500">Encargado del turno</h3>
+        {% with manager=shift.manager %}
+          {% if manager %}
+            <p class="mt-3 text-base font-semibold text-gray-900">{{ manager.user_FK.get_full_name|default:manager.user_FK.username }}</p>
+            {% if manager.position_FK %}
+              <p class="text-sm text-gray-600">{{ manager.position_FK.user_position }}</p>
+            {% endif %}
+          {% else %}
+            <p class="mt-3 text-sm text-gray-600">No hay un encargado asignado al turno.</p>
+          {% endif %}
+        {% endwith %}
+      </div>
+      <div class="rounded-lg border border-gray-100 bg-gray-50 p-4">
+        <h3 class="text-sm font-semibold uppercase tracking-wide text-gray-500">Bomberos asignados</h3>
+        {% if attendants %}
+          <ul class="mt-3 space-y-2">
+            {% for attendant in attendants %}
+              <li class="flex items-center justify-between gap-3 rounded-md border border-gray-100 bg-white px-3 py-2 text-sm text-gray-700">
+                <span class="font-medium text-gray-900">{{ attendant.user_FK.get_full_name|default:attendant.user_FK.username }}</span>
+                {% if attendant.position_FK %}
+                  <span class="text-xs text-gray-500">{{ attendant.position_FK.user_position }}</span>
+                {% endif %}
+              </li>
+            {% endfor %}
+          </ul>
+        {% else %}
+          <p class="mt-3 text-sm text-gray-600">No hay bomberos asignados a este servicio.</p>
+        {% endif %}
+      </div>
+    </div>
+  </section>
+
+  <div class="border-b border-gray-200">
+    <nav class="-mb-px flex flex-wrap gap-4" aria-label="Tabs">
+      <button
+        type="button"
+        data-tab-target="tab-caja"
+        data-tab-group="service-session"
+        class="whitespace-nowrap border-b-2 border-indigo-500 px-1 py-3 text-sm font-medium text-indigo-600"
+        aria-controls="tab-caja"
+        aria-selected="true"
+      >Caja</button>
+      <button
+        type="button"
+        data-tab-target="tab-inventario"
+        data-tab-group="service-session"
+        class="whitespace-nowrap border-b-2 border-transparent px-1 py-3 text-sm font-medium text-gray-500 hover:border-gray-300 hover:text-gray-700"
+        aria-controls="tab-inventario"
+        aria-selected="false"
+      >Inventario</button>
+    </nav>
+  </div>
+
+  <div id="tab-caja" class="tab-content mt-8 space-y-6">
+    <section class="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
+      <div class="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <h2 class="text-lg font-semibold text-gray-900">Resumen de caja</h2>
+          <p class="mt-1 text-sm text-gray-600">Controla el dinero disponible al inicio de este servicio.</p>
+        </div>
+      </div>
+      <dl class="mt-6 grid grid-cols-1 gap-6 sm:grid-cols-3">
+        <div class="rounded-lg border border-gray-100 bg-gray-50 p-4">
+          <dt class="text-sm font-medium text-gray-500">Monedas</dt>
+          <dd class="mt-2 text-2xl font-semibold text-gray-900">$ {{ service_session.coins_amount|floatformat:2 }}</dd>
+        </div>
+        <div class="rounded-lg border border-gray-100 bg-gray-50 p-4">
+          <dt class="text-sm font-medium text-gray-500">Efectivo</dt>
+          <dd class="mt-2 text-2xl font-semibold text-gray-900">$ {{ service_session.cash_amount|floatformat:2 }}</dd>
+        </div>
+        <div class="rounded-lg border border-gray-100 bg-gray-50 p-4">
+          <dt class="text-sm font-medium text-gray-500">Total disponible</dt>
+          <dd class="mt-2 text-2xl font-semibold text-gray-900">$ {{ service_session.initial_budget|floatformat:2 }}</dd>
+        </div>
+      </dl>
+    </section>
+  </div>
+
+  <div id="tab-inventario" class="tab-content mt-8 space-y-6 hidden">
+    <section class="rounded-xl border border-dashed border-gray-300 bg-white p-6 text-center text-sm text-gray-500">
+      <h2 class="text-lg font-semibold text-gray-900">Inventario del servicio</h2>
+      <p class="mt-2 text-sm text-gray-600">Aquí podrás registrar y revisar el inventario utilizado durante el servicio.</p>
+    </section>
+  </div>
+</div>
+{% endblock %}

@@ -10,7 +10,7 @@ from django.utils import timezone
 
 from django.views import View
 
-from django.views.generic import CreateView, DeleteView, ListView, UpdateView
+from django.views.generic import CreateView, DeleteView, DetailView, ListView, UpdateView
 from django.views.generic.edit import FormMixin
 
 from core.mixins import RoleRequiredMixin
@@ -1072,10 +1072,8 @@ class ServiceSessionCreateView(OwnerCompanyMixin, CreateView):
     allowed_roles = ["OWNER", "ADMINISTRATOR"]
 
     def get_success_url(self):
-        shift = getattr(self.object, "shift", None)
-        if shift:
-            return f"{reverse('service_session_start')}?shift={shift.pk}"
-        return reverse("service_session_start")
+        return reverse("service_session_detail", args=[self.object.pk])
+
 
     def get_form_kwargs(self):
         kwargs = super().get_form_kwargs()
@@ -1119,7 +1117,7 @@ class ServiceSessionCreateView(OwnerCompanyMixin, CreateView):
         response = super().form_valid(form)
         messages.success(
             self.request,
-            "Servicio iniciado correctamente. Puedes cerrar el turno desde esta misma pantalla más adelante.",
+            "Servicio iniciado correctamente. Gestiona la caja e inventario del turno desde esta pantalla.",
         )
         return response
 
@@ -1133,6 +1131,46 @@ class ServiceSessionCreateView(OwnerCompanyMixin, CreateView):
                 "available_replacements": getattr(form, "available_replacements", []),
                 "current_datetime": timezone.localtime(),
                 "has_shifts": self.available_shifts.exists(),
+            }
+        )
+        return context
+
+
+class ServiceSessionDetailView(OwnerCompanyMixin, DetailView):
+    model = ServiceSession
+    template_name = "pages/service_sessions/service_session_detail.html"
+    context_object_name = "service_session"
+    allowed_roles = ["OWNER", "ADMINISTRATOR"]
+
+    def get_queryset(self):
+        branch_ids = self.get_managed_branch_ids()
+        queryset = (
+            super()
+            .get_queryset()
+            .select_related(
+                "shift__sucursal",
+                "shift__manager__user_FK",
+                "shift__manager__position_FK",
+            )
+            .prefetch_related(
+                "attendants__user_FK",
+                "attendants__position_FK",
+            )
+        )
+
+        if branch_ids:
+            queryset = queryset.filter(shift__sucursal_id__in=branch_ids)
+        else:
+            queryset = queryset.none()
+
+        return queryset
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context.update(
+            {
+                "shift": self.object.shift,
+                "attendants": self.object.attendants.all(),
             }
         )
         return context
