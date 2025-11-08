@@ -196,15 +196,191 @@
       {% endif %}
     </section>
 
+    <section class="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
+      <div class="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <h2 class="text-lg font-semibold text-gray-900">Inventario de productos</h2>
+          <p class="mt-1 text-sm text-gray-600">Controla los productos registrados en la sucursal y los ingresos realizados durante el turno.</p>
+        </div>
+        <div class="flex flex-wrap items-center gap-2">
+          <a
+            href="{% url 'sucursal_product_create' branch.pk %}"
+            class="inline-flex items-center rounded-md border border-gray-200 px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50"
+          >
+            Administrar productos
+          </a>
+          <button
+            type="button"
+            class="inline-flex items-center rounded-md bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500"
+            @click="openModal = 'product-load'"
+          >
+            Registrar ingreso
+          </button>
+        </div>
+      </div>
+
+      {% if branch_products %}
+        <div class="mt-6 overflow-hidden rounded-lg border border-gray-200">
+          <table class="min-w-full divide-y divide-gray-200">
+            <thead class="bg-gray-50">
+              <tr class="text-left text-xs font-semibold uppercase tracking-wide text-gray-500">
+                <th scope="col" class="px-4 py-3">Producto</th>
+                <th scope="col" class="px-4 py-3">Fecha de llegada</th>
+                <th scope="col" class="px-4 py-3">Número de lote</th>
+                <th scope="col" class="px-4 py-3 text-right">Cantidad disponible</th>
+                <th scope="col" class="px-4 py-3 text-right">Ingresado en turno</th>
+                <th scope="col" class="px-4 py-3 text-right">Valor</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-200 bg-white text-sm">
+              {% for product in branch_products %}
+                <tr>
+                  <td class="px-4 py-3 font-medium text-gray-900">{{ product.product_type }}</td>
+                  <td class="px-4 py-3 text-gray-700">{{ product.arrival_date|date:"d/m/Y" }}</td>
+                  <td class="px-4 py-3 text-gray-700">{{ product.batch_number }}</td>
+                  <td class="px-4 py-3 text-right text-gray-900">{{ product.quantity }}</td>
+                  <td class="px-4 py-3 text-right text-gray-700">{{ product.session_added_quantity|default:0 }}</td>
+                  <td class="px-4 py-3 text-right text-gray-900">$ {{ product.value|floatformat:2 }}</td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+
+        {% if product_loads %}
+          <div class="mt-8">
+            <h3 class="text-sm font-semibold uppercase tracking-wide text-gray-500">Historial de ingresos</h3>
+            <div class="mt-3 overflow-hidden rounded-lg border border-gray-200">
+              <table class="min-w-full divide-y divide-gray-200">
+                <thead class="bg-gray-50">
+                  <tr class="text-left text-xs font-semibold uppercase tracking-wide text-gray-500">
+                    <th scope="col" class="px-4 py-3">Fecha</th>
+                    <th scope="col" class="px-4 py-3">Producto</th>
+                    <th scope="col" class="px-4 py-3 text-right">Cantidad</th>
+                    <th scope="col" class="px-4 py-3">Registrado por</th>
+                  </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-200 bg-white text-sm">
+                  {% for product_load in product_loads %}
+                    <tr>
+                      <td class="px-4 py-3 text-gray-700">{{ product_load.date|date:"d/m/Y" }}</td>
+                      <td class="px-4 py-3 font-medium text-gray-900">{{ product_load.product.product_type }}</td>
+                      <td class="px-4 py-3 text-right text-gray-900">{{ product_load.quantity_added }}</td>
+                      <td class="px-4 py-3 text-gray-700">
+                        {{ product_load.responsible.user_FK.get_full_name|default:product_load.responsible.user_FK.username }}
+                      </td>
+                    </tr>
+                  {% endfor %}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        {% endif %}
+      {% else %}
+        <div class="mt-6 rounded-lg border border-dashed border-gray-300 bg-gray-50 p-6 text-center">
+          <p class="text-sm text-gray-600">Aún no se han registrado productos para esta sucursal.</p>
+        </div>
+      {% endif %}
+    </section>
+
     <div
       x-cloak
-      x-show="openModal === 'fuel-load'"
+      x-show="openModal === 'product-load'"
       x-transition.opacity
       class="fixed inset-0 z-50 flex items-stretch justify-center bg-gray-900/80 p-4 sm:items-center"
       @click.self="openModal = null"
     >
       <div
-        class="w-full max-w-2xl overflow-y-auto rounded-none bg-white p-6 shadow-2xl sm:max-h-[calc(100vh-3rem)] sm:rounded-xl"
+        class="w-full max-w-xl overflow-y-auto rounded-none bg-white p-6 shadow-2xl sm:max-h-[calc(100vh-3rem)] sm:rounded-xl"
+        @click.away="openModal = null"
+      >
+        <div class="flex items-center justify-between">
+          <div>
+            <h3 class="text-lg font-semibold text-gray-900">Registrar ingreso de productos</h3>
+            <p class="mt-1 text-sm text-gray-500">Añade la cantidad recibida de un producto durante este servicio.</p>
+          </div>
+          <button type="button" class="rounded-md p-1 text-gray-400 hover:text-gray-600" @click="openModal = null">
+            <span class="sr-only">Cerrar</span>
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="h-5 w-5">
+              <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd" />
+            </svg>
+          </button>
+        </div>
+
+        <form method="post" action="{% url 'service_session_detail' service_session.pk %}" class="mt-6 space-y-6">
+          {% csrf_token %}
+          <input type="hidden" name="form_type" value="product-load" />
+
+          {% if product_load_form.non_field_errors %}
+            <div class="rounded-md border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+              {% for error in product_load_form.non_field_errors %}
+                <p>{{ error }}</p>
+              {% endfor %}
+            </div>
+          {% endif %}
+
+          <div class="grid gap-4 sm:grid-cols-2">
+            <div class="sm:col-span-2">
+              <label for="{{ product_load_form.product.id_for_label }}" class="block text-sm font-medium text-gray-700">Producto</label>
+              {{ product_load_form.product }}
+              {% if product_load_form.product.errors %}
+                <p class="mt-1 text-sm text-red-600">{{ product_load_form.product.errors|striptags }}</p>
+              {% endif %}
+            </div>
+            <div>
+              <label for="{{ product_load_form.quantity_added.id_for_label }}" class="block text-sm font-medium text-gray-700">Cantidad ingresada</label>
+              {{ product_load_form.quantity_added }}
+              {% if product_load_form.quantity_added.errors %}
+                <p class="mt-1 text-sm text-red-600">{{ product_load_form.quantity_added.errors|striptags }}</p>
+              {% endif %}
+            </div>
+            <div>
+              <span class="block text-sm font-medium text-gray-700">Responsable</span>
+              {% if product_responsible %}
+                <p class="mt-2 rounded-md border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-700">
+                  {{ product_responsible.user_FK.get_full_name|default:product_responsible.user_FK.username }}
+                </p>
+              {% else %}
+                <p class="mt-2 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-700">
+                  No hay un encargado asignado al turno.
+                </p>
+              {% endif %}
+            </div>
+            <div>
+              <span class="block text-sm font-medium text-gray-700">Fecha</span>
+              <p class="mt-2 rounded-md border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-700">{{ service_date|date:"d \d\e F \d\e Y" }}</p>
+            </div>
+          </div>
+
+          <div class="flex flex-wrap items-center justify-end gap-3">
+            <button
+              type="button"
+              class="inline-flex items-center rounded-md border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+              @click="openModal = null"
+            >
+              Cancelar
+            </button>
+            <button
+              type="submit"
+              class="inline-flex items-center rounded-md bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500"
+            >
+              Guardar ingreso
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <div
+      x-cloak
+      x-show="openModal === 'fuel-load'"
+      x-transition.opacity
+      class="fixed inset-0 z-50 flex justify-center bg-gray-900/80 p-4 sm:items-center"
+      @click.self="openModal = null" 
+      style="margin-top: 0;"
+    >
+      <div
+        class="w-full max-w-2xl overflow-y-auto rounded-none bg-white p-6 py-2 sm:max-h-[calc(100vh-3rem)] sm:rounded-xl"
         @click.away="openModal = null"
       >
         <div class="flex items-center justify-between">
@@ -222,6 +398,7 @@
 
         <form method="post" action="{% url 'service_session_detail' service_session.pk %}" class="mt-6 space-y-6">
           {% csrf_token %}
+          <input type="hidden" name="form_type" value="fuel-load" />
           {{ fuel_load_form.responsible }}
           {{ fuel_load_form.date }}
 

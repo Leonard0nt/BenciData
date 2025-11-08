@@ -15,6 +15,7 @@ from .models import (
     Nozzle,
     Shift,
     ServiceSessionFuelLoad,
+    ServiceSessionProductLoad,
     ServiceSession,
     Sucursal,
     SucursalStaff,
@@ -568,4 +569,75 @@ class ServiceSessionFuelLoadForm(forms.ModelForm):
                     liters=F("liters") + instance.liters_added
                 )
                 instance.inventory.refresh_from_db(fields=["liters"])
+        return instance
+
+
+class ServiceSessionProductLoadForm(forms.ModelForm):
+    class Meta:
+        model = ServiceSessionProductLoad
+        fields = [
+            "product",
+            "quantity_added",
+        ]
+        widgets = {
+            "product": forms.Select(
+                attrs={
+                    "class": "block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500",
+                }
+            ),
+            "quantity_added": forms.NumberInput(
+                attrs={
+                    "class": "block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500",
+                    "min": "1",
+                }
+            ),
+        }
+
+    def __init__(self, *args, service_session: ServiceSession, **kwargs):
+        self.service_session = service_session
+        super().__init__(*args, **kwargs)
+        branch = service_session.shift.sucursal
+        self.fields["product"].queryset = branch.products.all()
+
+    def clean(self):
+        cleaned_data = super().clean()
+        if self.service_session.shift.manager is None:
+            raise forms.ValidationError(
+                "El servicio no tiene un encargado asignado."
+            )
+        return cleaned_data
+
+    def clean_product(self):
+        product = self.cleaned_data.get("product")
+        if not product:
+            return product
+        branch = self.service_session.shift.sucursal
+        if product.sucursal_id != branch.pk:
+            raise forms.ValidationError(
+                "El producto seleccionado no pertenece a la sucursal del servicio."
+            )
+        return product
+
+    def clean_quantity_added(self):
+        quantity = self.cleaned_data.get("quantity_added")
+        if quantity is not None and quantity <= 0:
+            raise forms.ValidationError(
+                "Debes ingresar una cantidad mayor a 0."
+            )
+        return quantity
+
+    def save(self, commit: bool = True):
+        instance: ServiceSessionProductLoad = super().save(commit=False)
+        instance.service_session = self.service_session
+        manager = self.service_session.shift.manager
+        instance.responsible = manager
+        instance.date = self.service_session.started_at.date()
+
+        if commit:
+            with transaction.atomic():
+                instance.save()
+                BranchProduct.objects.filter(pk=instance.product.pk).update(
+                    quantity=F("quantity") + instance.quantity_added
+                )
+                instance.product.refresh_from_db(fields=["quantity"])
         return instance

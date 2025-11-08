@@ -1167,6 +1167,13 @@ class ServiceSessionDetailView(OwnerCompanyMixin, DetailView):
             )
         )
 
+                Prefetch(
+                    "product_loads",
+                    queryset=ServiceSessionProductLoad.objects.select_related(
+                        "product",
+                        "responsible__user_FK",
+                    ),
+                ),
         if branch_ids:
             queryset = queryset.filter(shift__sucursal_id__in=branch_ids)
         else:
@@ -1182,15 +1189,40 @@ class ServiceSessionDetailView(OwnerCompanyMixin, DetailView):
                 service_session=self.object
             )
 
+
+
+
+        product_load_form = kwargs.get("product_load_form")
+        if product_load_form is None:
+            product_load_form = ServiceSessionProductLoadForm(
+                service_session=self.object
+            )
+
         branch = self.object.shift.sucursal
+        product_loads = list(self.object.product_loads.all())
+        product_additions = {
+            entry["product_id"]: entry["total_added"]
+            for entry in self.object.product_loads.values("product_id").annotate(
+                total_added=Coalesce(Sum("quantity_added"), 0)
+            )
+        }
+        branch_products = list(branch.products.all())
+        for product in branch_products:
+            product.session_added_quantity = product_additions.get(product.pk, 0)
+
         context.update(
             {
                 "shift": self.object.shift,
                 "attendants": self.object.attendants.all(),
+                "branch": branch,
                 "fuel_inventories": branch.fuel_inventories.all(),
                 "fuel_loads": self.object.fuel_loads.all(),
+                "branch_products": branch_products,
+                "product_loads": product_loads,
                 "fuel_load_form": fuel_load_form,
+                "product_load_form": product_load_form,
                 "fuel_responsible": self.object.shift.manager,
+                "product_responsible": self.object.shift.manager,
                 "service_date": self.object.started_at.date(),
             }
         )
@@ -1198,6 +1230,24 @@ class ServiceSessionDetailView(OwnerCompanyMixin, DetailView):
 
     def post(self, request, *args, **kwargs):
         self.object = self.get_object()
+        form_type = request.POST.get("form_type", "fuel-load")
+
+        if form_type == "product-load":
+            form = ServiceSessionProductLoadForm(
+                data=request.POST,
+                service_session=self.object,
+            )
+            if form.is_valid():
+                form.save()
+                messages.success(
+                    request,
+                    "Ingreso de productos registrado correctamente.",
+                )
+                return redirect("service_session_detail", pk=self.object.pk)
+
+            context = self.get_context_data(product_load_form=form)
+            return self.render_to_response(context)
+
         form = ServiceSessionFuelLoadForm(
             data=request.POST,
             service_session=self.object,

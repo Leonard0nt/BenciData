@@ -547,6 +547,40 @@ class ServiceSessionFuelLoad(models.Model):
             f"{self.inventory.code} - {self.liters_added} L ({self.date:%Y-%m-%d})"
         )
 
+class ServiceSessionProductLoad(models.Model):
+    """Registra los ingresos de productos realizados durante un servicio."""
+
+    service_session = models.ForeignKey(
+        ServiceSession,
+        on_delete=models.CASCADE,
+        related_name="product_loads",
+        verbose_name="Servicio",
+    )
+    product = models.ForeignKey(
+        "BranchProduct",
+        on_delete=models.CASCADE,
+        related_name="product_loads",
+        verbose_name="Producto",
+    )
+    quantity_added = models.PositiveIntegerField("Cantidad agregada")
+    responsible = models.ForeignKey(
+        "UsuarioApp.Profile",
+        on_delete=models.PROTECT,
+        related_name="product_loads",
+        verbose_name="Responsable",
+    )
+    date = models.DateField("Fecha")
+    created_at = models.DateTimeField("Fecha de creación", auto_now_add=True)
+    updated_at = models.DateTimeField("Fecha de actualización", auto_now=True)
+
+    class Meta:
+        verbose_name = "Ingreso de producto"
+        verbose_name_plural = "Ingresos de productos"
+        ordering = ("-date", "-created_at")
+
+    def __str__(self) -> str:
+        return f"{self.product.product_type} - {self.quantity_added} u. ({self.date:%Y-%m-%d})"
+
 
 class BranchProduct(models.Model):
     """Registra los productos disponibles en una sucursal."""

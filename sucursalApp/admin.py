@@ -9,6 +9,7 @@ from .models import (
     Shift,
     ServiceSession,
     ServiceSessionFuelLoad,
+    ServiceSessionProductLoad,
     Sucursal,
     SucursalStaff,
 )
@@ -179,4 +180,21 @@ class ServiceSessionFuelLoadAdmin(admin.ModelAdmin):
         "invoice_number",
         "driver_name",
         "license_plate",
+    )
+@admin.register(ServiceSessionProductLoad)
+class ServiceSessionProductLoadAdmin(admin.ModelAdmin):
+    list_display = (
+        "service_session",
+        "product",
+        "quantity_added",
+        "date",
+    )
+    list_filter = (
+        "product__sucursal",
+        "product__product_type",
+        "date",
+    )
+    search_fields = (
+        "product__product_type",
+        "product__batch_number",
     )
