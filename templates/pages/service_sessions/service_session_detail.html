@@ -200,10 +200,13 @@
       x-cloak
       x-show="openModal === 'fuel-load'"
       x-transition.opacity
-      class="fixed inset-0 z-50 flex items-center justify-center bg-gray-900/60 px-4 py-6"
+      class="fixed inset-0 z-50 flex items-stretch justify-center bg-gray-900/80 p-4 sm:items-center"
       @click.self="openModal = null"
     >
-      <div class="w-full max-w-2xl rounded-xl bg-white p-6 shadow-2xl" @click.away="openModal = null">
+      <div
+        class="w-full max-w-2xl overflow-y-auto rounded-none bg-white p-6 shadow-2xl sm:max-h-[calc(100vh-3rem)] sm:rounded-xl"
+        @click.away="openModal = null"
+      >
         <div class="flex items-center justify-between">
           <div>
             <h3 class="text-lg font-semibold text-gray-900">Registrar carga de combustible</h3>
@@ -305,3 +308,7 @@
   </div>
 </div>
 {% endblock %}
+
+{% block javascript %}
+  <script defer src="{% static 'js/tabs.js' %}"></script>
+{% endblock javascript %}
