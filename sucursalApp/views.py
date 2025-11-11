@@ -2,7 +2,8 @@ from typing import Any, Dict, List
 from urllib.parse import urlencode
 from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin
-from django.db.models import Prefetch, QuerySet
+from django.db.models import Prefetch, QuerySet, Sum
+from django.db.models.functions import Coalesce
 from django.http import Http404, HttpResponseRedirect
 from django.shortcuts import get_object_or_404, redirect
 from django.urls import reverse, reverse_lazy
@@ -22,6 +23,7 @@ from .forms import (
     MachineForm,
     NozzleForm,
     ServiceSessionFuelLoadForm,
+    ServiceSessionProductLoadForm,
     ShiftForm,
     ServiceSessionForm,
     SucursalForm,
@@ -33,6 +35,7 @@ from .models import (
     Machine,
     Nozzle,
     ServiceSessionFuelLoad,
+    ServiceSessionProductLoad,
     Shift,
     ServiceSession,
     Sucursal,
@@ -1164,8 +1167,6 @@ class ServiceSessionDetailView(OwnerCompanyMixin, DetailView):
                         "responsible__user_FK",
                     ),
                 ),
-            )
-        )
 
                 Prefetch(
                     "product_loads",
@@ -1174,6 +1175,8 @@ class ServiceSessionDetailView(OwnerCompanyMixin, DetailView):
                         "responsible__user_FK",
                     ),
                 ),
+            )
+        )
         if branch_ids:
             queryset = queryset.filter(shift__sucursal_id__in=branch_ids)
         else:
