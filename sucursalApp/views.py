@@ -1261,6 +1261,7 @@ class ServiceSessionDetailView(OwnerCompanyMixin, DetailView):
                 "product_sales": list(self.object.product_sales.all()),
                 "product_load_form": product_load_form,
                 "fuel_responsible": self.object.shift.manager,
+                "product_load_responsible": self.object.shift.manager,
                 "product_sale_form": product_sale_form,
                 "product_sale_formset": product_sale_formset,
                 "product_responsible": self.object.shift.manager,
