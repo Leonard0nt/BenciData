@@ -1198,6 +1198,7 @@ class ServiceSessionDetailView(OwnerCompanyMixin, DetailView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
+        current_profile = getattr(self.request.user, "profile", None)
         fuel_load_form = kwargs.get("fuel_load_form")
         if fuel_load_form is None:
             fuel_load_form = ServiceSessionFuelLoadForm(
@@ -1216,7 +1217,8 @@ class ServiceSessionDetailView(OwnerCompanyMixin, DetailView):
         product_sale_form = kwargs.get("product_sale_form")
         if product_sale_form is None:
             product_sale_form = ServiceSessionProductSaleForm(
-                service_session=self.object
+                service_session=self.object,
+                responsible_profile=current_profile,
             )
 
         product_sale_formset = kwargs.get("product_sale_formset")
@@ -1262,7 +1264,7 @@ class ServiceSessionDetailView(OwnerCompanyMixin, DetailView):
                 "product_sale_form": product_sale_form,
                 "product_sale_formset": product_sale_formset,
                 "product_responsible": self.object.shift.manager,
-                "product_sale_responsible": self.object.shift.manager,
+                "product_sale_responsible": current_profile,
                 "service_date": self.object.started_at.date(),
             }
         )
@@ -1291,6 +1293,7 @@ class ServiceSessionDetailView(OwnerCompanyMixin, DetailView):
             sale_form = ServiceSessionProductSaleForm(
                 data=request.POST,
                 service_session=self.object,
+                responsible_profile=getattr(request.user, "profile", None),
             )
             item_formset = ServiceSessionProductSaleItemFormSet(
                 data=request.POST,

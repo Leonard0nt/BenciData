@@ -737,13 +737,20 @@ class ServiceSessionProductSaleForm(forms.ModelForm):
         model = ServiceSessionProductSale
         fields: list[str] = []
 
-    def __init__(self, *args, service_session: ServiceSession, **kwargs):
+    def __init__(
+        self,
+        *args,
+        service_session: ServiceSession,
+        responsible_profile: Optional[Profile] = None,
+        **kwargs,
+    ):
         self.service_session = service_session
+        self.responsible_profile: Optional[Profile] = responsible_profile
         super().__init__(*args, **kwargs)
 
     def clean(self):
         cleaned_data = super().clean()
-        if self.service_session.shift.manager is None:
+        if self.responsible_profile is None:
             raise forms.ValidationError(
                 "El servicio no tiene un encargado asignado."
             )
@@ -752,7 +759,7 @@ class ServiceSessionProductSaleForm(forms.ModelForm):
     def save(self, commit: bool = True):
         instance: ServiceSessionProductSale = super().save(commit=False)
         instance.service_session = self.service_session
-        instance.responsible = self.service_session.shift.manager
+        instance.responsible = self.responsible_profile
         if commit:
             instance.save()
         return instance
