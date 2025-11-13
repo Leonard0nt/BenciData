@@ -105,15 +105,7 @@
           <p class="mt-1 text-sm text-gray-600">Controla el dinero disponible al inicio de este servicio.</p>
         </div>
       </div>
-      <dl class="mt-6 grid grid-cols-1 gap-6 sm:grid-cols-3">
-        <div class="rounded-lg border border-gray-100 bg-gray-50 p-4">
-          <dt class="text-sm font-medium text-gray-500">Monedas</dt>
-          <dd class="mt-2 text-2xl font-semibold text-gray-900">$ {{ service_session.coins_amount|floatformat:2 }}</dd>
-        </div>
-        <div class="rounded-lg border border-gray-100 bg-gray-50 p-4">
-          <dt class="text-sm font-medium text-gray-500">Efectivo</dt>
-          <dd class="mt-2 text-2xl font-semibold text-gray-900">$ {{ service_session.cash_amount|floatformat:2 }}</dd>
-        </div>
+      <dl class="mt-6 grid grid-cols-1 gap-6"></dl>
         <div class="rounded-lg border border-gray-100 bg-gray-50 p-4">
           <dt class="text-sm font-medium text-gray-500">Total disponible</dt>
           <dd class="mt-2 text-2xl font-semibold text-gray-900">$ {{ service_session.initial_budget|floatformat:2 }}</dd>
@@ -471,6 +463,45 @@
                       <td class="px-4 py-3 text-right text-gray-900">{{ product_load.quantity_added }}</td>
                       <td class="px-4 py-3 text-gray-700">
                         {{ product_load.responsible.user_FK.get_full_name|default:product_load.responsible.user_FK.username }}
+                      </td>
+                    </tr>
+                  {% endfor %}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        {% endif %}
+
+        {% if product_sales %}
+          <div class="mt-8">
+            <h3 class="text-sm font-semibold uppercase tracking-wide text-gray-500">Historial de ventas</h3>
+            <div class="mt-3 overflow-hidden rounded-lg border border-gray-200">
+              <table class="min-w-full divide-y divide-gray-200">
+                <thead class="bg-gray-50">
+                  <tr class="text-left text-xs font-semibold uppercase tracking-wide text-gray-500">
+                    <th scope="col" class="px-4 py-3">Fecha</th>
+                    <th scope="col" class="px-4 py-3">Productos vendidos</th>
+                    <th scope="col" class="px-4 py-3">Registrado por</th>
+                  </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-200 bg-white text-sm">
+                  {% for sale in product_sales %}
+                    <tr>
+                      <td class="px-4 py-3 text-gray-700">{{ sale.sold_at|date:"d/m/Y H:i" }}</td>
+                      <td class="px-4 py-3 text-gray-700">
+                        <ul class="list-disc space-y-1 pl-4">
+                          {% for item in sale.items.all %}
+                            <li>
+                              <span class="font-medium text-gray-900">{{ item.product.product_type }}</span>
+                              <span class="text-gray-600">- {{ item.quantity }} u.</span>
+                            </li>
+                          {% empty %}
+                            <li class="text-gray-500">Sin productos registrados</li>
+                          {% endfor %}
+                        </ul>
+                      </td>
+                      <td class="px-4 py-3 text-gray-700">
+                        {{ sale.responsible.user_FK.get_full_name|default:sale.responsible.user_FK.username }}
                       </td>
                     </tr>
                   {% endfor %}
