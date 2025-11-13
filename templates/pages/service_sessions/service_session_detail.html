@@ -22,6 +22,12 @@
         <p class="mt-2 text-xs text-indigo-700">Monedas: $ {{ service_session.coins_amount|floatformat:2 }} · Efectivo: $ {{ service_session.cash_amount|floatformat:2 }}</p>
       </div>
     </div>
+          <button
+          type="button"
+          class="inline-flex items-center justify-center rounded-md bg-gradient-to-br from-rose-500 to-red-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-rose-500 hover:from-rose-600 hover:to-red-700"
+        >
+          Cerrar turno
+        </button>
   </section>
 
   <section class="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
