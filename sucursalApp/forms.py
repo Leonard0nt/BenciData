@@ -643,7 +643,7 @@ class ServiceSessionProductLoadForm(forms.ModelForm):
                     quantity=F("quantity") + instance.quantity_added
                 )
                 instance.product.refresh_from_db(fields=["quantity"])
-       return instance
+        return instance
 
 
 class ServiceSessionProductSaleItemForm(forms.ModelForm):
