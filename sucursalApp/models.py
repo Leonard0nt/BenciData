@@ -582,6 +582,60 @@ class ServiceSessionProductLoad(models.Model):
         return f"{self.product.product_type} - {self.quantity_added} u. ({self.date:%Y-%m-%d})"
 
 
+class ServiceSessionProductSale(models.Model):
+    """Registra la venta de productos realizada durante un servicio."""
+
+    service_session = models.ForeignKey(
+        ServiceSession,
+        on_delete=models.CASCADE,
+        related_name="product_sales",
+        verbose_name="Servicio",
+    )
+    responsible = models.ForeignKey(
+        "UsuarioApp.Profile",
+        on_delete=models.PROTECT,
+        related_name="product_sales",
+        verbose_name="Responsable",
+    )
+    sold_at = models.DateTimeField("Fecha y hora de venta", auto_now_add=True)
+    created_at = models.DateTimeField("Fecha de creación", auto_now_add=True)
+    updated_at = models.DateTimeField("Fecha de actualización", auto_now=True)
+
+    class Meta:
+        verbose_name = "Venta de productos"
+        verbose_name_plural = "Ventas de productos"
+        ordering = ("-sold_at", "-created_at")
+
+    def __str__(self) -> str:
+        return f"Venta #{self.pk} - {self.service_session.shift.sucursal.name} ({self.sold_at:%Y-%m-%d %H:%M})"
+
+
+class ServiceSessionProductSaleItem(models.Model):
+    """Detalle de productos vendidos en una venta del servicio."""
+
+    sale = models.ForeignKey(
+        ServiceSessionProductSale,
+        on_delete=models.CASCADE,
+        related_name="items",
+        verbose_name="Venta",
+    )
+    product = models.ForeignKey(
+        "BranchProduct",
+        on_delete=models.PROTECT,
+        related_name="sale_items",
+        verbose_name="Producto",
+    )
+    quantity = models.PositiveIntegerField("Cantidad vendida")
+
+    class Meta:
+        verbose_name = "Producto vendido"
+        verbose_name_plural = "Productos vendidos"
+        ordering = ("product__product_type",)
+
+    def __str__(self) -> str:
+        return f"{self.product.product_type} - {self.quantity} u."
+
+
 class BranchProduct(models.Model):
     """Registra los productos disponibles en una sucursal."""
 

@@ -1,5 +1,6 @@
 from typing import Optional
 
+
 from django import forms
 from django.db import transaction
 from django.db.models import F, Q, Count
@@ -16,6 +17,8 @@ from .models import (
     Shift,
     ServiceSessionFuelLoad,
     ServiceSessionProductLoad,
+    ServiceSessionProductSale,
+    ServiceSessionProductSaleItem,
     ServiceSession,
     Sucursal,
     SucursalStaff,
@@ -640,4 +643,116 @@ class ServiceSessionProductLoadForm(forms.ModelForm):
                     quantity=F("quantity") + instance.quantity_added
                 )
                 instance.product.refresh_from_db(fields=["quantity"])
+       return instance
+
+
+class ServiceSessionProductSaleItemForm(forms.ModelForm):
+    class Meta:
+        model = ServiceSessionProductSaleItem
+        fields = [
+            "product",
+            "quantity",
+        ]
+        widgets = {
+            "product": forms.Select(
+                attrs={
+                    "class": "block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500",
+                }
+            ),
+            "quantity": forms.NumberInput(
+                attrs={
+                    "class": "block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500",
+                    "min": "1",
+                }
+            ),
+        }
+
+    def __init__(self, *args, service_session: ServiceSession, **kwargs):
+        self.service_session = service_session
+        super().__init__(*args, **kwargs)
+        branch = service_session.shift.sucursal
+        self.fields["product"].queryset = branch.products.all()
+
+    def clean(self):
+        cleaned_data = super().clean()
+        product: Optional[BranchProduct] = cleaned_data.get("product")
+        quantity = cleaned_data.get("quantity")
+
+        if not product and not quantity:
+            return cleaned_data
+
+        if not product:
+            raise forms.ValidationError("Debes seleccionar un producto válido.")
+
+        if quantity is None or quantity <= 0:
+            raise forms.ValidationError("Debes ingresar una cantidad mayor a 0.")
+
+        if quantity > product.quantity:
+            raise forms.ValidationError(
+                "La cantidad solicitada supera el stock disponible en la sucursal.",
+            )
+
+        if product.sucursal_id != self.service_session.shift.sucursal_id:
+            raise forms.ValidationError(
+                "El producto seleccionado no pertenece a la sucursal del servicio.",
+            )
+
+        return cleaned_data
+
+
+class BaseServiceSessionProductSaleItemFormSet(forms.BaseModelFormSet):
+    def __init__(self, *args, service_session: ServiceSession, **kwargs):
+        self.service_session = service_session
+        super().__init__(*args, **kwargs)
+
+    def _construct_form(self, i, **kwargs):
+        kwargs.setdefault("service_session", self.service_session)
+        return super()._construct_form(i, **kwargs)
+
+    def clean(self):
+        super().clean()
+        has_data = False
+        for form in self.forms:
+            if form.cleaned_data and not form.cleaned_data.get("DELETE", False):
+                has_data = True
+                break
+        if not has_data:
+            raise forms.ValidationError(
+                "Debes agregar al menos un producto para registrar la venta.",
+            )
+
+
+ServiceSessionProductSaleItemFormSet = forms.modelformset_factory(
+    ServiceSessionProductSaleItem,
+    form=ServiceSessionProductSaleItemForm,
+    formset=BaseServiceSessionProductSaleItemFormSet,
+    extra=3,
+    min_num=1,
+    validate_min=True,
+)
+
+
+class ServiceSessionProductSaleForm(forms.ModelForm):
+    class Meta:
+        model = ServiceSessionProductSale
+        fields: list[str] = []
+
+    def __init__(self, *args, service_session: ServiceSession, **kwargs):
+        self.service_session = service_session
+        super().__init__(*args, **kwargs)
+
+    def clean(self):
+        cleaned_data = super().clean()
+        if self.service_session.shift.manager is None:
+            raise forms.ValidationError(
+                "El servicio no tiene un encargado asignado."
+            )
+        return cleaned_data
+
+    def save(self, commit: bool = True):
+        instance: ServiceSessionProductSale = super().save(commit=False)
+        instance.service_session = self.service_session
+        instance.responsible = self.service_session.shift.manager
+        if commit:
+            instance.save()
         return instance

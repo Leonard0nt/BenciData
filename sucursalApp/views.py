@@ -1,8 +1,10 @@
 from typing import Any, Dict, List
 from urllib.parse import urlencode
+
 from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin
-from django.db.models import Prefetch, QuerySet, Sum
+from django.db import transaction
+from django.db.models import F, Prefetch, QuerySet, Sum
 from django.db.models.functions import Coalesce
 from django.http import Http404, HttpResponseRedirect
 from django.shortcuts import get_object_or_404, redirect
@@ -24,6 +26,8 @@ from .forms import (
     NozzleForm,
     ServiceSessionFuelLoadForm,
     ServiceSessionProductLoadForm,
+    ServiceSessionProductSaleForm,
+    ServiceSessionProductSaleItemFormSet,
     ShiftForm,
     ServiceSessionForm,
     SucursalForm,
@@ -36,6 +40,8 @@ from .models import (
     Nozzle,
     ServiceSessionFuelLoad,
     ServiceSessionProductLoad,
+    ServiceSessionProductSale,
+    ServiceSessionProductSaleItem,
     Shift,
     ServiceSession,
     Sucursal,
@@ -1175,6 +1181,12 @@ class ServiceSessionDetailView(OwnerCompanyMixin, DetailView):
                         "responsible__user_FK",
                     ),
                 ),
+                Prefetch(
+                    "product_sales",
+                    queryset=ServiceSessionProductSale.objects.select_related(
+                        "responsible__user_FK"
+                    ).prefetch_related("items__product"),
+                ),
             )
         )
         if branch_ids:
@@ -1201,6 +1213,19 @@ class ServiceSessionDetailView(OwnerCompanyMixin, DetailView):
                 service_session=self.object
             )
 
+        product_sale_form = kwargs.get("product_sale_form")
+        if product_sale_form is None:
+            product_sale_form = ServiceSessionProductSaleForm(
+                service_session=self.object
+            )
+
+        product_sale_formset = kwargs.get("product_sale_formset")
+        if product_sale_formset is None:
+            product_sale_formset = ServiceSessionProductSaleItemFormSet(
+                service_session=self.object,
+                queryset=ServiceSessionProductSaleItem.objects.none(),
+            )
+
         branch = self.object.shift.sucursal
         product_loads = list(self.object.product_loads.all())
         product_additions = {
@@ -1209,10 +1234,18 @@ class ServiceSessionDetailView(OwnerCompanyMixin, DetailView):
                 total_added=Coalesce(Sum("quantity_added"), 0)
             )
         }
+        product_sales_items = {
+            entry["product_id"]: entry["total_sold"]
+            for entry in ServiceSessionProductSaleItem.objects.filter(
+                sale__service_session=self.object
+            )
+            .values("product_id")
+            .annotate(total_sold=Coalesce(Sum("quantity"), 0))
+        }
         branch_products = list(branch.products.all())
         for product in branch_products:
             product.session_added_quantity = product_additions.get(product.pk, 0)
-
+            product.session_sold_quantity = product_sales_items.get(product.pk, 0)
         context.update(
             {
                 "shift": self.object.shift,
@@ -1223,9 +1256,13 @@ class ServiceSessionDetailView(OwnerCompanyMixin, DetailView):
                 "branch_products": branch_products,
                 "product_loads": product_loads,
                 "fuel_load_form": fuel_load_form,
+                "product_sales": list(self.object.product_sales.all()),
                 "product_load_form": product_load_form,
                 "fuel_responsible": self.object.shift.manager,
+                "product_sale_form": product_sale_form,
+                "product_sale_formset": product_sale_formset,
                 "product_responsible": self.object.shift.manager,
+                "product_sale_responsible": self.object.shift.manager,
                 "service_date": self.object.started_at.date(),
             }
         )
@@ -1250,6 +1287,44 @@ class ServiceSessionDetailView(OwnerCompanyMixin, DetailView):
 
             context = self.get_context_data(product_load_form=form)
             return self.render_to_response(context)
+        if form_type == "product-sale":
+            sale_form = ServiceSessionProductSaleForm(
+                data=request.POST,
+                service_session=self.object,
+            )
+            item_formset = ServiceSessionProductSaleItemFormSet(
+                data=request.POST,
+                service_session=self.object,
+                queryset=ServiceSessionProductSaleItem.objects.none(),
+            )
+            if sale_form.is_valid() and item_formset.is_valid():
+                with transaction.atomic():
+                    sale = sale_form.save()
+                    for form in item_formset:
+                        if not form.cleaned_data or form.cleaned_data.get("DELETE"):
+                            continue
+                        product = form.cleaned_data["product"]
+                        quantity = form.cleaned_data["quantity"]
+                        ServiceSessionProductSaleItem.objects.create(
+                            sale=sale,
+                            product=product,
+                            quantity=quantity,
+                        )
+                        BranchProduct.objects.filter(pk=product.pk).update(
+                            quantity=F("quantity") - quantity
+                        )
+                    messages.success(
+                        request,
+                        "Venta de productos registrada correctamente.",
+                    )
+                return redirect("service_session_detail", pk=self.object.pk)
+
+            context = self.get_context_data(
+                product_sale_form=sale_form,
+                product_sale_formset=item_formset,
+            )
+            return self.render_to_response(context)
+
 
         form = ServiceSessionFuelLoadForm(
             data=request.POST,

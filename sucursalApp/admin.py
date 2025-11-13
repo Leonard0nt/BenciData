@@ -10,6 +10,8 @@ from .models import (
     ServiceSession,
     ServiceSessionFuelLoad,
     ServiceSessionProductLoad,
+    ServiceSessionProductSale,
+    ServiceSessionProductSaleItem,
     Sucursal,
     SucursalStaff,
 )
@@ -198,3 +200,28 @@ class ServiceSessionProductLoadAdmin(admin.ModelAdmin):
         "product__product_type",
         "product__batch_number",
     )
+
+
+class ServiceSessionProductSaleItemInline(admin.TabularInline):
+    model = ServiceSessionProductSaleItem
+    extra = 0
+
+
+@admin.register(ServiceSessionProductSale)
+class ServiceSessionProductSaleAdmin(admin.ModelAdmin):
+    list_display = (
+        "service_session",
+        "sold_at",
+        "responsible",
+    )
+    list_filter = (
+        "service_session__shift__sucursal",
+        "sold_at",
+    )
+    search_fields = (
+        "service_session__shift__code",
+        "responsible__user_FK__username",
+        "items__product__product_type",
+    )
+    date_hierarchy = "sold_at"
+    inlines = [ServiceSessionProductSaleItemInline]
