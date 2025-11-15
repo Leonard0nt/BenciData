@@ -8,6 +8,7 @@ from .models import (
     Nozzle,
     Shift,
     ServiceSession,
+    ServiceSessionCreditSale,
     ServiceSessionFuelLoad,
     ServiceSessionProductLoad,
     ServiceSessionProductSale,
@@ -225,3 +226,27 @@ class ServiceSessionProductSaleAdmin(admin.ModelAdmin):
     )
     date_hierarchy = "sold_at"
     inlines = [ServiceSessionProductSaleItemInline]
+
+
+@admin.register(ServiceSessionCreditSale)
+class ServiceSessionCreditSaleAdmin(admin.ModelAdmin):
+    list_display = (
+        "invoice_number",
+        "customer_name",
+        "service_session",
+        "fuel_inventory",
+        "amount",
+        "responsible",
+        "created_at",
+    )
+    list_filter = (
+        "service_session__shift__sucursal",
+        "fuel_inventory__fuel_type",
+        "created_at",
+    )
+    search_fields = (
+        "invoice_number",
+        "customer_name",
+        "responsible__user_FK__username",
+    )
+    date_hierarchy = "created_at"

@@ -149,6 +149,14 @@
           aria-controls="tab-islas"
           aria-selected="false"
         >Islas y equipos</button>
+        <button
+          type="button"
+          data-tab-target="tab-creditos"
+          data-tab-group="branch-detail"
+          class="whitespace-nowrap border-b-2 border-transparent px-1 py-3 text-sm font-medium text-gray-500 hover:border-gray-300 hover:text-gray-700"
+          aria-controls="tab-creditos"
+          aria-selected="false"
+        >Créditos</button>
       </nav>
     </div>
 
@@ -1271,8 +1279,62 @@
     <div class="flex justify-end gap-3">
       <a href="{% url 'sucursal_list' %}" class="inline-flex items-center rounded-md border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">Cancelar</a>
       <button type="submit" class="inline-flex items-center rounded-md bg-gradient-to-br px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-blue-500">Guardar</button>
-    </div>
-  </form>
+  </div>
+
+  <div id="tab-creditos" class="tab-content mt-8 hidden space-y-6">
+    <section class="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
+      <div class="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <h2 class="text-lg font-semibold text-gray-900">Créditos registrados</h2>
+          <p class="mt-1 text-sm text-gray-600">Ventas a crédito ingresadas desde los servicios de esta sucursal.</p>
+        </div>
+      </div>
+
+      {% if branch_credit_sales %}
+        <div class="mt-6 overflow-hidden rounded-lg border border-gray-200">
+          <table class="min-w-full divide-y divide-gray-200">
+            <thead class="bg-gray-50">
+              <tr class="text-left text-xs font-semibold uppercase tracking-wide text-gray-500">
+                <th scope="col" class="px-4 py-3">Factura</th>
+                <th scope="col" class="px-4 py-3">Cliente</th>
+                <th scope="col" class="px-4 py-3">Combustible</th>
+                <th scope="col" class="px-4 py-3 text-right">Monto</th>
+                <th scope="col" class="px-4 py-3">Responsable</th>
+                <th scope="col" class="px-4 py-3">Turno</th>
+                <th scope="col" class="px-4 py-3">Fecha</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-200 bg-white text-sm">
+              {% for credit in branch_credit_sales %}
+                <tr>
+                  <td class="px-4 py-3 font-medium text-gray-900">{{ credit.invoice_number }}</td>
+                  <td class="px-4 py-3 text-gray-700">{{ credit.customer_name }}</td>
+                  <td class="px-4 py-3 text-gray-700">{{ credit.fuel_inventory.fuel_type }}</td>
+                  <td class="px-4 py-3 text-right text-gray-900">$ {{ credit.amount|floatformat:0 }}</td>
+                  <td class="px-4 py-3 text-gray-700">
+                    {{ credit.responsible.user_FK.get_full_name|default:credit.responsible.user_FK.username }}
+                  </td>
+                  <td class="px-4 py-3 text-gray-700">
+                    {% if credit.service_session.shift %}
+                      {{ credit.service_session.shift.code }}
+                    {% else %}
+                      --
+                    {% endif %}
+                  </td>
+                  <td class="px-4 py-3 text-gray-500">{{ credit.created_at|date:"d/m/Y H:i" }}</td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      {% else %}
+        <div class="mt-6 rounded-lg border border-dashed border-gray-300 bg-gray-50 p-4 text-sm text-gray-600">
+          Aún no existen ventas a crédito registradas en esta sucursal.
+        </div>
+      {% endif %}
+    </section>
+  </div>
+</form>
 {% endif %}
 
 </div>

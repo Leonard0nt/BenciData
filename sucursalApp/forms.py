@@ -15,6 +15,7 @@ from .models import (
     Machine,
     Nozzle,
     Shift,
+    ServiceSessionCreditSale,
     ServiceSessionFuelLoad,
     ServiceSessionProductLoad,
     ServiceSessionProductSale,
@@ -765,6 +766,91 @@ class ServiceSessionProductSaleForm(forms.ModelForm):
         instance: ServiceSessionProductSale = super().save(commit=False)
         instance.service_session = self.service_session
         instance.responsible = self.responsible_profile
+        if commit:
+            instance.save()
+        return instance
+
+
+class ServiceSessionCreditSaleForm(forms.ModelForm):
+    class Meta:
+        model = ServiceSessionCreditSale
+        fields = [
+            "invoice_number",
+            "customer_name",
+            "fuel_inventory",
+            "amount",
+        ]
+        widgets = {
+            "invoice_number": forms.TextInput(
+                attrs={
+                    "class": "block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500",
+                    "placeholder": "Ej: 000123",
+                }
+            ),
+            "customer_name": forms.TextInput(
+                attrs={
+                    "class": "block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500",
+                    "placeholder": "Nombre del cliente",
+                }
+            ),
+            "fuel_inventory": forms.Select(
+                attrs={
+                    "class": "block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500",
+                }
+            ),
+            "amount": forms.NumberInput(
+                attrs={
+                    "class": "block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500",
+                    "min": "1",
+                    "step": "0.01",
+                }
+            ),
+        }
+
+    def __init__(
+        self,
+        *args,
+        service_session: ServiceSession,
+        responsible_profile: Optional[Profile] = None,
+        **kwargs,
+    ):
+        self.service_session = service_session
+        self.responsible_profile = responsible_profile
+        super().__init__(*args, **kwargs)
+        branch = service_session.shift.sucursal
+        self.fields["fuel_inventory"].queryset = branch.fuel_inventories.all()
+        self.fields["fuel_inventory"].empty_label = "Selecciona un estanque"
+
+    def clean_fuel_inventory(self):
+        fuel_inventory = self.cleaned_data.get("fuel_inventory")
+        if not fuel_inventory:
+            return fuel_inventory
+        if fuel_inventory.sucursal_id != self.service_session.shift.sucursal_id:
+            raise forms.ValidationError(
+                "El estanque seleccionado no pertenece a la sucursal del servicio.",
+            )
+        return fuel_inventory
+
+    def clean_amount(self):
+        amount = self.cleaned_data.get("amount")
+        if amount is not None and amount <= 0:
+            raise forms.ValidationError(
+                "Debes ingresar un monto mayor a 0.",
+            )
+        return amount
+
+    def clean(self):
+        cleaned_data = super().clean()
+        if self.responsible_profile is None:
+            raise forms.ValidationError(
+                "No hay un responsable disponible para registrar la venta a crédito.",
+            )
+        return cleaned_data
+
+    def save(self, commit: bool = True):
+        instance: ServiceSessionCreditSale = super().save(commit=False)
+        instance.service_session = self.service_session
+        instance.responsible = self.responsible_profile  # type: ignore[assignment]
         if commit:
             instance.save()
         return instance

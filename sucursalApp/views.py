@@ -24,6 +24,7 @@ from .forms import (
     IslandForm,
     MachineForm,
     NozzleForm,
+    ServiceSessionCreditSaleForm,
     ServiceSessionFuelLoadForm,
     ServiceSessionProductLoadForm,
     ServiceSessionProductSaleForm,
@@ -38,6 +39,7 @@ from .models import (
     Island,
     Machine,
     Nozzle,
+    ServiceSessionCreditSale,
     ServiceSessionFuelLoad,
     ServiceSessionProductLoad,
     ServiceSessionProductSale,
@@ -310,6 +312,17 @@ class SucursalUpdateView(OwnerCompanyMixin, UpdateView):
             context["product_create_url"] = reverse(
                 "sucursal_product_create", args=[self.object.pk]
             )
+            context["branch_credit_sales"] = (
+                ServiceSessionCreditSale.objects.filter(
+                    service_session__shift__sucursal=self.object
+                )
+                .select_related(
+                    "service_session__shift",
+                    "responsible__user_FK",
+                    "fuel_inventory",
+                )
+                .order_by("-created_at")
+            )
             for island in islands:
                 island.update_form = IslandForm(
                     instance=island, auto_id=f"edit-island-{island.pk}_%s"
@@ -337,6 +350,7 @@ class SucursalUpdateView(OwnerCompanyMixin, UpdateView):
             context.setdefault("islands", [])
             context.setdefault("shifts", [])
             context.setdefault("products", [])
+            context.setdefault("branch_credit_sales", [])
         context.setdefault("can_manage_shifts", False)
         if not context.get("active_modal"):
             requested_modal = self.request.GET.get("modal")
@@ -1187,6 +1201,13 @@ class ServiceSessionDetailView(OwnerCompanyMixin, DetailView):
                         "responsible__user_FK"
                     ).prefetch_related("items__product"),
                 ),
+                Prefetch(
+                    "credit_sales",
+                    queryset=ServiceSessionCreditSale.objects.select_related(
+                        "responsible__user_FK",
+                        "fuel_inventory",
+                    ),
+                ),
             )
         )
         if branch_ids:
@@ -1217,6 +1238,13 @@ class ServiceSessionDetailView(OwnerCompanyMixin, DetailView):
         product_sale_form = kwargs.get("product_sale_form")
         if product_sale_form is None:
             product_sale_form = ServiceSessionProductSaleForm(
+                service_session=self.object,
+                responsible_profile=current_profile,
+            )
+
+        credit_sale_form = kwargs.get("credit_sale_form")
+        if credit_sale_form is None:
+            credit_sale_form = ServiceSessionCreditSaleForm(
                 service_session=self.object,
                 responsible_profile=current_profile,
             )
@@ -1264,8 +1292,11 @@ class ServiceSessionDetailView(OwnerCompanyMixin, DetailView):
                 "product_load_responsible": self.object.shift.manager,
                 "product_sale_form": product_sale_form,
                 "product_sale_formset": product_sale_formset,
+                "credit_sale_form": credit_sale_form,
                 "product_responsible": self.object.shift.manager,
                 "product_sale_responsible": current_profile,
+                "credit_sale_responsible": current_profile,
+                "credit_sales": list(self.object.credit_sales.all()),
                 "service_date": self.object.started_at.date(),
                 "current_profile_name": (
                     (current_profile.user_FK.get_full_name() or current_profile.user_FK.username)
@@ -1334,6 +1365,22 @@ class ServiceSessionDetailView(OwnerCompanyMixin, DetailView):
             )
             return self.render_to_response(context)
 
+        if form_type == "credit-sale":
+            credit_form = ServiceSessionCreditSaleForm(
+                data=request.POST,
+                service_session=self.object,
+                responsible_profile=getattr(request.user, "profile", None),
+            )
+            if credit_form.is_valid():
+                credit_form.save()
+                messages.success(
+                    request,
+                    "Venta a crédito registrada correctamente.",
+                )
+                return redirect("service_session_detail", pk=self.object.pk)
+
+            context = self.get_context_data(credit_sale_form=credit_form)
+            return self.render_to_response(context)
 
         form = ServiceSessionFuelLoadForm(
             data=request.POST,

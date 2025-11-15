@@ -582,6 +582,46 @@ class ServiceSessionProductLoad(models.Model):
         return f"{self.product.product_type} - {self.quantity_added} u. ({self.date:%Y-%m-%d})"
 
 
+class ServiceSessionCreditSale(models.Model):
+    """Registra las ventas realizadas a crédito durante un servicio."""
+
+    service_session = models.ForeignKey(
+        ServiceSession,
+        on_delete=models.CASCADE,
+        related_name="credit_sales",
+        verbose_name="Servicio",
+    )
+    invoice_number = models.CharField("Número de factura", max_length=100)
+    customer_name = models.CharField("Nombre del cliente", max_length=255)
+    fuel_inventory = models.ForeignKey(
+        "FuelInventory",
+        on_delete=models.PROTECT,
+        related_name="credit_sales",
+        verbose_name="Estanque",
+    )
+    amount = models.DecimalField(
+        "Monto del crédito",
+        max_digits=12,
+        decimal_places=2,
+    )
+    responsible = models.ForeignKey(
+        "UsuarioApp.Profile",
+        on_delete=models.PROTECT,
+        related_name="credit_sales",
+        verbose_name="Responsable",
+    )
+    created_at = models.DateTimeField("Fecha de registro", auto_now_add=True)
+    updated_at = models.DateTimeField("Fecha de actualización", auto_now=True)
+
+    class Meta:
+        verbose_name = "Venta a crédito"
+        verbose_name_plural = "Ventas a crédito"
+        ordering = ("-created_at", "-pk")
+
+    def __str__(self) -> str:
+        return f"Crédito #{self.pk} - {self.service_session.shift.sucursal.name}"
+
+
 class ServiceSessionProductSale(models.Model):
     """Registra la venta de productos realizada durante un servicio."""
 
