@@ -726,7 +726,7 @@ ServiceSessionProductSaleItemFormSet = forms.modelformset_factory(
     ServiceSessionProductSaleItem,
     form=ServiceSessionProductSaleItemForm,
     formset=BaseServiceSessionProductSaleItemFormSet,
-    extra=3,
+    extra=1,
     min_num=1,
     validate_min=True,
 )

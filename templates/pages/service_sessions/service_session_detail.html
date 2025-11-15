@@ -192,6 +192,7 @@
       x-transition.opacity
       class="fixed inset-0 z-50 flex justify-center bg-gray-900/80 p-4 sm:items-center"
       @click.self="saleModalOpen = false"
+      style="margin-top: 0%;"
     >
       <div
         class="w-full max-w-3xl overflow-y-auto rounded-none bg-white p-6 shadow-2xl sm:max-h-[calc(100vh-3rem)] sm:rounded-xl"
@@ -236,7 +237,7 @@
 
           {{ product_sale_formset.management_form }}
 
-          <div class="space-y-4">
+          <div class="space-y-4" id="product-sale-items" data-formset-prefix="{{ product_sale_formset.prefix }}">
             {% for form in product_sale_formset %}
               <div class="rounded-lg border border-gray-200 p-4 shadow-sm">
                 {{ form.id }}
@@ -266,6 +267,29 @@
               </div>
             {% endfor %}
           </div>
+          <button
+            type="button"
+            id="add-product-sale-item"
+            class="mt-4 inline-flex items-center rounded-md border border-dashed border-indigo-300 px-4 py-2 text-sm font-medium text-indigo-700 hover:bg-indigo-50"
+          >
+            <span class="mr-2 text-lg font-semibold">+</span> Agregar producto
+          </button>
+
+          <template id="product-sale-item-template">
+            <div class="rounded-lg border border-gray-200 p-4 shadow-sm">
+              {{ product_sale_formset.empty_form.id }}
+              <div class="grid gap-4 sm:grid-cols-2">
+                <div>
+                  <label for="{{ product_sale_formset.empty_form.product.id_for_label }}" class="block text-sm font-medium text-gray-700">Producto</label>
+                  {{ product_sale_formset.empty_form.product }}
+                </div>
+                <div>
+                  <label for="{{ product_sale_formset.empty_form.quantity.id_for_label }}" class="block text-sm font-medium text-gray-700">Cantidad vendida</label>
+                  {{ product_sale_formset.empty_form.quantity }}
+                </div>
+              </div>
+            </div>
+          </template>
 
           <div class="grid gap-4 sm:grid-cols-2">
             <div>
@@ -301,6 +325,35 @@
               Registrar venta
             </button>
           </div>
+          <script>
+            document.addEventListener("DOMContentLoaded", () => {
+              const addButton = document.getElementById("add-product-sale-item");
+              const container = document.getElementById("product-sale-items");
+              const template = document.getElementById("product-sale-item-template");
+              if (!addButton || !container || !template) {
+                return;
+              }
+
+              const prefix = container.dataset.formsetPrefix || "form";
+              const totalFormsInput = document.querySelector(`input[name="${prefix}-TOTAL_FORMS"]`);
+
+              addButton.addEventListener("click", () => {
+                if (!totalFormsInput) {
+                  return;
+                }
+
+                const currentCount = parseInt(totalFormsInput.value, 10) || 0;
+                const newFormHTML = template.innerHTML.replace(/__prefix__/g, currentCount);
+                const fragment = document.createElement("div");
+                fragment.innerHTML = newFormHTML.trim();
+                const newForm = fragment.firstElementChild;
+                if (newForm) {
+                  container.appendChild(newForm);
+                  totalFormsInput.value = currentCount + 1;
+                }
+              });
+            });
+          </script>
         </form>
       </div>
     </div>
@@ -522,6 +575,7 @@
       x-show="openModal === 'product-load'"
       x-transition.opacity
       class="fixed inset-0 z-50 flex items-stretch justify-center bg-gray-900/80 p-4 sm:items-center"
+      style="margin-top: 0%;"
       @click.self="openModal = null"
     >
       <div
