@@ -4,7 +4,7 @@ from urllib.parse import urlencode
 from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.db import transaction
-from django.db.models import F, Prefetch, QuerySet, Sum
+from django.db.models import DecimalField, F, Prefetch, QuerySet, Sum, Value
 from django.db.models.functions import Coalesce
 from django.http import Http404, HttpResponseRedirect
 from django.shortcuts import get_object_or_404, redirect
@@ -312,7 +312,7 @@ class SucursalUpdateView(OwnerCompanyMixin, UpdateView):
             context["product_create_url"] = reverse(
                 "sucursal_product_create", args=[self.object.pk]
             )
-            context["branch_credit_sales"] = (
+            branch_credit_sales = (
                 ServiceSessionCreditSale.objects.filter(
                     service_session__shift__sucursal=self.object
                 )
@@ -322,6 +322,18 @@ class SucursalUpdateView(OwnerCompanyMixin, UpdateView):
                     "fuel_inventory",
                 )
                 .order_by("-created_at")
+            )
+            context["branch_credit_sales"] = branch_credit_sales
+            context["branch_credit_sales_count"] = branch_credit_sales.count()
+            context["branch_credit_sales_total"] = (
+                branch_credit_sales.aggregate(
+                    total=Coalesce(
+                        Sum("amount"),
+                        Value(0),
+                        output_field=DecimalField(max_digits=12, decimal_places=2),
+                    )
+                )["total"]
+                or 0
             )
             for island in islands:
                 island.update_form = IslandForm(
@@ -351,6 +363,8 @@ class SucursalUpdateView(OwnerCompanyMixin, UpdateView):
             context.setdefault("shifts", [])
             context.setdefault("products", [])
             context.setdefault("branch_credit_sales", [])
+            context.setdefault("branch_credit_sales_count", 0)
+            context.setdefault("branch_credit_sales_total", 0)
         context.setdefault("can_manage_shifts", False)
         if not context.get("active_modal"):
             requested_modal = self.request.GET.get("modal")

@@ -1283,10 +1283,18 @@
 
   <div id="tab-creditos" class="tab-content mt-8 hidden space-y-6">
     <section class="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
-      <div class="flex flex-wrap items-center justify-between gap-3">
+      <div class="flex flex-wrap items-center justify-between gap-4">
         <div>
           <h2 class="text-lg font-semibold text-gray-900">Créditos registrados</h2>
           <p class="mt-1 text-sm text-gray-600">Ventas a crédito ingresadas desde los servicios de esta sucursal.</p>
+        </div>
+        <div class="flex flex-wrap items-center gap-3">
+          <span class="inline-flex items-center rounded-full bg-indigo-50 px-3 py-1 text-sm font-medium text-indigo-700">
+            {{ branch_credit_sales_count|default:0 }} registro{{ branch_credit_sales_count|default:0|pluralize:"s" }}
+          </span>
+          <span class="inline-flex items-center rounded-full bg-gray-100 px-3 py-1 text-sm text-gray-700">
+            Total: $ {{ branch_credit_sales_total|default:0|floatformat:0 }}
+          </span>
         </div>
       </div>
 
