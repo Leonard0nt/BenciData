@@ -1267,6 +1267,11 @@ class ServiceSessionDetailView(OwnerCompanyMixin, DetailView):
                 "product_responsible": self.object.shift.manager,
                 "product_sale_responsible": current_profile,
                 "service_date": self.object.started_at.date(),
+                "current_profile_name": (
+                    (current_profile.user_FK.get_full_name() or current_profile.user_FK.username)
+                    if current_profile and getattr(current_profile, "user_FK", None)
+                    else "Sin encargado asignado"
+                ),
             }
         )
         return context

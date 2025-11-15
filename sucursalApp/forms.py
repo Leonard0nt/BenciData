@@ -705,6 +705,11 @@ class BaseServiceSessionProductSaleItemFormSet(forms.BaseModelFormSet):
         self.service_session = service_session
         super().__init__(*args, **kwargs)
 
+    def get_form_kwargs(self, index):
+        kwargs = super().get_form_kwargs(index)
+        kwargs.setdefault("service_session", self.service_session)
+        return kwargs
+
     def _construct_form(self, i, **kwargs):
         kwargs.setdefault("service_session", self.service_session)
         return super()._construct_form(i, **kwargs)
@@ -726,7 +731,7 @@ ServiceSessionProductSaleItemFormSet = forms.modelformset_factory(
     ServiceSessionProductSaleItem,
     form=ServiceSessionProductSaleItemForm,
     formset=BaseServiceSessionProductSaleItemFormSet,
-    extra=1,
+    extra=0,
     min_num=1,
     validate_min=True,
 )
