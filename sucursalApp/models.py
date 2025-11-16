@@ -506,6 +506,44 @@ class ServiceSession(models.Model):
         super().save(*args, **kwargs)
 
 
+class ServiceSessionWithdrawal(models.Model):
+    """Registra las tiradas de dinero realizadas durante un servicio."""
+
+    service_session = models.ForeignKey(
+        ServiceSession,
+        on_delete=models.CASCADE,
+        related_name="withdrawals",
+        verbose_name="Servicio",
+    )
+    responsible = models.ForeignKey(
+        "UsuarioApp.Profile",
+        on_delete=models.PROTECT,
+        related_name="service_session_withdrawals",
+        verbose_name="Responsable",
+    )
+    amount = models.DecimalField(
+        "Monto retirado",
+        max_digits=12,
+        decimal_places=2,
+    )
+    registered_at = models.DateTimeField(
+        "Fecha de registro",
+        auto_now_add=True,
+    )
+
+    class Meta:
+        verbose_name = "Tirada de caja"
+        verbose_name_plural = "Tiradas de caja"
+        ordering = ("-registered_at", "-pk")
+
+    def __str__(self) -> str:
+        return (
+            f"Tirada #{self.pk} - {self.service_session.shift.sucursal.name}"
+            if self.pk
+            else "Tirada"
+        )
+
+
 class ServiceSessionFuelLoad(models.Model):
     """Registra las cargas de combustible realizadas durante un servicio."""
 

@@ -20,6 +20,7 @@ from .models import (
     ServiceSessionProductLoad,
     ServiceSessionProductSale,
     ServiceSessionProductSaleItem,
+    ServiceSessionWithdrawal,
     ServiceSession,
     Sucursal,
     SucursalStaff,
@@ -849,6 +850,50 @@ class ServiceSessionCreditSaleForm(forms.ModelForm):
 
     def save(self, commit: bool = True):
         instance: ServiceSessionCreditSale = super().save(commit=False)
+        instance.service_session = self.service_session
+        instance.responsible = self.responsible_profile  # type: ignore[assignment]
+        if commit:
+            instance.save()
+        return instance
+
+
+class ServiceSessionWithdrawalForm(forms.ModelForm):
+    class Meta:
+        model = ServiceSessionWithdrawal
+        fields = ["amount"]
+        widgets = {
+            "amount": forms.NumberInput(
+                attrs={
+                    "class": "block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500",
+                    "min": "0",
+                    "step": "0.01",
+                }
+            )
+        }
+        labels = {"amount": "Monto de la tirada"}
+
+    def __init__(
+        self,
+        *args,
+        service_session: ServiceSession,
+        responsible_profile: Optional[Profile],
+        **kwargs,
+    ):
+        self.service_session = service_session
+        self.responsible_profile = responsible_profile
+        super().__init__(*args, **kwargs)
+        self.fields["amount"].min_value = 0
+
+    def clean(self):
+        cleaned_data = super().clean()
+        if self.responsible_profile is None:
+            raise forms.ValidationError(
+                "No se puede registrar la tirada porque no se encontró un encargado asignado."
+            )
+        return cleaned_data
+
+    def save(self, commit: bool = True):
+        instance: ServiceSessionWithdrawal = super().save(commit=False)
         instance.service_session = self.service_session
         instance.responsible = self.responsible_profile  # type: ignore[assignment]
         if commit:

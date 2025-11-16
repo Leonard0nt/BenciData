@@ -29,6 +29,7 @@ from .forms import (
     ServiceSessionProductLoadForm,
     ServiceSessionProductSaleForm,
     ServiceSessionProductSaleItemFormSet,
+    ServiceSessionWithdrawalForm,
     ShiftForm,
     ServiceSessionForm,
     SucursalForm,
@@ -44,6 +45,7 @@ from .models import (
     ServiceSessionProductLoad,
     ServiceSessionProductSale,
     ServiceSessionProductSaleItem,
+    ServiceSessionWithdrawal,
     Shift,
     ServiceSession,
     Sucursal,
@@ -1222,6 +1224,12 @@ class ServiceSessionDetailView(OwnerCompanyMixin, DetailView):
                         "fuel_inventory",
                     ),
                 ),
+                Prefetch(
+                    "withdrawals",
+                    queryset=ServiceSessionWithdrawal.objects.select_related(
+                        "responsible__user_FK"
+                    ),
+                ),
             )
         )
         if branch_ids:
@@ -1234,6 +1242,7 @@ class ServiceSessionDetailView(OwnerCompanyMixin, DetailView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         current_profile = getattr(self.request.user, "profile", None)
+        current_datetime = timezone.localtime()
         fuel_load_form = kwargs.get("fuel_load_form")
         if fuel_load_form is None:
             fuel_load_form = ServiceSessionFuelLoadForm(
@@ -1270,6 +1279,13 @@ class ServiceSessionDetailView(OwnerCompanyMixin, DetailView):
                 queryset=ServiceSessionProductSaleItem.objects.none(),
             )
 
+        withdraw_form = kwargs.get("withdraw_form")
+        if withdraw_form is None:
+            withdraw_form = ServiceSessionWithdrawalForm(
+                service_session=self.object,
+                responsible_profile=current_profile,
+            )
+
         branch = self.object.shift.sucursal
         product_loads = list(self.object.product_loads.all())
         product_additions = {
@@ -1290,6 +1306,7 @@ class ServiceSessionDetailView(OwnerCompanyMixin, DetailView):
         for product in branch_products:
             product.session_added_quantity = product_additions.get(product.pk, 0)
             product.session_sold_quantity = product_sales_items.get(product.pk, 0)
+        withdrawals = list(self.object.withdrawals.all())
         context.update(
             {
                 "shift": self.object.shift,
@@ -1312,6 +1329,9 @@ class ServiceSessionDetailView(OwnerCompanyMixin, DetailView):
                 "credit_sale_responsible": current_profile,
                 "credit_sales": list(self.object.credit_sales.all()),
                 "service_date": self.object.started_at.date(),
+                "withdrawals": withdrawals,
+                "withdraw_responsible": current_profile,
+                "current_datetime": current_datetime,
                 "current_profile_name": (
                     (current_profile.user_FK.get_full_name() or current_profile.user_FK.username)
                     if current_profile and getattr(current_profile, "user_FK", None)
@@ -1396,6 +1416,22 @@ class ServiceSessionDetailView(OwnerCompanyMixin, DetailView):
             context = self.get_context_data(credit_sale_form=credit_form)
             return self.render_to_response(context)
 
+        if form_type == "withdrawal":
+            withdraw_form = ServiceSessionWithdrawalForm(
+                data=request.POST,
+                service_session=self.object,
+                responsible_profile=getattr(request.user, "profile", None),
+            )
+            if withdraw_form.is_valid():
+                withdraw_form.save()
+                messages.success(
+                    request,
+                    "Tirada de caja registrada correctamente.",
+                )
+                return redirect("service_session_detail", pk=self.object.pk)
+
+            context = self.get_context_data(withdraw_form=withdraw_form)
+            return self.render_to_response(context)
         form = ServiceSessionFuelLoadForm(
             data=request.POST,
             service_session=self.object,
