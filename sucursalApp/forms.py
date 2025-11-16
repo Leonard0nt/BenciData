@@ -1,6 +1,8 @@
 from typing import Optional
 
 
+from decimal import Decimal, InvalidOperation
+
 from django import forms
 from django.db import transaction
 from django.db.models import F, Q, Count
@@ -858,19 +860,22 @@ class ServiceSessionCreditSaleForm(forms.ModelForm):
 
 
 class ServiceSessionWithdrawalForm(forms.ModelForm):
+    amount = forms.CharField(
+        label="Monto de la tirada",
+        widget=forms.TextInput(
+            attrs={
+                "class": "block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500",
+                "inputmode": "decimal",
+                "placeholder": "Ej: 150000",
+                "autocomplete": "off",
+            }
+        ),
+    )
+
     class Meta:
         model = ServiceSessionWithdrawal
         fields = ["amount"]
-        widgets = {
-            "amount": forms.NumberInput(
-                attrs={
-                    "class": "block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500",
-                    "min": "0",
-                    "step": "0.01",
-                }
-            )
-        }
-        labels = {"amount": "Monto de la tirada"}
+        widgets = {}
 
     def __init__(
         self,
@@ -882,7 +887,41 @@ class ServiceSessionWithdrawalForm(forms.ModelForm):
         self.service_session = service_session
         self.responsible_profile = responsible_profile
         super().__init__(*args, **kwargs)
-        self.fields["amount"].min_value = 0
+
+    def _normalize_amount_input(self, raw_value: str) -> str:
+        cleaned = str(raw_value)
+        for char in ("$", " ", " ", " "):
+            cleaned = cleaned.replace(char, "")
+        cleaned = cleaned.strip()
+        if not cleaned:
+            return ""
+        if "," in cleaned:
+            cleaned = cleaned.replace(".", "")
+            cleaned = cleaned.replace(",", ".")
+            return cleaned
+        dot_count = cleaned.count(".")
+        if dot_count > 1:
+            return cleaned.replace(".", "")
+        if dot_count == 1:
+            integer_part, decimal_part = cleaned.split(".")
+            if len(decimal_part) == 3 and integer_part:
+                return integer_part + decimal_part
+        return cleaned
+
+    def clean_amount(self):
+        raw_value = self.data.get(self.add_prefix("amount"), "") or ""
+        if isinstance(raw_value, (list, tuple)):
+            raw_value = raw_value[0]
+        normalized_value = self._normalize_amount_input(str(raw_value))
+        if not normalized_value:
+            raise forms.ValidationError("Debes ingresar un monto para la tirada.")
+        try:
+            amount = Decimal(normalized_value)
+        except InvalidOperation:
+            raise forms.ValidationError("Ingresa un monto válido usando solo números.")
+        if amount <= 0:
+            raise forms.ValidationError("El monto debe ser mayor a 0.")
+        return amount.quantize(Decimal("0.01"))
 
     def clean(self):
         cleaned_data = super().clean()
