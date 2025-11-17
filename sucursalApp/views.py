@@ -1182,6 +1182,11 @@ class ServiceSessionDetailView(OwnerCompanyMixin, DetailView):
     template_name = "pages/service_sessions/service_session_detail.html"
     context_object_name = "service_session"
     allowed_roles = ["OWNER", "ADMINISTRATOR"]
+    fuel_load_form_prefix = "fuel_load"
+    product_load_form_prefix = "product_load"
+    product_sale_form_prefix = "product_sale"
+    credit_sale_form_prefix = "credit_sale"
+    withdrawal_form_prefix = "withdrawal"
 
     def get_queryset(self):
         branch_ids = self.get_managed_branch_ids()
@@ -1246,7 +1251,8 @@ class ServiceSessionDetailView(OwnerCompanyMixin, DetailView):
         fuel_load_form = kwargs.get("fuel_load_form")
         if fuel_load_form is None:
             fuel_load_form = ServiceSessionFuelLoadForm(
-                service_session=self.object
+                service_session=self.object,
+                prefix=self.fuel_load_form_prefix,
             )
 
 
@@ -1255,7 +1261,8 @@ class ServiceSessionDetailView(OwnerCompanyMixin, DetailView):
         product_load_form = kwargs.get("product_load_form")
         if product_load_form is None:
             product_load_form = ServiceSessionProductLoadForm(
-                service_session=self.object
+                service_session=self.object,
+                prefix=self.product_load_form_prefix,
             )
 
         product_sale_form = kwargs.get("product_sale_form")
@@ -1263,6 +1270,7 @@ class ServiceSessionDetailView(OwnerCompanyMixin, DetailView):
             product_sale_form = ServiceSessionProductSaleForm(
                 service_session=self.object,
                 responsible_profile=current_profile,
+                prefix=self.product_sale_form_prefix,
             )
 
         credit_sale_form = kwargs.get("credit_sale_form")
@@ -1270,6 +1278,7 @@ class ServiceSessionDetailView(OwnerCompanyMixin, DetailView):
             credit_sale_form = ServiceSessionCreditSaleForm(
                 service_session=self.object,
                 responsible_profile=current_profile,
+                prefix=self.credit_sale_form_prefix,
             )
 
         product_sale_formset = kwargs.get("product_sale_formset")
@@ -1284,6 +1293,7 @@ class ServiceSessionDetailView(OwnerCompanyMixin, DetailView):
             withdraw_form = ServiceSessionWithdrawalForm(
                 service_session=self.object,
                 responsible_profile=current_profile,
+                prefix=self.withdrawal_form_prefix,
             )
 
         branch = self.object.shift.sucursal
@@ -1330,6 +1340,7 @@ class ServiceSessionDetailView(OwnerCompanyMixin, DetailView):
                 "credit_sales": list(self.object.credit_sales.all()),
                 "service_date": self.object.started_at.date(),
                 "withdrawals": withdrawals,
+                "withdraw_form": withdraw_form,
                 "withdraw_responsible": current_profile,
                 "current_datetime": current_datetime,
                 "current_profile_name": (
@@ -1349,6 +1360,7 @@ class ServiceSessionDetailView(OwnerCompanyMixin, DetailView):
             form = ServiceSessionProductLoadForm(
                 data=request.POST,
                 service_session=self.object,
+                prefix=self.product_load_form_prefix,
             )
             if form.is_valid():
                 form.save()
@@ -1365,6 +1377,7 @@ class ServiceSessionDetailView(OwnerCompanyMixin, DetailView):
                 data=request.POST,
                 service_session=self.object,
                 responsible_profile=getattr(request.user, "profile", None),
+                prefix=self.product_sale_form_prefix,
             )
             item_formset = ServiceSessionProductSaleItemFormSet(
                 data=request.POST,
@@ -1404,6 +1417,7 @@ class ServiceSessionDetailView(OwnerCompanyMixin, DetailView):
                 data=request.POST,
                 service_session=self.object,
                 responsible_profile=getattr(request.user, "profile", None),
+                prefix=self.credit_sale_form_prefix,
             )
             if credit_form.is_valid():
                 credit_form.save()
@@ -1421,6 +1435,7 @@ class ServiceSessionDetailView(OwnerCompanyMixin, DetailView):
                 data=request.POST,
                 service_session=self.object,
                 responsible_profile=getattr(request.user, "profile", None),
+                prefix=self.withdrawal_form_prefix,
             )
             if withdraw_form.is_valid():
                 withdraw_form.save()
@@ -1435,6 +1450,7 @@ class ServiceSessionDetailView(OwnerCompanyMixin, DetailView):
         form = ServiceSessionFuelLoadForm(
             data=request.POST,
             service_session=self.object,
+            prefix=self.fuel_load_form_prefix,
         )
         if form.is_valid():
             form.save()
