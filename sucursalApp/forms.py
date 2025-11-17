@@ -17,6 +17,7 @@ from .models import (
     Machine,
     Nozzle,
     Shift,
+    ServiceSessionFirefighterPayment,
     ServiceSessionCreditSale,
     ServiceSessionFuelLoad,
     ServiceSessionProductLoad,
@@ -938,3 +939,112 @@ class ServiceSessionWithdrawalForm(forms.ModelForm):
         if commit:
             instance.save()
         return instance
+
+
+class ServiceSessionFirefighterPaymentForm(forms.Form):
+    """Formulario para registrar pagos a bomberos part-time del servicio."""
+
+    amount_widget_attrs = {
+        "class": "block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500",
+        "inputmode": "decimal",
+        "placeholder": "Ej: 25000",
+        "autocomplete": "off",
+    }
+
+    def __init__(
+        self,
+        *args,
+        service_session: ServiceSession,
+        firefighters: list[Profile],
+        **kwargs,
+    ):
+        self.service_session = service_session
+        self.firefighters = firefighters
+        super().__init__(*args, **kwargs)
+
+        for firefighter in firefighters:
+            field_name = self._field_name(firefighter)
+            self.fields[field_name] = forms.CharField(
+                label="Monto a pagar",
+                required=False,
+                widget=forms.TextInput(attrs=self.amount_widget_attrs),
+            )
+
+    def _field_name(self, firefighter: Profile) -> str:
+        return f"amount_{firefighter.pk}"
+
+    def get_field_name(self, firefighter: Profile) -> str:
+        return self._field_name(firefighter)
+
+    def get_bound_field(self, firefighter: Profile):
+        return self[self._field_name(firefighter)]
+
+    def _normalize_amount_input(self, raw_value: str) -> str:
+        cleaned = str(raw_value)
+        for char in ("$", " ", " ", " "):
+            cleaned = cleaned.replace(char, "")
+        cleaned = cleaned.strip()
+        if not cleaned:
+            return ""
+        if "," in cleaned:
+            cleaned = cleaned.replace(".", "")
+            cleaned = cleaned.replace(",", ".")
+            return cleaned
+        dot_count = cleaned.count(".")
+        if dot_count > 1:
+            return cleaned.replace(".", "")
+        if dot_count == 1:
+            integer_part, decimal_part = cleaned.split(".")
+            if len(decimal_part) == 3 and integer_part:
+                return integer_part + decimal_part
+        return cleaned
+
+    def clean(self):
+        cleaned_data = super().clean()
+        self.cleaned_payments: list[tuple[Profile, Decimal]] = []
+
+        if not self.firefighters:
+            raise forms.ValidationError(
+                "No hay bomberos part-time disponibles para registrar pagos.",
+            )
+
+        for firefighter in self.firefighters:
+            field_name = self._field_name(firefighter)
+            raw_value = self.data.get(self.add_prefix(field_name), "") or ""
+            normalized_value = self._normalize_amount_input(str(raw_value))
+
+            if not normalized_value:
+                continue
+
+            try:
+                amount = Decimal(normalized_value)
+            except InvalidOperation:
+                self.add_error(field_name, "Ingresa un monto válido usando solo números.")
+                continue
+
+            if amount <= 0:
+                self.add_error(field_name, "El monto debe ser mayor a 0.")
+                continue
+
+            self.cleaned_payments.append(
+                (firefighter, amount.quantize(Decimal("0.01")))
+            )
+
+        if not self.cleaned_payments and not self.errors:
+            raise forms.ValidationError(
+                "Debes ingresar al menos un pago para registrar.",
+            )
+
+        return cleaned_data
+
+    def save(self):
+        payments = []
+        for firefighter, amount in self.cleaned_payments:
+            payments.append(
+                ServiceSessionFirefighterPayment.objects.create(
+                    service_session=self.service_session,
+                    firefighter=firefighter,
+                    amount=amount,
+                )
+            )
+        return payments

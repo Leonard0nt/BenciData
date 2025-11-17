@@ -8,6 +8,7 @@ from .models import (
     Nozzle,
     Shift,
     ServiceSession,
+    ServiceSessionFirefighterPayment,
     ServiceSessionCreditSale,
     ServiceSessionFuelLoad,
     ServiceSessionProductLoad,
@@ -250,3 +251,21 @@ class ServiceSessionCreditSaleAdmin(admin.ModelAdmin):
         "responsible__user_FK__username",
     )
     date_hierarchy = "created_at"
+
+
+@admin.register(ServiceSessionFirefighterPayment)
+class ServiceSessionFirefighterPaymentAdmin(admin.ModelAdmin):
+    list_display = (
+        "service_session",
+        "firefighter",
+        "amount",
+        "registered_at",
+    )
+    list_filter = ("service_session__shift__sucursal", "registered_at")
+    search_fields = (
+        "service_session__shift__code",
+        "firefighter__user_FK__username",
+        "firefighter__user_FK__first_name",
+        "firefighter__user_FK__last_name",
+    )
+    date_hierarchy = "registered_at"

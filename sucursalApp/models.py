@@ -544,6 +544,44 @@ class ServiceSessionWithdrawal(models.Model):
         )
 
 
+class ServiceSessionFirefighterPayment(models.Model):
+    """Registra los pagos realizados a bomberos durante un servicio."""
+
+    service_session = models.ForeignKey(
+        ServiceSession,
+        on_delete=models.CASCADE,
+        related_name="firefighter_payments",
+        verbose_name="Servicio",
+    )
+    firefighter = models.ForeignKey(
+        "UsuarioApp.Profile",
+        on_delete=models.PROTECT,
+        related_name="firefighter_payments",
+        verbose_name="Bombero",
+    )
+    amount = models.DecimalField(
+        "Monto pagado",
+        max_digits=12,
+        decimal_places=2,
+    )
+    registered_at = models.DateTimeField(
+        "Fecha de registro",
+        auto_now_add=True,
+    )
+
+    class Meta:
+        verbose_name = "Pago a bombero"
+        verbose_name_plural = "Pagos a bomberos"
+        ordering = ("-registered_at", "-pk")
+
+    def __str__(self) -> str:
+        return (
+            f"Pago #{self.pk} - {self.service_session.shift.sucursal.name}"
+            if self.pk
+            else "Pago a bombero"
+        )
+
+
 class ServiceSessionFuelLoad(models.Model):
     """Registra las cargas de combustible realizadas durante un servicio."""
 

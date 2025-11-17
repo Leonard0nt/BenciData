@@ -26,6 +26,7 @@ from .forms import (
     NozzleForm,
     ServiceSessionCreditSaleForm,
     ServiceSessionFuelLoadForm,
+    ServiceSessionFirefighterPaymentForm,
     ServiceSessionProductLoadForm,
     ServiceSessionProductSaleForm,
     ServiceSessionProductSaleItemFormSet,
@@ -42,6 +43,7 @@ from .models import (
     Nozzle,
     ServiceSessionCreditSale,
     ServiceSessionFuelLoad,
+    ServiceSessionFirefighterPayment,
     ServiceSessionProductLoad,
     ServiceSessionProductSale,
     ServiceSessionProductSaleItem,
@@ -1187,6 +1189,7 @@ class ServiceSessionDetailView(OwnerCompanyMixin, DetailView):
     product_sale_form_prefix = "product_sale"
     credit_sale_form_prefix = "credit_sale"
     withdrawal_form_prefix = "withdrawal"
+    firefighter_payment_form_prefix = "firefighter_payment"
 
     def get_queryset(self):
         branch_ids = self.get_managed_branch_ids()
@@ -1233,6 +1236,12 @@ class ServiceSessionDetailView(OwnerCompanyMixin, DetailView):
                     "withdrawals",
                     queryset=ServiceSessionWithdrawal.objects.select_related(
                         "responsible__user_FK"
+                    ),
+                ),
+                Prefetch(
+                    "firefighter_payments",
+                    queryset=ServiceSessionFirefighterPayment.objects.select_related(
+                        "firefighter__user_FK"
                     ),
                 ),
             )
@@ -1297,6 +1306,7 @@ class ServiceSessionDetailView(OwnerCompanyMixin, DetailView):
             )
 
         branch = self.object.shift.sucursal
+        attendants = list(self.object.attendants.all())
         product_loads = list(self.object.product_loads.all())
         product_additions = {
             entry["product_id"]: entry["total_added"]
@@ -1317,6 +1327,19 @@ class ServiceSessionDetailView(OwnerCompanyMixin, DetailView):
             product.session_added_quantity = product_additions.get(product.pk, 0)
             product.session_sold_quantity = product_sales_items.get(product.pk, 0)
         withdrawals = list(self.object.withdrawals.all())
+        part_time_attendants = [
+            attendant
+            for attendant in attendants
+            if attendant and not getattr(attendant, "is_partime", True)
+        ]
+
+        firefighter_payment_form = kwargs.get("firefighter_payment_form")
+        if firefighter_payment_form is None:
+            firefighter_payment_form = ServiceSessionFirefighterPaymentForm(
+                service_session=self.object,
+                firefighters=part_time_attendants,
+                prefix=self.firefighter_payment_form_prefix,
+            )
         context.update(
             {
                 "shift": self.object.shift,
@@ -1347,6 +1370,18 @@ class ServiceSessionDetailView(OwnerCompanyMixin, DetailView):
                     (current_profile.user_FK.get_full_name() or current_profile.user_FK.username)
                     if current_profile and getattr(current_profile, "user_FK", None)
                     else "Sin encargado asignado"
+                ),
+                "part_time_attendants": part_time_attendants,
+                "firefighter_payment_form": firefighter_payment_form,
+                "firefighter_payment_fields": [
+                    (
+                        attendant,
+                        firefighter_payment_form.get_bound_field(attendant),
+                    )
+                    for attendant in part_time_attendants
+                ],
+                "firefighter_payments": list(
+                    self.object.firefighter_payments.all()
                 ),
             }
         )
@@ -1446,6 +1481,31 @@ class ServiceSessionDetailView(OwnerCompanyMixin, DetailView):
                 return redirect("service_session_detail", pk=self.object.pk)
 
             context = self.get_context_data(withdraw_form=withdraw_form)
+            return self.render_to_response(context)
+
+        if form_type == "firefighter-payment":
+            part_time_attendants = [
+                attendant
+                for attendant in self.object.attendants.all()
+                if attendant and not getattr(attendant, "is_partime", True)
+            ]
+            firefighter_payment_form = ServiceSessionFirefighterPaymentForm(
+                data=request.POST,
+                service_session=self.object,
+                firefighters=part_time_attendants,
+                prefix=self.firefighter_payment_form_prefix,
+            )
+            if firefighter_payment_form.is_valid():
+                firefighter_payment_form.save()
+                messages.success(
+                    request,
+                    "Pagos a bomberos registrados correctamente.",
+                )
+                return redirect("service_session_detail", pk=self.object.pk)
+
+            context = self.get_context_data(
+                firefighter_payment_form=firefighter_payment_form
+            )
             return self.render_to_response(context)
         form = ServiceSessionFuelLoadForm(
             data=request.POST,
