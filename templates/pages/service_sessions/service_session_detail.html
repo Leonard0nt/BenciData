@@ -22,12 +22,6 @@
         <p class="mt-2 text-xs text-indigo-700">Monedas: $ {{ service_session.coins_amount|floatformat:2 }} · Efectivo: $ {{ service_session.cash_amount|floatformat:2 }}</p>
       </div>
     </div>
-          <button
-          type="button"
-          class="inline-flex items-center justify-center rounded-md bg-gradient-to-br from-rose-500 to-red-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-rose-500 hover:from-rose-600 hover:to-red-700"
-        >
-          Cerrar turno
-        </button>
   </section>
 
   <section class="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
@@ -95,8 +89,8 @@
   <div
     id="tab-caja"
     class="tab-content mt-8 space-y-6"
-    x-data="{ saleModalOpen: false, withdrawModalOpen: false, creditModalOpen: false, firefighterPaymentModalOpen: false }"
-    @keydown.escape.window="saleModalOpen = false; withdrawModalOpen = false; creditModalOpen = false; firefighterPaymentModalOpen = false"
+    x-data="{ saleModalOpen: false, withdrawModalOpen: false, creditModalOpen: false, firefighterPaymentModalOpen: false, transbankVoucherModalOpen: false }"
+    @keydown.escape.window="saleModalOpen = false; withdrawModalOpen = false; creditModalOpen = false; firefighterPaymentModalOpen = false; transbankVoucherModalOpen = false"
   >
     <section class="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
       <div class="flex flex-wrap items-center justify-between gap-3">
@@ -166,16 +160,17 @@
             <p class="mt-2 text-sm text-gray-600">Lleva el control de los pagos efectuados a los bomberos durante el turno.</p>
           </div>
         </button>
-        <a
-          href="#"
+        <button
+          type="button"
           class="flex h-full flex-col justify-between rounded-lg border border-gray-100 bg-gray-50 p-5 text-left transition hover:border-indigo-200 hover:bg-white"
+          @click="transbankVoucherModalOpen = true"
         >
           <div>
             <p class="text-sm font-semibold uppercase tracking-wide text-indigo-600">Caja</p>
             <h3 class="mt-2 text-lg font-semibold text-gray-900">Registro vaucher Transbank</h3>
             <p class="mt-2 text-sm text-gray-600">Registra y revisa los comprobantes generados por Transbank.</p>
           </div>
-        </a>
+        </button>
         <a
           href="#"
           class="flex h-full flex-col justify-between rounded-lg border border-gray-100 bg-gray-50 p-5 text-left transition hover:border-indigo-200 hover:bg-white"
@@ -227,6 +222,51 @@
         {% else %}
           <div class="mt-4 rounded-lg border border-dashed border-gray-300 bg-white/80 p-4 text-sm text-gray-600">
             Aún no se registran tiradas en este turno. Utiliza el botón "Registro de tiradas" para añadir la primera.
+          </div>
+        {% endif %}
+      </div>
+
+      <div class="mt-10 rounded-xl border border-sky-100 bg-sky-50/40 p-4 sm:p-6">
+        <div class="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <h3 class="text-base font-semibold text-gray-900">Vouchers Transbank registrados</h3>
+            <p class="mt-1 text-sm text-gray-600">Revisa los vouchers ingresados durante este servicio.</p>
+          </div>
+          <span class="inline-flex items-center rounded-full bg-white px-3 py-1 text-sm font-medium text-sky-700">
+            {{ transbank_vouchers|length }} registro{{ transbank_vouchers|length|pluralize:"s" }}
+          </span>
+        </div>
+
+        {% if transbank_vouchers %}
+          <div class="mt-4 overflow-hidden rounded-lg border border-gray-200">
+            <table class="min-w-full divide-y divide-gray-200">
+              <thead class="bg-gray-50">
+                <tr class="text-left text-xs font-semibold uppercase tracking-wide text-gray-500">
+                  <th scope="col" class="px-4 py-3">Fecha</th>
+                  <th scope="col" class="px-4 py-3">Hora</th>
+                  <th scope="col" class="px-4 py-3">Encargado</th>
+                  <th scope="col" class="px-4 py-3 text-right">Cantidad</th>
+                  <th scope="col" class="px-4 py-3 text-right">Monto total</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-gray-200 bg-white text-sm">
+                {% for voucher in transbank_vouchers %}
+                  <tr>
+                    <td class="px-4 py-3 text-gray-700">{{ voucher.registered_at|date:"d/m/Y" }}</td>
+                    <td class="px-4 py-3 text-gray-700">{{ voucher.registered_at|date:"H:i" }}</td>
+                    <td class="px-4 py-3 font-medium text-gray-900">
+                      {{ voucher.responsible.user_FK.get_full_name|default:voucher.responsible.user_FK.username }}
+                    </td>
+                    <td class="px-4 py-3 text-right text-gray-900">{{ voucher.voucher_count }}</td>
+                    <td class="px-4 py-3 text-right text-gray-900">$ {{ voucher.total_amount|floatformat:0 }}</td>
+                  </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        {% else %}
+          <div class="mt-4 rounded-lg border border-dashed border-gray-300 bg-white/80 p-4 text-sm text-gray-600">
+            Aún no se registran vouchers de Transbank en este servicio. Usa el botón "Registro vaucher Transbank" para agregar el primero.
           </div>
         {% endif %}
       </div>
@@ -702,6 +742,113 @@
               class="inline-flex items-center rounded-md bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500"
             >
               Registrar tirada
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <div
+      x-cloak
+      x-show="transbankVoucherModalOpen"
+      x-transition.opacity
+      class="fixed inset-0 z-50 flex justify-center bg-gray-900/80 p-4 sm:items-center"
+      @click.self="transbankVoucherModalOpen = false"
+      style="margin-top: 0%;"
+    >
+      <div
+        class="w-full max-w-2xl overflow-y-auto rounded-none bg-white p-6 shadow-2xl sm:max-h-[calc(100vh-3rem)] sm:rounded-xl"
+        @click.away="transbankVoucherModalOpen = false"
+      >
+        <div class="flex items-center justify-between">
+          <div>
+            <h3 class="text-lg font-semibold text-gray-900">Registrar vouchers Transbank</h3>
+            <p class="mt-1 text-sm text-gray-500">Ingresa la cantidad de vouchers y el total cobrado en Transbank.</p>
+          </div>
+          <button type="button" class="rounded-md p-1 text-gray-400 hover:text-gray-600" @click="transbankVoucherModalOpen = false">
+            <span class="sr-only">Cerrar</span>
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="h-5 w-5">
+              <path
+                fill-rule="evenodd"
+                d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"
+                clip-rule="evenodd"
+              />
+            </svg>
+          </button>
+        </div>
+
+        <form method="post" action="{% url 'service_session_detail' service_session.pk %}" class="mt-6 space-y-6">
+          {% csrf_token %}
+          <input type="hidden" name="form_type" value="transbank-voucher" />
+
+          {% if transbank_voucher_form.non_field_errors %}
+            <div class="rounded-md border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+              {% for error in transbank_voucher_form.non_field_errors %}
+                <p>{{ error }}</p>
+              {% endfor %}
+            </div>
+          {% endif %}
+
+          <div class="grid gap-4 sm:grid-cols-2">
+            <div>
+              <span class="block text-sm font-medium text-gray-700">Fecha</span>
+              <p class="mt-2 rounded-md border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-700">{{ current_datetime|date:"d \d\e F \d\e Y" }}</p>
+            </div>
+            <div>
+              <span class="block text-sm font-medium text-gray-700">Hora</span>
+              <p class="mt-2 rounded-md border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-700">{{ current_datetime|date:"H:i" }} hrs</p>
+            </div>
+            <div class="sm:col-span-2">
+              <span class="block text-sm font-medium text-gray-700">Encargado</span>
+              {% if transbank_voucher_responsible %}
+                <p class="mt-2 rounded-md border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-700">
+                  {{ transbank_voucher_responsible.user_FK.get_full_name|default:transbank_voucher_responsible.user_FK.username }}
+                </p>
+              {% else %}
+                <p class="mt-2 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-700">
+                  No hay un encargado asignado al turno.
+                </p>
+              {% endif %}
+            </div>
+          </div>
+
+          <div class="grid gap-4 sm:grid-cols-2">
+            <div>
+              <label for="{{ transbank_voucher_form.voucher_count.id_for_label }}" class="block text-sm font-medium text-gray-700">Cantidad de vouchers</label>
+              {{ transbank_voucher_form.voucher_count }}
+              {% if transbank_voucher_form.voucher_count.errors %}
+                <p class="mt-1 text-sm text-red-600">{{ transbank_voucher_form.voucher_count.errors|striptags }}</p>
+              {% else %}
+                <p class="mt-1 text-xs text-gray-500">Indica cuántos vouchers se generaron.</p>
+              {% endif %}
+            </div>
+            <div>
+              <label for="{{ transbank_voucher_form.total_amount.id_for_label }}" class="block text-sm font-medium text-gray-700">Monto total</label>
+              <div class="mt-1 flex rounded-md shadow-sm">
+                <span class="inline-flex items-center rounded-l-md border border-r-0 border-gray-300 bg-gray-50 px-3 text-sm text-gray-500">$</span>
+                {{ transbank_voucher_form.total_amount }}
+              </div>
+              {% if transbank_voucher_form.total_amount.errors %}
+                <p class="mt-1 text-sm text-red-600">{{ transbank_voucher_form.total_amount.errors|striptags }}</p>
+              {% else %}
+                <p class="mt-1 text-xs text-gray-500">Ingresa el monto total cobrado mediante Transbank.</p>
+              {% endif %}
+            </div>
+          </div>
+
+          <div class="flex flex-wrap items-center justify-end gap-3">
+            <button
+              type="button"
+              class="inline-flex items-center rounded-md border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+              @click="transbankVoucherModalOpen = false"
+            >
+              Cancelar
+            </button>
+            <button
+              type="submit"
+              class="inline-flex items-center rounded-md bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500"
+            >
+              Registrar vouchers
             </button>
           </div>
         </form>

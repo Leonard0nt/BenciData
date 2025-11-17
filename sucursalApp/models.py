@@ -544,6 +544,38 @@ class ServiceSessionWithdrawal(models.Model):
         )
 
 
+class ServiceSessionTransbankVoucher(models.Model):
+    """Registra los vouchers generados por Transbank durante un servicio."""
+
+    service_session = models.ForeignKey(
+        ServiceSession,
+        on_delete=models.CASCADE,
+        related_name="transbank_vouchers",
+        verbose_name="Servicio",
+    )
+    responsible = models.ForeignKey(
+        "UsuarioApp.Profile",
+        on_delete=models.PROTECT,
+        related_name="transbank_vouchers",
+        verbose_name="Responsable",
+    )
+    voucher_count = models.PositiveIntegerField("Cantidad de vouchers")
+    total_amount = models.DecimalField("Monto total", max_digits=12, decimal_places=2)
+    registered_at = models.DateTimeField("Fecha de registro", auto_now_add=True)
+
+    class Meta:
+        verbose_name = "Voucher Transbank"
+        verbose_name_plural = "Vouchers Transbank"
+        ordering = ("-registered_at", "-pk")
+
+    def __str__(self) -> str:
+        return (
+            f"Voucher #{self.pk} - {self.service_session.shift.sucursal.name}"
+            if self.pk
+            else "Voucher Transbank"
+        )
+
+
 class ServiceSessionFirefighterPayment(models.Model):
     """Registra los pagos realizados a bomberos durante un servicio."""
 

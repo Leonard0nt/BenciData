@@ -14,6 +14,7 @@ from .models import (
     ServiceSessionProductLoad,
     ServiceSessionProductSale,
     ServiceSessionProductSaleItem,
+    ServiceSessionTransbankVoucher,
     Sucursal,
     SucursalStaff,
 )
@@ -251,6 +252,25 @@ class ServiceSessionCreditSaleAdmin(admin.ModelAdmin):
         "responsible__user_FK__username",
     )
     date_hierarchy = "created_at"
+
+
+@admin.register(ServiceSessionTransbankVoucher)
+class ServiceSessionTransbankVoucherAdmin(admin.ModelAdmin):
+    list_display = (
+        "service_session",
+        "voucher_count",
+        "total_amount",
+        "responsible",
+        "registered_at",
+    )
+    list_filter = ("service_session__shift__sucursal", "registered_at")
+    search_fields = (
+        "service_session__shift__code",
+        "responsible__user_FK__username",
+        "responsible__user_FK__first_name",
+        "responsible__user_FK__last_name",
+    )
+    date_hierarchy = "registered_at"
 
 
 @admin.register(ServiceSessionFirefighterPayment)

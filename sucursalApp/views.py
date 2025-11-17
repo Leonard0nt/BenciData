@@ -30,6 +30,7 @@ from .forms import (
     ServiceSessionProductLoadForm,
     ServiceSessionProductSaleForm,
     ServiceSessionProductSaleItemFormSet,
+    ServiceSessionTransbankVoucherForm,
     ServiceSessionWithdrawalForm,
     ShiftForm,
     ServiceSessionForm,
@@ -47,6 +48,7 @@ from .models import (
     ServiceSessionProductLoad,
     ServiceSessionProductSale,
     ServiceSessionProductSaleItem,
+    ServiceSessionTransbankVoucher,
     ServiceSessionWithdrawal,
     Shift,
     ServiceSession,
@@ -1189,6 +1191,7 @@ class ServiceSessionDetailView(OwnerCompanyMixin, DetailView):
     product_sale_form_prefix = "product_sale"
     credit_sale_form_prefix = "credit_sale"
     withdrawal_form_prefix = "withdrawal"
+    transbank_voucher_form_prefix = "transbank_voucher"
     firefighter_payment_form_prefix = "firefighter_payment"
 
     def get_queryset(self):
@@ -1235,6 +1238,12 @@ class ServiceSessionDetailView(OwnerCompanyMixin, DetailView):
                 Prefetch(
                     "withdrawals",
                     queryset=ServiceSessionWithdrawal.objects.select_related(
+                        "responsible__user_FK"
+                    ),
+                ),
+                Prefetch(
+                    "transbank_vouchers",
+                    queryset=ServiceSessionTransbankVoucher.objects.select_related(
                         "responsible__user_FK"
                     ),
                 ),
@@ -1305,6 +1314,14 @@ class ServiceSessionDetailView(OwnerCompanyMixin, DetailView):
                 prefix=self.withdrawal_form_prefix,
             )
 
+        transbank_voucher_form = kwargs.get("transbank_voucher_form")
+        if transbank_voucher_form is None:
+            transbank_voucher_form = ServiceSessionTransbankVoucherForm(
+                service_session=self.object,
+                responsible_profile=current_profile,
+                prefix=self.transbank_voucher_form_prefix,
+            )
+
         branch = self.object.shift.sucursal
         attendants = list(self.object.attendants.all())
         product_loads = list(self.object.product_loads.all())
@@ -1365,6 +1382,9 @@ class ServiceSessionDetailView(OwnerCompanyMixin, DetailView):
                 "withdrawals": withdrawals,
                 "withdraw_form": withdraw_form,
                 "withdraw_responsible": current_profile,
+                "transbank_voucher_form": transbank_voucher_form,
+                "transbank_voucher_responsible": current_profile,
+                "transbank_vouchers": list(self.object.transbank_vouchers.all()),
                 "current_datetime": current_datetime,
                 "current_profile_name": (
                     (current_profile.user_FK.get_full_name() or current_profile.user_FK.username)
@@ -1481,6 +1501,24 @@ class ServiceSessionDetailView(OwnerCompanyMixin, DetailView):
                 return redirect("service_session_detail", pk=self.object.pk)
 
             context = self.get_context_data(withdraw_form=withdraw_form)
+            return self.render_to_response(context)
+
+        if form_type == "transbank-voucher":
+            voucher_form = ServiceSessionTransbankVoucherForm(
+                data=request.POST,
+                service_session=self.object,
+                responsible_profile=getattr(request.user, "profile", None),
+                prefix=self.transbank_voucher_form_prefix,
+            )
+            if voucher_form.is_valid():
+                voucher_form.save()
+                messages.success(
+                    request,
+                    "Registro de vouchers de Transbank guardado correctamente.",
+                )
+                return redirect("service_session_detail", pk=self.object.pk)
+
+            context = self.get_context_data(transbank_voucher_form=voucher_form)
             return self.render_to_response(context)
 
         if form_type == "firefighter-payment":

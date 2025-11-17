@@ -18,6 +18,7 @@ from .models import (
     Nozzle,
     Shift,
     ServiceSessionFirefighterPayment,
+    ServiceSessionTransbankVoucher,
     ServiceSessionCreditSale,
     ServiceSessionFuelLoad,
     ServiceSessionProductLoad,
@@ -934,6 +935,102 @@ class ServiceSessionWithdrawalForm(forms.ModelForm):
 
     def save(self, commit: bool = True):
         instance: ServiceSessionWithdrawal = super().save(commit=False)
+        instance.service_session = self.service_session
+        instance.responsible = self.responsible_profile  # type: ignore[assignment]
+        if commit:
+            instance.save()
+        return instance
+
+
+class ServiceSessionTransbankVoucherForm(forms.ModelForm):
+    total_amount = forms.CharField(
+        label="Monto total",
+        widget=forms.TextInput(
+            attrs={
+                "class": "block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500",
+                "inputmode": "decimal",
+                "placeholder": "Ej: 200000",
+                "autocomplete": "off",
+            }
+        ),
+    )
+
+    class Meta:
+        model = ServiceSessionTransbankVoucher
+        fields = ["voucher_count", "total_amount"]
+        widgets = {
+            "voucher_count": forms.NumberInput(
+                attrs={
+                    "class": "block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500",
+                    "min": 1,
+                    "placeholder": "Ej: 5",
+                    "inputmode": "numeric",
+                }
+            ),
+        }
+
+    def __init__(
+        self,
+        *args,
+        service_session: ServiceSession,
+        responsible_profile: Optional[Profile],
+        **kwargs,
+    ):
+        self.service_session = service_session
+        self.responsible_profile = responsible_profile
+        super().__init__(*args, **kwargs)
+
+    def _normalize_amount_input(self, raw_value: str) -> str:
+        cleaned = str(raw_value)
+        for char in ("$", " ", " ", " "):
+            cleaned = cleaned.replace(char, "")
+        cleaned = cleaned.strip()
+        if not cleaned:
+            return ""
+        if "," in cleaned:
+            cleaned = cleaned.replace(".", "")
+            cleaned = cleaned.replace(",", ".")
+            return cleaned
+        dot_count = cleaned.count(".")
+        if dot_count > 1:
+            return cleaned.replace(".", "")
+        if dot_count == 1:
+            integer_part, decimal_part = cleaned.split(".")
+            if len(decimal_part) == 3 and integer_part:
+                return integer_part + decimal_part
+        return cleaned
+
+    def clean_total_amount(self):
+        raw_value = self.data.get(self.add_prefix("total_amount"), "") or ""
+        if isinstance(raw_value, (list, tuple)):
+            raw_value = raw_value[0]
+        normalized_value = self._normalize_amount_input(str(raw_value))
+        if not normalized_value:
+            raise forms.ValidationError("Debes ingresar el monto total de los vouchers.")
+        try:
+            amount = Decimal(normalized_value)
+        except InvalidOperation:
+            raise forms.ValidationError("Ingresa un monto válido usando solo números.")
+        if amount <= 0:
+            raise forms.ValidationError("El monto debe ser mayor a 0.")
+        return amount.quantize(Decimal("0.01"))
+
+    def clean_voucher_count(self):
+        count = self.cleaned_data.get("voucher_count")
+        if count is None or count <= 0:
+            raise forms.ValidationError("Ingresa una cantidad válida de vouchers.")
+        return count
+
+    def clean(self):
+        cleaned_data = super().clean()
+        if self.responsible_profile is None:
+            raise forms.ValidationError(
+                "No se puede registrar porque no se encontró un encargado asignado."
+            )
+        return cleaned_data
+
+    def save(self, commit: bool = True):
+        instance: ServiceSessionTransbankVoucher = super().save(commit=False)
         instance.service_session = self.service_session
         instance.responsible = self.responsible_profile  # type: ignore[assignment]
         if commit:
