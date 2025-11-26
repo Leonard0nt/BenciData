@@ -1747,6 +1747,7 @@ class ServiceSessionDetailView(OwnerCompanyMixin, DetailView):
             )
             if close_session_formset.is_valid():
                 machines_by_id = {machine.pk: machine for machine in branch_machines}
+                closure_time = timezone.now()
                 with transaction.atomic():
                     for form in close_session_formset:
                         machine_id = form.cleaned_data.get("machine_id")
@@ -1763,7 +1764,11 @@ class ServiceSessionDetailView(OwnerCompanyMixin, DetailView):
                                 "updated_at",
                             ]
                         )
-                    self.object.ended_at = timezone.now()
+                    ServiceSession.objects.filter(
+                        shift__sucursal=self.object.shift.sucursal,
+                        ended_at__isnull=True,
+                    ).exclude(pk=self.object.pk).update(ended_at=closure_time)
+                    self.object.ended_at = closure_time
                     self.object.save(update_fields=["ended_at"])
                 messages.success(
                     request,
