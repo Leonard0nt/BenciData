@@ -422,12 +422,12 @@ class SucursalUpdateView(OwnerCompanyMixin, UpdateView):
                         "attendants": list(session.attendants.all()),
                         "credit_count": len(credit_sales),
                         "credit_total": sum(
-                            (credit.amount or decimal_zero) for credit in credit_sales,
+                            ((credit.amount or decimal_zero) for credit in credit_sales),
                             decimal_zero,
                         ),
                         "fuel_load_count": len(fuel_loads),
                         "fuel_load_liters": sum(
-                            (load.liters_added or decimal_zero) for load in fuel_loads,
+                            ((load.liters_added or decimal_zero) for load in fuel_loads),
                             decimal_zero,
                         ),
                         "product_load_count": len(product_loads),
@@ -437,21 +437,18 @@ class SucursalUpdateView(OwnerCompanyMixin, UpdateView):
                         "product_sales_count": len(product_sales),
                         "product_sales_items": product_sale_items_total,
                         "withdrawal_total": sum(
-                            (withdrawal.amount or decimal_zero)
-                            for withdrawal in withdrawals,
+                            ((withdrawal.amount or decimal_zero) for withdrawal in withdrawals),
                             decimal_zero,
                         ),
                         "voucher_count": sum(
                             (voucher.voucher_count or 0) for voucher in vouchers
                         ),
                         "voucher_total": sum(
-                            (voucher.total_amount or decimal_zero)
-                            for voucher in vouchers,
+                            ((voucher.total_amount or decimal_zero) for voucher in vouchers),
                             decimal_zero,
                         ),
                         "firefighter_payments_total": sum(
-                            (payment.amount or decimal_zero)
-                            for payment in firefighter_payments,
+                            ((payment.amount or decimal_zero) for payment in firefighter_payments),
                             decimal_zero,
                         ),
                     }
@@ -624,6 +621,7 @@ class SucursalUpdateView(OwnerCompanyMixin, UpdateView):
         form = MachineForm(
             request.POST,
             instance=machine,
+            island=machine.island,
             auto_id=f"edit-machine-{machine.pk}_%s",
         )
         if form.is_valid():
@@ -1079,6 +1077,12 @@ class MachineCreateView(BranchAccessMixin, CreateView):
     template_name = "pages/sucursales/related_form.html"
     island_url_kwarg = "island_pk"
 
+    def get_form_kwargs(self) -> Dict[str, Any]:
+        kwargs = super().get_form_kwargs()
+        kwargs.setdefault("island", self.get_island())
+        return kwargs
+
+
     def get_island(self) -> Island:
         sucursal = self.get_sucursal()
         queryset = sucursal.branch_islands.all()
@@ -1112,6 +1116,11 @@ class MachineCreateView(BranchAccessMixin, CreateView):
 class MachineUpdateView(MachineAccessMixin, UpdateView):
     form_class = MachineForm
     template_name = "pages/sucursales/related_form.html"
+
+    def get_form_kwargs(self) -> Dict[str, Any]:
+        kwargs = super().get_form_kwargs()
+        kwargs.setdefault("island", getattr(self, "object", None) and self.object.island)
+        return kwargs
 
     def get(self, request, *args, **kwargs):
         self.object = self.get_object()

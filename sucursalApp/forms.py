@@ -4,6 +4,7 @@ from typing import Optional
 from decimal import Decimal, InvalidOperation
 
 from django import forms
+from django.core.exceptions import ValidationError
 from django.forms import BaseFormSet, formset_factory
 from django.db import transaction
 from django.db.models import F, Q, Count
@@ -152,6 +153,29 @@ class IslandForm(forms.ModelForm):
 
 
 class MachineForm(forms.ModelForm):
+    def __init__(self, *args, island: Optional[Island] = None, **kwargs):
+        instance_island = getattr(kwargs.get("instance"), "island", None)
+        initial_island = kwargs.get("initial", {}).get("island")
+        self._form_island = island or instance_island or initial_island
+        super().__init__(*args, **kwargs)
+
+        fuel_field = self.fields.get("fuel_inventory")
+        if fuel_field:
+            queryset = FuelInventory.objects.all()
+            if self._form_island:
+                queryset = queryset.filter(sucursal=self._form_island.sucursal)
+            fuel_field.queryset = queryset.order_by("code")
+            fuel_field.empty_label = "Selecciona un estanque"
+
+    def clean_fuel_inventory(self):
+        fuel_inventory = self.cleaned_data.get("fuel_inventory")
+        island = self.cleaned_data.get("island") or self._form_island
+        if fuel_inventory and island and fuel_inventory.sucursal_id != island.sucursal_id:
+            raise ValidationError(
+                "El estanque seleccionado no pertenece a la sucursal de la máquina."
+            )
+        return fuel_inventory
+
     class Meta:
         model = Machine
         fields = [
@@ -159,6 +183,7 @@ class MachineForm(forms.ModelForm):
             "number",
             "initial_numeral",
             "final_numeral",
+            "fuel_inventory",
             "fuel_type",
             "description",
         ]
@@ -167,6 +192,9 @@ class MachineForm(forms.ModelForm):
             "number": forms.NumberInput(attrs={"class": "w-full border rounded p-2"}),
             "initial_numeral": forms.NumberInput(attrs={"class": "w-full border rounded p-2"}),
             "final_numeral": forms.NumberInput(attrs={"class": "w-full border rounded p-2"}),
+            "fuel_inventory": forms.Select(
+                attrs={"class": "w-full border rounded p-2"}
+            ),
             "fuel_type": forms.TextInput(attrs={"class": "w-full border rounded p-2"}),
             "description": forms.TextInput(attrs={"class": "w-full border rounded p-2"}),
         }
