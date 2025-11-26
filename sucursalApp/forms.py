@@ -2,6 +2,7 @@ from typing import Optional
 
 
 from decimal import Decimal, InvalidOperation
+from typing import Iterable
 
 from django import forms
 from django.core.exceptions import ValidationError
@@ -15,6 +16,7 @@ from UsuarioApp.models import Profile
 from .models import (
     BranchProduct,
     FuelInventory,
+    FuelPrice,
     Island,
     Machine,
     Nozzle,
@@ -453,6 +455,46 @@ class FuelInventoryForm(forms.ModelForm):
             "liters": forms.NumberInput(
                 attrs={"class": "w-full border rounded p-2", "step": "0.01"}
             ),
+        }
+
+
+class FuelPriceForm(forms.ModelForm):
+    def __init__(
+        self,
+        *args,
+        branch: Sucursal,
+        available_fuel_types: Iterable[str],
+        **kwargs,
+    ):
+        self.branch = branch
+        self.available_fuel_types = set(available_fuel_types)
+        super().__init__(*args, **kwargs)
+        self.fields["sucursal"].initial = branch
+        self.fields["sucursal"].widget = forms.HiddenInput()
+        self.fields["fuel_type"].widget = forms.HiddenInput()
+        if "fuel_type" in self.initial and not self.fields["fuel_type"].initial:
+            self.fields["fuel_type"].initial = self.initial.get("fuel_type")
+
+    def clean_fuel_type(self):
+        fuel_type = self.cleaned_data.get("fuel_type")
+        if fuel_type not in self.available_fuel_types:
+            raise forms.ValidationError(
+                "El tipo de combustible seleccionado no es válido para la sucursal."
+            )
+        return fuel_type
+
+    class Meta:
+        model = FuelPrice
+        fields = ["sucursal", "fuel_type", "price"]
+        widgets = {
+            "price": forms.NumberInput(
+                attrs={
+                    "class": "w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500",
+                    "step": "0.01",
+                    "min": "0",
+                    "placeholder": "Ej: 1200.50",
+                }
+            )
         }
 
 

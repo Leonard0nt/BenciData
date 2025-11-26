@@ -863,3 +863,25 @@ class FuelInventory(models.Model):
 
     def __str__(self) -> str:
         return f"{self.code} - {self.sucursal.name} ({self.fuel_type})"
+
+
+class FuelPrice(models.Model):
+    """Registra el historial de precios por tipo de combustible en una sucursal."""
+
+    sucursal = models.ForeignKey(
+        Sucursal,
+        on_delete=models.CASCADE,
+        related_name="fuel_prices",
+        verbose_name="Sucursal",
+    )
+    fuel_type = models.CharField("Tipo de combustible", max_length=100)
+    price = models.DecimalField("Precio por litro", max_digits=12, decimal_places=2)
+    created_at = models.DateTimeField("Fecha de registro", auto_now_add=True)
+
+    class Meta:
+        verbose_name = "Precio de combustible"
+        verbose_name_plural = "Precios de combustible"
+        ordering = ("-created_at", "-pk")
+
+    def __str__(self) -> str:
+        return f"{self.fuel_type} - {self.sucursal.name} (${self.price})"

@@ -11,6 +11,7 @@ from django.http import Http404, HttpResponseRedirect
 from django.shortcuts import get_object_or_404, redirect
 from django.urls import reverse, reverse_lazy
 from django.utils import timezone
+from django.template.defaultfilters import slugify
 
 from django.views import View
 
@@ -22,6 +23,7 @@ from homeApp.models import Company
 from .forms import (
     BranchProductForm,
     FuelInventoryForm,
+    FuelPriceForm,
     IslandForm,
     MachineForm,
     NozzleForm,
@@ -41,6 +43,7 @@ from .forms import (
 from .models import (
     BranchProduct,
     FuelInventory,
+    FuelPrice,
     Island,
     Machine,
     Nozzle,
@@ -302,6 +305,35 @@ class SucursalUpdateView(OwnerCompanyMixin, UpdateView):
                     instance=inventory, auto_id=f"edit-inventory-{inventory.pk}_%s"
                 )
             context["fuel_inventories"] = fuel_inventories
+            fuel_types = sorted({inventory.fuel_type for inventory in fuel_inventories})
+            fuel_price_forms: dict[str, FuelPriceForm] = {}
+            fuel_price_entries: list[dict[str, Any]] = []
+            for fuel_type in fuel_types:
+                modal_id = f"fuel-price-{slugify(fuel_type)}"
+                latest_price = (
+                    FuelPrice.objects.filter(
+                        sucursal=self.object, fuel_type=fuel_type
+                    )
+                    .order_by("-created_at", "-pk")
+                    .first()
+                )
+                fuel_price_entries.append(
+                    {
+                        "fuel_type": fuel_type,
+                        "current_price": getattr(latest_price, "price", None),
+                        "last_updated": getattr(latest_price, "created_at", None),
+                        "modal_id": modal_id,
+                    }
+                )
+                fuel_price_forms[fuel_type] = FuelPriceForm(
+                    initial={"fuel_type": fuel_type},
+                    branch=self.object,
+                    available_fuel_types=fuel_types,
+                    auto_id=f"{modal_id}-form_%s",
+                )
+                fuel_price_entries[-1]["form"] = fuel_price_forms[fuel_type]
+            context["fuel_price_entries"] = fuel_price_entries
+            context["fuel_price_forms"] = fuel_price_forms
             context["fuel_inventory_create_form"] = FuelInventoryForm(
                 initial={"sucursal": self.object}, auto_id="new-inventory_%s"
             )
@@ -505,6 +537,8 @@ class SucursalUpdateView(OwnerCompanyMixin, UpdateView):
             context.setdefault("islands", [])
             context.setdefault("shifts", [])
             context.setdefault("products", [])
+            context.setdefault("fuel_price_entries", [])
+            context.setdefault("fuel_price_forms", {})
             context.setdefault("branch_credit_sales", [])
             context.setdefault("branch_credit_sales_count", 0)
             context.setdefault("branch_credit_sales_total", 0)
@@ -529,6 +563,8 @@ class SucursalUpdateView(OwnerCompanyMixin, UpdateView):
             return self._handle_shift_update(request)
         if scope == "fuel-inventory-update":
             return self._handle_fuel_inventory_update(request)
+        if scope == "fuel-price-create":
+            return self._handle_fuel_price_create(request)
         if scope == "product-update":
             return self._handle_product_update(request)
         if scope == "island-update":
@@ -591,6 +627,36 @@ class SucursalUpdateView(OwnerCompanyMixin, UpdateView):
         for inventory_context in response.context_data.get("fuel_inventories", []):  # type: ignore[attr-defined]
             if inventory_context.pk == inventory.pk:
                 inventory_context.update_form = form
+                break
+        return response
+
+    def _handle_fuel_price_create(self, request) -> Any:
+        fuel_type = request.POST.get("fuel_type", "")
+        available_types = list(
+            self.object.fuel_inventories.values_list("fuel_type", flat=True).distinct()
+        )
+        modal_id = f"fuel-price-{slugify(fuel_type)}" if fuel_type else "fuel-price"
+        form = FuelPriceForm(
+            request.POST,
+            branch=self.object,
+            available_fuel_types=available_types,
+            auto_id=f"{modal_id}-form_%s",
+        )
+        if form.is_valid():
+            form.save()
+            messages.success(
+                request,
+                "Precio asignado correctamente para el combustible seleccionado.",
+            )
+            return redirect("sucursal_update", pk=self.object.pk)
+
+        response = self._render_with_inline_form(modal_name=modal_id)
+        fuel_price_forms = response.context_data.get("fuel_price_forms", {})  # type: ignore[attr-defined]
+        fuel_price_forms[fuel_type] = form
+        response.context_data["fuel_price_forms"] = fuel_price_forms  # type: ignore[index]
+        for entry in response.context_data.get("fuel_price_entries", []):  # type: ignore[attr-defined]
+            if entry.get("fuel_type") == fuel_type:
+                entry["form"] = form
                 break
         return response
 
