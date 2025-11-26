@@ -981,8 +981,7 @@
           <div>
             <h3 class="text-lg font-semibold text-gray-900">Cierre de caja y servicio</h3>
             <p class="mt-1 text-sm text-gray-500">
-              Ingresa el numeral final de cada máquina registrada. El valor ingresado se restará del numeral inicial y el resultado se
-              guardará como nuevo numeral inicial.
+              Ingresa el numeral de cada máquina registrada. El valor ingresado se guardará como numeral actualizado de la máquina.
             </p>
           </div>
           <button type="button" class="rounded-md p-1 text-gray-400 hover:text-gray-600" @click="closeSessionModalOpen = false">
@@ -1023,13 +1022,13 @@
                     <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                       <div>
                         <p class="text-sm font-semibold text-gray-900">Máquina {{ machine.number }} · Isla {{ machine.island.number }}</p>
-                        <p class="mt-1 text-xs text-gray-500">Numeral inicial: {{ machine.initial_numeral }}</p>
+                        <p class="mt-1 text-xs text-gray-500">Numeral actual: {{ machine.numeral }}</p>
                       </div>
                       <div class="sm:w-64">
-                        <label for="{{ form.final_numeral.id_for_label }}" class="block text-sm font-medium text-gray-700">Numeral final</label>
-                        {{ form.final_numeral }}
-                        {% if form.final_numeral.errors %}
-                          <p class="mt-1 text-sm text-red-600">{{ form.final_numeral.errors|striptags }}</p>
+                        <label for="{{ form.numeral.id_for_label }}" class="block text-sm font-medium text-gray-700">Numeral</label>
+                        {{ form.numeral }}
+                        {% if form.numeral.errors %}
+                          <p class="mt-1 text-sm text-red-600">{{ form.numeral.errors|striptags }}</p>
                         {% endif %}
                       </div>
                     </div>

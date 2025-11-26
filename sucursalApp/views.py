@@ -1596,19 +1596,16 @@ class ServiceSessionDetailView(OwnerCompanyMixin, DetailView):
                 with transaction.atomic():
                     for form in close_session_formset:
                         machine_id = form.cleaned_data.get("machine_id")
-                        final_numeral = form.cleaned_data.get("final_numeral")
-                        if machine_id is None or final_numeral is None:
+                        numeral = form.cleaned_data.get("numeral")
+                        if machine_id is None or numeral is None:
                             continue
                         machine = machines_by_id.get(machine_id)
                         if machine is None:
                             continue
-                        new_initial = final_numeral - machine.initial_numeral
-                        machine.final_numeral = final_numeral
-                        machine.initial_numeral = new_initial
+                        machine.numeral = numeral
                         machine.save(
                             update_fields=[
-                                "initial_numeral",
-                                "final_numeral",
+                                "numeral",
                                 "updated_at",
                             ]
                         )

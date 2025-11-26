@@ -932,8 +932,7 @@
                       </div>
 
                       <dl class="mt-2 grid grid-cols-1 gap-x-4 gap-y-2 text-sm text-gray-600 sm:grid-cols-2">
-                        <div><dt class="font-medium text-gray-700">Numeral inicial</dt><dd>{{ machine.initial_numeral }}</dd></div>
-                        <div><dt class="font-medium text-gray-700">Numeral final</dt><dd>{{ machine.final_numeral }}</dd></div>
+                        <div class="sm:col-span-2"><dt class="font-medium text-gray-700">Numeral</dt><dd>{{ machine.numeral }}</dd></div>
                         {% if machine.fuel_inventory %}
                           <div class="sm:col-span-2"><dt class="font-medium text-gray-700">Estanque</dt><dd>{{ machine.fuel_inventory }}</dd></div>
                         {% endif %}

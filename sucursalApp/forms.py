@@ -181,8 +181,7 @@ class MachineForm(forms.ModelForm):
         fields = [
             "island",
             "number",
-            "initial_numeral",
-            "final_numeral",
+            "numeral",
             "fuel_inventory",
             "fuel_type",
             "description",
@@ -190,8 +189,7 @@ class MachineForm(forms.ModelForm):
         widgets = {
             "island": forms.HiddenInput(),
             "number": forms.NumberInput(attrs={"class": "w-full border rounded p-2"}),
-            "initial_numeral": forms.NumberInput(attrs={"class": "w-full border rounded p-2"}),
-            "final_numeral": forms.NumberInput(attrs={"class": "w-full border rounded p-2"}),
+            "numeral": forms.NumberInput(attrs={"class": "w-full border rounded p-2"}),
             "fuel_inventory": forms.Select(
                 attrs={"class": "w-full border rounded p-2"}
             ),
@@ -1178,8 +1176,8 @@ class ServiceSessionFirefighterPaymentForm(forms.Form):
 
 class MachineClosingForm(forms.Form):
     machine_id = forms.IntegerField(widget=forms.HiddenInput())
-    final_numeral = forms.DecimalField(
-        label="Numeral final",
+    numeral = forms.DecimalField(
+        label="Numeral",
         max_digits=12,
         decimal_places=2,
     )
@@ -1189,23 +1187,21 @@ class MachineClosingForm(forms.Form):
         super().__init__(*args, **kwargs)
         if machine:
             self.fields["machine_id"].initial = machine.pk
-            self.fields["final_numeral"].initial = (
-                machine.final_numeral or machine.initial_numeral
-            )
-            self.fields["final_numeral"].min_value = machine.initial_numeral
-            self.fields["final_numeral"].label = (
+            self.fields["numeral"].initial = machine.numeral
+            self.fields["numeral"].min_value = machine.numeral
+            self.fields["numeral"].label = (
                 f"Máquina {machine.number} · Isla {machine.island.number}"
             )
 
-    def clean_final_numeral(self):
-        value = self.cleaned_data.get("final_numeral")
+    def clean_numeral(self):
+        value = self.cleaned_data.get("numeral")
         if value is None:
             return value
         if value < 0:
-            raise forms.ValidationError("El numeral final debe ser mayor o igual a 0.")
-        if self.machine and value < self.machine.initial_numeral:
+            raise forms.ValidationError("El numeral debe ser mayor o igual a 0.")
+        if self.machine and value < self.machine.numeral:
             raise forms.ValidationError(
-                "El numeral final no puede ser menor al numeral inicial de la máquina."
+                "El numeral no puede ser menor al valor registrado actualmente."
             )
         return value
 

@@ -133,7 +133,7 @@ class IslandAdmin(admin.ModelAdmin):
 
 @admin.register(Machine)
 class MachineAdmin(admin.ModelAdmin):
-    list_display = ("number", "island", "fuel_type", "initial_numeral", "final_numeral")
+    list_display = ("number", "island", "fuel_type", "numeral")
     list_filter = ("island__sucursal", "fuel_type")
     search_fields = ("number", "island__sucursal__name")
     inlines = [NozzleInline]

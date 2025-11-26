@@ -193,12 +193,7 @@ class Machine(models.Model):
         verbose_name="Isla",
     )
     number = models.PositiveIntegerField("Número")
-    initial_numeral = models.DecimalField(
-        "Numeral inicial", max_digits=12, decimal_places=2, default=0
-    )
-    final_numeral = models.DecimalField(
-        "Numeral final", max_digits=12, decimal_places=2, default=0
-    )
+    numeral = models.DecimalField("Numeral", max_digits=12, decimal_places=2, default=0)
     fuel_inventory = models.ForeignKey(
         "FuelInventory",
         on_delete=models.PROTECT,
