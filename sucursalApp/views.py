@@ -1196,6 +1196,18 @@ class ServiceSessionDetailView(OwnerCompanyMixin, DetailView):
     firefighter_payment_form_prefix = "firefighter_payment"
     close_session_form_prefix = "close_session"
 
+    def get(self, request, *args, **kwargs):
+        self.object = self.get_object()
+        if self.object.ended_at:
+            messages.info(
+                request,
+                "Este servicio ya fue cerrado. Inicia un nuevo servicio para continuar.",
+            )
+            return redirect("service_session_start")
+
+        context = self.get_context_data(object=self.object)
+        return self.render_to_response(context)
+
     def get_queryset(self):
         branch_ids = self.get_managed_branch_ids()
         queryset = (
@@ -1434,7 +1446,7 @@ class ServiceSessionDetailView(OwnerCompanyMixin, DetailView):
             messages.error(
                 request, "Este servicio ya fue cerrado y no admite nuevos registros."
             )
-            return redirect("service_session_detail", pk=self.object.pk)
+            return redirect("service_session_start")
 
         if form_type == "close-session":
             if self.object.ended_at:
@@ -1442,7 +1454,7 @@ class ServiceSessionDetailView(OwnerCompanyMixin, DetailView):
                     request,
                     "Este servicio ya fue cerrado previamente.",
                 )
-                return redirect("service_session_detail", pk=self.object.pk)
+                return redirect("service_session_start")
             branch_machines = list(
                 Machine.objects.filter(
                     island__sucursal=self.object.shift.sucursal
@@ -1480,7 +1492,7 @@ class ServiceSessionDetailView(OwnerCompanyMixin, DetailView):
                     request,
                     "Caja cerrada y servicio finalizado correctamente.",
                 )
-                return redirect("service_session_detail", pk=self.object.pk)
+                return redirect("service_session_start")
 
             context = self.get_context_data(
                 service_close_formset=close_session_formset,
