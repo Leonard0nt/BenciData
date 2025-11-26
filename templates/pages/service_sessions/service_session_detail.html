@@ -1241,6 +1241,7 @@
                   <tr class="text-left text-xs font-semibold uppercase tracking-wide text-gray-500">
                     <th scope="col" class="px-4 py-3">Fecha</th>
                     <th scope="col" class="px-4 py-3">Productos vendidos</th>
+                    <th scope="col" class="px-4 py-3 text-right">Valor de venta</th>
                     <th scope="col" class="px-4 py-3">Registrado por</th>
                   </tr>
                 </thead>
@@ -1260,6 +1261,7 @@
                           {% endfor %}
                         </ul>
                       </td>
+                      <td class="px-4 py-3 text-right text-gray-900">$ {{ sale.total_value|floatformat:2 }}</td>
                       <td class="px-4 py-3 text-gray-700">
                         {{ sale.responsible.user_FK.get_full_name|default:sale.responsible.user_FK.username }}
                       </td>

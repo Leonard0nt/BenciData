@@ -414,7 +414,14 @@ class SucursalUpdateView(OwnerCompanyMixin, UpdateView):
                     ),
                     0,
                 )
-
+                product_sale_value_total = sum(
+                    (
+                        item.quantity * item.product.value
+                        for sale in product_sales
+                        for item in sale.items.all()
+                    ),
+                    decimal_zero,
+                )
                 history_records.append(
                     {
                         "session": session,
@@ -430,12 +437,21 @@ class SucursalUpdateView(OwnerCompanyMixin, UpdateView):
                             ((load.liters_added or decimal_zero) for load in fuel_loads),
                             decimal_zero,
                         ),
+
+                        "fuel_load_payment_total": sum(
+                            (
+                                (load.payment_amount or decimal_zero)
+                                for load in fuel_loads
+                            ),
+                            decimal_zero,
+                        ),
                         "product_load_count": len(product_loads),
                         "product_load_quantity": sum(
                             (load.quantity_added or 0) for load in product_loads
                         ),
                         "product_sales_count": len(product_sales),
                         "product_sales_items": product_sale_items_total,
+                        "product_sales_value": product_sale_value_total,
                         "withdrawal_total": sum(
                             ((withdrawal.amount or decimal_zero) for withdrawal in withdrawals),
                             decimal_zero,
@@ -1470,6 +1486,15 @@ class ServiceSessionDetailView(OwnerCompanyMixin, DetailView):
             )
         attendants = list(self.object.attendants.all())
         product_loads = list(self.object.product_loads.all())
+        product_sales = list(self.object.product_sales.all())
+        for sale in product_sales:
+            sale.total_value = sum(
+                (
+                    item.quantity * item.product.value
+                    for item in sale.items.all()
+                ),
+                Decimal("0"),
+            )
         product_additions = {
             entry["product_id"]: entry["total_added"]
             for entry in self.object.product_loads.values("product_id").annotate(
@@ -1520,7 +1545,7 @@ class ServiceSessionDetailView(OwnerCompanyMixin, DetailView):
                 "branch_products": branch_products,
                 "product_loads": product_loads,
                 "fuel_load_form": fuel_load_form,
-                "product_sales": list(self.object.product_sales.all()),
+                "product_sales": product_sales,
                 "product_load_form": product_load_form,
                 "fuel_responsible": self.object.shift.manager,
                 "product_load_responsible": self.object.shift.manager,
