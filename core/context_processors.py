@@ -27,7 +27,9 @@ def service_session_navigation(request):
         }
 
     latest_session_id = (
-        ServiceSession.objects.filter(shift__sucursal_id=branch_id)
+        ServiceSession.objects.filter(
+            shift__sucursal_id=branch_id, ended_at__isnull=True
+        )
         .order_by("-started_at")
         .values_list("pk", flat=True)
         .first()

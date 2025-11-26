@@ -4,6 +4,7 @@ from typing import Optional
 from decimal import Decimal, InvalidOperation
 
 from django import forms
+from django.forms import BaseFormSet, formset_factory
 from django.db import transaction
 from django.db.models import F, Q, Count
 
@@ -1145,3 +1146,55 @@ class ServiceSessionFirefighterPaymentForm(forms.Form):
                 )
             )
         return payments
+
+
+class MachineClosingForm(forms.Form):
+    machine_id = forms.IntegerField(widget=forms.HiddenInput())
+    final_numeral = forms.DecimalField(
+        label="Numeral final",
+        max_digits=12,
+        decimal_places=2,
+    )
+
+    def __init__(self, *args, machine: Machine | None = None, **kwargs):
+        self.machine = machine
+        super().__init__(*args, **kwargs)
+        if machine:
+            self.fields["machine_id"].initial = machine.pk
+            self.fields["final_numeral"].initial = (
+                machine.final_numeral or machine.initial_numeral
+            )
+            self.fields["final_numeral"].min_value = machine.initial_numeral
+            self.fields["final_numeral"].label = (
+                f"Máquina {machine.number} · Isla {machine.island.number}"
+            )
+
+    def clean_final_numeral(self):
+        value = self.cleaned_data.get("final_numeral")
+        if value is None:
+            return value
+        if value < 0:
+            raise forms.ValidationError("El numeral final debe ser mayor o igual a 0.")
+        if self.machine and value < self.machine.initial_numeral:
+            raise forms.ValidationError(
+                "El numeral final no puede ser menor al numeral inicial de la máquina."
+            )
+        return value
+
+
+class MachineClosingFormSet(BaseFormSet):
+    def __init__(self, *args, machines: list[Machine] | None = None, **kwargs):
+        self.machines = machines or []
+        super().__init__(*args, **kwargs)
+
+    def _construct_form(self, i, **kwargs):
+        machine = None
+        if self.machines and i < len(self.machines):
+            machine = self.machines[i]
+        kwargs["machine"] = machine
+        return super()._construct_form(i, **kwargs)
+
+
+ServiceSessionMachineClosingFormSet = formset_factory(
+    MachineClosingForm, formset=MachineClosingFormSet, extra=0
+)

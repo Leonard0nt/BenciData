@@ -30,6 +30,7 @@ from .forms import (
     ServiceSessionProductLoadForm,
     ServiceSessionProductSaleForm,
     ServiceSessionProductSaleItemFormSet,
+    ServiceSessionMachineClosingFormSet,
     ServiceSessionTransbankVoucherForm,
     ServiceSessionWithdrawalForm,
     ShiftForm,
@@ -1193,6 +1194,7 @@ class ServiceSessionDetailView(OwnerCompanyMixin, DetailView):
     withdrawal_form_prefix = "withdrawal"
     transbank_voucher_form_prefix = "transbank_voucher"
     firefighter_payment_form_prefix = "firefighter_payment"
+    close_session_form_prefix = "close_session"
 
     def get_queryset(self):
         branch_ids = self.get_managed_branch_ids()
@@ -1323,6 +1325,11 @@ class ServiceSessionDetailView(OwnerCompanyMixin, DetailView):
             )
 
         branch = self.object.shift.sucursal
+        branch_machines = kwargs.get("branch_machines")
+        if branch_machines is None:
+            branch_machines = list(
+                Machine.objects.filter(island__sucursal=branch).select_related("island")
+            )
         attendants = list(self.object.attendants.all())
         product_loads = list(self.object.product_loads.all())
         product_additions = {
@@ -1357,6 +1364,14 @@ class ServiceSessionDetailView(OwnerCompanyMixin, DetailView):
                 firefighters=part_time_attendants,
                 prefix=self.firefighter_payment_form_prefix,
             )
+        close_session_formset = kwargs.get("service_close_formset")
+        if close_session_formset is None:
+            close_session_formset = ServiceSessionMachineClosingFormSet(
+                prefix=self.close_session_form_prefix,
+                machines=branch_machines,
+                initial=[{"machine_id": machine.pk} for machine in branch_machines],
+            )
+        machine_close_pairs = list(zip(branch_machines, close_session_formset.forms))
         context.update(
             {
                 "shift": self.object.shift,
@@ -1398,11 +1413,15 @@ class ServiceSessionDetailView(OwnerCompanyMixin, DetailView):
                         attendant,
                         firefighter_payment_form.get_bound_field(attendant),
                     )
-                    for attendant in part_time_attendants
+                for attendant in part_time_attendants
                 ],
                 "firefighter_payments": list(
                     self.object.firefighter_payments.all()
                 ),
+                "service_close_formset": close_session_formset,
+                "machine_close_pairs": machine_close_pairs,
+                "branch_machines": branch_machines,
+                "service_session_closed": self.object.ended_at is not None,
             }
         )
         return context
@@ -1410,6 +1429,64 @@ class ServiceSessionDetailView(OwnerCompanyMixin, DetailView):
     def post(self, request, *args, **kwargs):
         self.object = self.get_object()
         form_type = request.POST.get("form_type", "fuel-load")
+
+        if self.object.ended_at and form_type != "close-session":
+            messages.error(
+                request, "Este servicio ya fue cerrado y no admite nuevos registros."
+            )
+            return redirect("service_session_detail", pk=self.object.pk)
+
+        if form_type == "close-session":
+            if self.object.ended_at:
+                messages.info(
+                    request,
+                    "Este servicio ya fue cerrado previamente.",
+                )
+                return redirect("service_session_detail", pk=self.object.pk)
+            branch_machines = list(
+                Machine.objects.filter(
+                    island__sucursal=self.object.shift.sucursal
+                ).select_related("island")
+            )
+            close_session_formset = ServiceSessionMachineClosingFormSet(
+                data=request.POST,
+                prefix=self.close_session_form_prefix,
+                machines=branch_machines,
+            )
+            if close_session_formset.is_valid():
+                machines_by_id = {machine.pk: machine for machine in branch_machines}
+                with transaction.atomic():
+                    for form in close_session_formset:
+                        machine_id = form.cleaned_data.get("machine_id")
+                        final_numeral = form.cleaned_data.get("final_numeral")
+                        if machine_id is None or final_numeral is None:
+                            continue
+                        machine = machines_by_id.get(machine_id)
+                        if machine is None:
+                            continue
+                        new_initial = final_numeral - machine.initial_numeral
+                        machine.final_numeral = final_numeral
+                        machine.initial_numeral = new_initial
+                        machine.save(
+                            update_fields=[
+                                "initial_numeral",
+                                "final_numeral",
+                                "updated_at",
+                            ]
+                        )
+                    self.object.ended_at = timezone.now()
+                    self.object.save(update_fields=["ended_at"])
+                messages.success(
+                    request,
+                    "Caja cerrada y servicio finalizado correctamente.",
+                )
+                return redirect("service_session_detail", pk=self.object.pk)
+
+            context = self.get_context_data(
+                service_close_formset=close_session_formset,
+                branch_machines=branch_machines,
+            )
+            return self.render_to_response(context)
 
         if form_type == "product-load":
             form = ServiceSessionProductLoadForm(

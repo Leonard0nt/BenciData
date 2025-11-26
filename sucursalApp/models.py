@@ -488,6 +488,11 @@ class ServiceSession(models.Model):
         editable=False,
         default=0,
     )
+    ended_at = models.DateTimeField(
+        "Fecha de cierre",
+        null=True,
+        blank=True,
+    )
     started_at = models.DateTimeField(
         "Fecha de inicio",
         auto_now_add=True,
