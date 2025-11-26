@@ -1,3 +1,4 @@
+from decimal import Decimal
 from typing import Any, Dict, List
 from urllib.parse import urlencode
 
@@ -342,6 +343,121 @@ class SucursalUpdateView(OwnerCompanyMixin, UpdateView):
                 )["total"]
                 or 0
             )
+            closed_service_sessions = (
+                ServiceSession.objects.filter(
+                    shift__sucursal=self.object, ended_at__isnull=False
+                )
+                .select_related("shift__manager__user_FK")
+                .prefetch_related(
+                    "attendants__user_FK",
+                    Prefetch(
+                        "credit_sales",
+                        queryset=ServiceSessionCreditSale.objects.select_related(
+                            "responsible__user_FK", "fuel_inventory"
+                        ),
+                    ),
+                    Prefetch(
+                        "fuel_loads",
+                        queryset=ServiceSessionFuelLoad.objects.select_related(
+                            "responsible__user_FK", "inventory"
+                        ),
+                    ),
+                    Prefetch(
+                        "product_loads",
+                        queryset=ServiceSessionProductLoad.objects.select_related(
+                            "responsible__user_FK", "product"
+                        ),
+                    ),
+                    Prefetch(
+                        "product_sales",
+                        queryset=ServiceSessionProductSale.objects.select_related(
+                            "responsible__user_FK"
+                        ).prefetch_related("items__product"),
+                    ),
+                    Prefetch(
+                        "withdrawals",
+                        queryset=ServiceSessionWithdrawal.objects.select_related(
+                            "responsible__user_FK"
+                        ),
+                    ),
+                    Prefetch(
+                        "transbank_vouchers",
+                        queryset=ServiceSessionTransbankVoucher.objects.select_related(
+                            "responsible__user_FK"
+                        ),
+                    ),
+                    Prefetch(
+                        "firefighter_payments",
+                        queryset=ServiceSessionFirefighterPayment.objects.select_related(
+                            "firefighter__user_FK"
+                        ),
+                    ),
+                )
+                .order_by("-ended_at")
+            )
+
+            history_records = []
+            decimal_zero = Decimal("0")
+            for session in closed_service_sessions:
+                credit_sales = list(session.credit_sales.all())
+                fuel_loads = list(session.fuel_loads.all())
+                product_loads = list(session.product_loads.all())
+                product_sales = list(session.product_sales.all())
+                withdrawals = list(session.withdrawals.all())
+                vouchers = list(session.transbank_vouchers.all())
+                firefighter_payments = list(session.firefighter_payments.all())
+                product_sale_items_total = sum(
+                    (
+                        item.quantity
+                        for sale in product_sales
+                        for item in sale.items.all()
+                    ),
+                    0,
+                )
+
+                history_records.append(
+                    {
+                        "session": session,
+                        "shift_schedule": f"{session.shift.start_time:%H:%M} - {session.shift.end_time:%H:%M}",
+                        "attendants": list(session.attendants.all()),
+                        "credit_count": len(credit_sales),
+                        "credit_total": sum(
+                            (credit.amount or decimal_zero) for credit in credit_sales,
+                            decimal_zero,
+                        ),
+                        "fuel_load_count": len(fuel_loads),
+                        "fuel_load_liters": sum(
+                            (load.liters_added or decimal_zero) for load in fuel_loads,
+                            decimal_zero,
+                        ),
+                        "product_load_count": len(product_loads),
+                        "product_load_quantity": sum(
+                            (load.quantity_added or 0) for load in product_loads
+                        ),
+                        "product_sales_count": len(product_sales),
+                        "product_sales_items": product_sale_items_total,
+                        "withdrawal_total": sum(
+                            (withdrawal.amount or decimal_zero)
+                            for withdrawal in withdrawals,
+                            decimal_zero,
+                        ),
+                        "voucher_count": sum(
+                            (voucher.voucher_count or 0) for voucher in vouchers
+                        ),
+                        "voucher_total": sum(
+                            (voucher.total_amount or decimal_zero)
+                            for voucher in vouchers,
+                            decimal_zero,
+                        ),
+                        "firefighter_payments_total": sum(
+                            (payment.amount or decimal_zero)
+                            for payment in firefighter_payments,
+                            decimal_zero,
+                        ),
+                    }
+                )
+
+            context["service_history"] = history_records
             for island in islands:
                 island.update_form = IslandForm(
                     instance=island, auto_id=f"edit-island-{island.pk}_%s"
@@ -372,6 +488,7 @@ class SucursalUpdateView(OwnerCompanyMixin, UpdateView):
             context.setdefault("branch_credit_sales", [])
             context.setdefault("branch_credit_sales_count", 0)
             context.setdefault("branch_credit_sales_total", 0)
+            context.setdefault("service_history", [])
         context.setdefault("can_manage_shifts", False)
         if not context.get("active_modal"):
             requested_modal = self.request.GET.get("modal")

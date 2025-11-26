@@ -157,6 +157,14 @@
           aria-controls="tab-creditos"
           aria-selected="false"
         >Créditos</button>
+        <button
+          type="button"
+          data-tab-target="tab-historial"
+          data-tab-group="branch-detail"
+          class="whitespace-nowrap border-b-2 border-transparent px-1 py-3 text-sm font-medium text-gray-500 hover:border-gray-300 hover:text-gray-700"
+          aria-controls="tab-historial"
+          aria-selected="false"
+        >Historial</button>
       </nav>
     </div>
 
@@ -1317,6 +1325,86 @@
       {% else %}
         <div class="mt-6 rounded-lg border border-dashed border-gray-300 bg-gray-50 p-4 text-sm text-gray-600">
           Aún no existen ventas a crédito registradas en esta sucursal.
+        </div>
+      {% endif %}
+    </section>
+  </div>
+
+  <div id="tab-historial" class="tab-content mt-8 hidden space-y-6">
+    <section class="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
+      <div class="flex flex-wrap items-center justify-between gap-4">
+        <div>
+          <h2 class="text-lg font-semibold text-gray-900">Historial de servicios</h2>
+          <p class="mt-1 text-sm text-gray-600">Revisa los servicios cerrados y un resumen de sus registros.</p>
+        </div>
+        <span class="inline-flex items-center rounded-full bg-indigo-50 px-3 py-1 text-sm font-medium text-indigo-700">
+          {{ service_history|length|default:0 }} servicio{{ service_history|length|pluralize:"s" }}
+        </span>
+      </div>
+
+      {% if service_history %}
+        <div class="mt-6 space-y-4">
+          {% for record in service_history %}
+            <div class="rounded-lg border border-gray-200 bg-white p-4 shadow-sm" x-data="{ open: false }">
+              <div class="flex flex-wrap items-start justify-between gap-3">
+                <div class="space-y-1">
+                  <p class="text-sm font-semibold text-gray-900">Turno {{ record.session.shift.code }} · {{ record.shift_schedule }}</p>
+                  <p class="text-sm text-gray-600">Inicio: {{ record.session.started_at|date:"d/m/Y H:i" }} · Cierre: {{ record.session.ended_at|date:"d/m/Y H:i" }}</p>
+                  <p class="text-sm text-gray-600">Encargado: {{ record.session.shift.manager.user_FK.get_full_name|default:record.session.shift.manager.user_FK.username }}</p>
+                </div>
+                <div class="flex flex-wrap items-center gap-2">
+                  <span class="inline-flex items-center rounded-full bg-gray-100 px-3 py-1 text-xs font-medium text-gray-700">Créditos: {{ record.credit_count }} · $ {{ record.credit_total|floatformat:0 }}</span>
+                  <span class="inline-flex items-center rounded-full bg-gray-100 px-3 py-1 text-xs font-medium text-gray-700">Vouchers: {{ record.voucher_count }} · $ {{ record.voucher_total|floatformat:0 }}</span>
+                  <span class="inline-flex items-center rounded-full bg-gray-100 px-3 py-1 text-xs font-medium text-gray-700">Retiros: $ {{ record.withdrawal_total|floatformat:0 }}</span>
+                  <button
+                    type="button"
+                    class="inline-flex items-center rounded-md border border-indigo-200 bg-indigo-50 px-3 py-1.5 text-sm font-medium text-indigo-700 hover:bg-white"
+                    @click="open = !open"
+                  >Ver</button>
+                </div>
+              </div>
+
+              <div class="mt-4 border-t border-gray-100 pt-4" x-show="open" x-cloak>
+                <div class="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
+                  <div class="rounded-lg bg-gray-50 p-3">
+                    <h3 class="text-sm font-semibold text-gray-900">Personal</h3>
+                    <ul class="mt-2 space-y-1 text-sm text-gray-700">
+                      <li>Encargado: {{ record.session.shift.manager.user_FK.get_full_name|default:record.session.shift.manager.user_FK.username }}</li>
+                      {% for attendant in record.attendants %}
+                        <li>Bombero: {{ attendant.user_FK.get_full_name|default:attendant.user_FK.username }}</li>
+                      {% empty %}
+                        <li class="text-gray-500">Sin bomberos registrados.</li>
+                      {% endfor %}
+                    </ul>
+                  </div>
+                  <div class="rounded-lg bg-gray-50 p-3 space-y-1">
+                    <h3 class="text-sm font-semibold text-gray-900">Créditos y vouchers</h3>
+                    <p class="text-sm text-gray-700">Créditos: {{ record.credit_count }} · $ {{ record.credit_total|floatformat:0 }}</p>
+                    <p class="text-sm text-gray-700">Vouchers Transbank: {{ record.voucher_count }} · $ {{ record.voucher_total|floatformat:0 }}</p>
+                  </div>
+                  <div class="rounded-lg bg-gray-50 p-3 space-y-1">
+                    <h3 class="text-sm font-semibold text-gray-900">Combustibles</h3>
+                    <p class="text-sm text-gray-700">Cargas registradas: {{ record.fuel_load_count }}</p>
+                    <p class="text-sm text-gray-700">Litros agregados: {{ record.fuel_load_liters|floatformat:2 }}</p>
+                  </div>
+                  <div class="rounded-lg bg-gray-50 p-3 space-y-1">
+                    <h3 class="text-sm font-semibold text-gray-900">Productos</h3>
+                    <p class="text-sm text-gray-700">Ingresos de stock: {{ record.product_load_count }} ({{ record.product_load_quantity }} unidades)</p>
+                    <p class="text-sm text-gray-700">Ventas registradas: {{ record.product_sales_count }} ({{ record.product_sales_items }} ítem{{ record.product_sales_items|pluralize:"s" }})</p>
+                  </div>
+                  <div class="rounded-lg bg-gray-50 p-3 space-y-1">
+                    <h3 class="text-sm font-semibold text-gray-900">Retiros y pagos</h3>
+                    <p class="text-sm text-gray-700">Retiros de caja: $ {{ record.withdrawal_total|floatformat:0 }}</p>
+                    <p class="text-sm text-gray-700">Pagos a bomberos: $ {{ record.firefighter_payments_total|floatformat:0 }}</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          {% endfor %}
+        </div>
+      {% else %}
+        <div class="mt-6 rounded-lg border border-dashed border-gray-300 bg-gray-50 p-4 text-sm text-gray-600">
+          Aún no se han cerrado servicios en esta sucursal.
         </div>
       {% endif %}
     </section>
