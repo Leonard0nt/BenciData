@@ -1558,6 +1558,7 @@ class ServiceSessionDetailView(OwnerCompanyMixin, DetailView):
                 Machine.objects.filter(island__sucursal=branch).select_related("island")
             )
         attendants = list(self.object.attendants.all())
+        fuel_loads = list(self.object.fuel_loads.all())
         product_loads = list(self.object.product_loads.all())
         product_sales = list(self.object.product_sales.all())
         for sale in product_sales:
@@ -1568,6 +1569,7 @@ class ServiceSessionDetailView(OwnerCompanyMixin, DetailView):
                 ),
                 Decimal("0"),
             )
+        credit_sales = list(self.object.credit_sales.all())
         product_additions = {
             entry["product_id"]: entry["total_added"]
             for entry in self.object.product_loads.values("product_id").annotate(
@@ -1587,11 +1589,53 @@ class ServiceSessionDetailView(OwnerCompanyMixin, DetailView):
             product.session_added_quantity = product_additions.get(product.pk, 0)
             product.session_sold_quantity = product_sales_items.get(product.pk, 0)
         withdrawals = list(self.object.withdrawals.all())
+        transbank_vouchers = list(self.object.transbank_vouchers.all())
         part_time_attendants = [
             attendant
             for attendant in attendants
             if attendant and not getattr(attendant, "is_partime", True)
         ]
+        firefighter_payments = list(self.object.firefighter_payments.all())
+
+        decimal_zero = Decimal("0")
+        initial_budget = self.object.initial_budget or decimal_zero
+        credit_sales_total = sum(
+            (credit.amount or decimal_zero) for credit in credit_sales
+        )
+        transbank_vouchers_total = sum(
+            (voucher.total_amount or decimal_zero) for voucher in transbank_vouchers
+        )
+        withdrawals_total = sum(
+            (withdrawal.amount or decimal_zero) for withdrawal in withdrawals
+        )
+        product_sales_total = sum(
+            (getattr(sale, "total_value", decimal_zero) or decimal_zero)
+            for sale in product_sales
+        )
+        fuel_payments_total = sum(
+            (fuel_load.payment_amount or decimal_zero) for fuel_load in fuel_loads
+        )
+        firefighter_payments_total = sum(
+            (payment.amount or decimal_zero) for payment in firefighter_payments
+        )
+        product_loads_total = sum(
+            (product_load.payment_amount or decimal_zero)
+            for product_load in product_loads
+        )
+
+        turn_profit = (
+            initial_budget
+            + credit_sales_total
+            + transbank_vouchers_total
+            + withdrawals_total
+            + product_sales_total
+        )
+        net_turn_profit = (
+            turn_profit
+            - fuel_payments_total
+            - firefighter_payments_total
+            - product_loads_total
+        )
 
         firefighter_payment_form = kwargs.get("firefighter_payment_form")
         if firefighter_payment_form is None:
@@ -1614,7 +1658,7 @@ class ServiceSessionDetailView(OwnerCompanyMixin, DetailView):
                 "attendants": self.object.attendants.all(),
                 "branch": branch,
                 "fuel_inventories": branch.fuel_inventories.all(),
-                "fuel_loads": self.object.fuel_loads.all(),
+                "fuel_loads": fuel_loads,
                 "branch_products": branch_products,
                 "product_loads": product_loads,
                 "fuel_load_form": fuel_load_form,
@@ -1628,14 +1672,14 @@ class ServiceSessionDetailView(OwnerCompanyMixin, DetailView):
                 "product_responsible": self.object.shift.manager,
                 "product_sale_responsible": current_profile,
                 "credit_sale_responsible": current_profile,
-                "credit_sales": list(self.object.credit_sales.all()),
+                "credit_sales": credit_sales,
                 "service_date": self.object.started_at.date(),
                 "withdrawals": withdrawals,
                 "withdraw_form": withdraw_form,
                 "withdraw_responsible": current_profile,
                 "transbank_voucher_form": transbank_voucher_form,
                 "transbank_voucher_responsible": current_profile,
-                "transbank_vouchers": list(self.object.transbank_vouchers.all()),
+                "transbank_vouchers": transbank_vouchers,
                 "current_datetime": current_datetime,
                 "current_profile_name": (
                     (current_profile.user_FK.get_full_name() or current_profile.user_FK.username)
@@ -1651,13 +1695,25 @@ class ServiceSessionDetailView(OwnerCompanyMixin, DetailView):
                     )
                 for attendant in part_time_attendants
                 ],
-                "firefighter_payments": list(
-                    self.object.firefighter_payments.all()
-                ),
+                "firefighter_payments": firefighter_payments,
                 "service_close_formset": close_session_formset,
                 "machine_close_pairs": machine_close_pairs,
                 "branch_machines": branch_machines,
                 "service_session_closed": self.object.ended_at is not None,
+                "turn_profit": turn_profit,
+                "net_turn_profit": net_turn_profit,
+                "turn_profit_components": {
+                    "initial_budget": initial_budget,
+                    "credit_sales": credit_sales_total,
+                    "transbank_vouchers": transbank_vouchers_total,
+                    "withdrawals": withdrawals_total,
+                    "product_sales": product_sales_total,
+                },
+                "turn_expenses": {
+                    "fuel_loads": fuel_payments_total,
+                    "firefighter_payments": firefighter_payments_total,
+                    "product_loads": product_loads_total,
+                },
             }
         )
         return context
