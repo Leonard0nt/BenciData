@@ -449,6 +449,13 @@ class SucursalUpdateView(OwnerCompanyMixin, UpdateView):
                         "product_load_quantity": sum(
                             (load.quantity_added or 0) for load in product_loads
                         ),
+                        "product_load_payment_total": sum(
+                            (
+                                (load.payment_amount or decimal_zero)
+                                for load in product_loads
+                            ),
+                            decimal_zero,
+                        ),
                         "product_sales_count": len(product_sales),
                         "product_sales_items": product_sale_items_total,
                         "product_sales_value": product_sale_value_total,

@@ -1393,6 +1393,7 @@
                   <div class="rounded-lg bg-gray-50 p-3 space-y-1">
                     <h3 class="text-sm font-semibold text-gray-900">Productos</h3>
                     <p class="text-sm text-gray-700">Ingresos de stock: {{ record.product_load_count }} ({{ record.product_load_quantity }} unidades)</p>
+                    <p class="text-sm text-gray-700">Gasto ingresos de stock: $ {{ record.product_load_payment_total|floatformat:0 }}</p>
                     <p class="text-sm text-gray-700">Ventas registradas: {{ record.product_sales_count }} ({{ record.product_sales_items }} ítem{{ record.product_sales_items|pluralize:"s" }})</p>
                     <p class="text-sm text-gray-700">Valor de ventas: $ {{ record.product_sales_value|floatformat:0 }}</p>
                   </div>
