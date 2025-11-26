@@ -454,58 +454,82 @@ class SucursalUpdateView(OwnerCompanyMixin, UpdateView):
                     ),
                     decimal_zero,
                 )
+                credit_total = sum(
+                    ((credit.amount or decimal_zero) for credit in credit_sales),
+                    decimal_zero,
+                )
+                fuel_load_payment_total = sum(
+                    (
+                        (load.payment_amount or decimal_zero)
+                        for load in fuel_loads
+                    ),
+                    decimal_zero,
+                )
+                product_load_payment_total = sum(
+                    (
+                        (load.payment_amount or decimal_zero)
+                        for load in product_loads
+                    ),
+                    decimal_zero,
+                )
+                withdrawal_total = sum(
+                    ((withdrawal.amount or decimal_zero) for withdrawal in withdrawals),
+                    decimal_zero,
+                )
+                voucher_total = sum(
+                    ((voucher.total_amount or decimal_zero) for voucher in vouchers),
+                    decimal_zero,
+                )
+                firefighter_payments_total = sum(
+                    (
+                        (payment.amount or decimal_zero)
+                        for payment in firefighter_payments
+                    ),
+                    decimal_zero,
+                )
+
+                turn_profit = (
+                    (session.initial_budget or decimal_zero)
+                    + credit_total
+                    + voucher_total
+                    + withdrawal_total
+                    + product_sale_value_total
+                )
+                net_turn_profit = (
+                    turn_profit
+                    - fuel_load_payment_total
+                    - firefighter_payments_total
+                    - product_load_payment_total
+                )
                 history_records.append(
                     {
                         "session": session,
                         "shift_schedule": f"{session.shift.start_time:%H:%M} - {session.shift.end_time:%H:%M}",
                         "attendants": list(session.attendants.all()),
                         "credit_count": len(credit_sales),
-                        "credit_total": sum(
-                            ((credit.amount or decimal_zero) for credit in credit_sales),
-                            decimal_zero,
-                        ),
+                        "credit_total": credit_total,
                         "fuel_load_count": len(fuel_loads),
                         "fuel_load_liters": sum(
                             ((load.liters_added or decimal_zero) for load in fuel_loads),
                             decimal_zero,
                         ),
-
-                        "fuel_load_payment_total": sum(
-                            (
-                                (load.payment_amount or decimal_zero)
-                                for load in fuel_loads
-                            ),
-                            decimal_zero,
-                        ),
+                        "fuel_load_payment_total": fuel_load_payment_total,
                         "product_load_count": len(product_loads),
                         "product_load_quantity": sum(
                             (load.quantity_added or 0) for load in product_loads
                         ),
-                        "product_load_payment_total": sum(
-                            (
-                                (load.payment_amount or decimal_zero)
-                                for load in product_loads
-                            ),
-                            decimal_zero,
-                        ),
+                        "product_load_payment_total": product_load_payment_total,
                         "product_sales_count": len(product_sales),
                         "product_sales_items": product_sale_items_total,
                         "product_sales_value": product_sale_value_total,
-                        "withdrawal_total": sum(
-                            ((withdrawal.amount or decimal_zero) for withdrawal in withdrawals),
-                            decimal_zero,
-                        ),
+                        "withdrawal_total": withdrawal_total,
                         "voucher_count": sum(
                             (voucher.voucher_count or 0) for voucher in vouchers
                         ),
-                        "voucher_total": sum(
-                            ((voucher.total_amount or decimal_zero) for voucher in vouchers),
-                            decimal_zero,
-                        ),
-                        "firefighter_payments_total": sum(
-                            ((payment.amount or decimal_zero) for payment in firefighter_payments),
-                            decimal_zero,
-                        ),
+                        "voucher_total": voucher_total,
+                        "firefighter_payments_total": firefighter_payments_total,
+                        "turn_profit": turn_profit,
+                        "net_turn_profit": net_turn_profit,
                     }
                 )
 
