@@ -493,6 +493,7 @@ class ServiceSessionFuelLoadForm(forms.ModelForm):
         fields = [
             "inventory",
             "liters_added",
+            "payment_amount",
             "invoice_number",
             "responsible",
             "driver_name",
@@ -506,6 +507,13 @@ class ServiceSessionFuelLoadForm(forms.ModelForm):
                 }
             ),
             "liters_added": forms.NumberInput(
+                attrs={
+                    "class": "block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500",
+                    "step": "0.01",
+                    "min": "0",
+                }
+            ),
+            "payment_amount": forms.NumberInput(
                 attrs={
                     "class": "block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500",
                     "step": "0.01",
@@ -571,6 +579,12 @@ class ServiceSessionFuelLoadForm(forms.ModelForm):
             raise forms.ValidationError("Debes ingresar una cantidad de litros mayor a 0.")
         return liters
 
+    def clean_payment_amount(self):
+        amount = self.cleaned_data.get("payment_amount")
+        if amount is not None and amount < 0:
+            raise forms.ValidationError("El valor pagado no puede ser negativo.")
+        return amount
+
     def clean(self):
         cleaned_data = super().clean()
         inventory = cleaned_data.get("inventory")
@@ -614,6 +628,7 @@ class ServiceSessionProductLoadForm(forms.ModelForm):
         fields = [
             "product",
             "quantity_added",
+            "payment_amount",
         ]
         widgets = {
             "product": forms.Select(
@@ -625,6 +640,13 @@ class ServiceSessionProductLoadForm(forms.ModelForm):
                 attrs={
                     "class": "block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500",
                     "min": "1",
+                }
+            ),
+            "payment_amount": forms.NumberInput(
+                attrs={
+                    "class": "block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500",
+                    "step": "0.01",
+                    "min": "0",
                 }
             ),
         }
@@ -661,6 +683,12 @@ class ServiceSessionProductLoadForm(forms.ModelForm):
                 "Debes ingresar una cantidad mayor a 0."
             )
         return quantity
+
+    def clean_payment_amount(self):
+        amount = self.cleaned_data.get("payment_amount")
+        if amount is not None and amount < 0:
+            raise forms.ValidationError("El valor pagado no puede ser negativo.")
+        return amount
 
     def save(self, commit: bool = True):
         instance: ServiceSessionProductLoad = super().save(commit=False)

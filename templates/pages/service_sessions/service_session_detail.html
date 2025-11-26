@@ -1119,6 +1119,7 @@
                     <th scope="col" class="px-4 py-3">Fecha</th>
                     <th scope="col" class="px-4 py-3">Tanque</th>
                     <th scope="col" class="px-4 py-3">Litros cargados</th>
+                    <th scope="col" class="px-4 py-3">Valor pagado</th>
                     <th scope="col" class="px-4 py-3">Factura</th>
                     <th scope="col" class="px-4 py-3">Chofer</th>
                     <th scope="col" class="px-4 py-3">Patente</th>
@@ -1130,6 +1131,7 @@
                       <td class="px-4 py-3 text-gray-700">{{ fuel_load.date|date:"d/m/Y" }}</td>
                       <td class="px-4 py-3 font-medium text-gray-900">{{ fuel_load.inventory.code }}</td>
                       <td class="px-4 py-3 text-gray-900">{{ fuel_load.liters_added|floatformat:2 }} L</td>
+                      <td class="px-4 py-3 text-gray-900">$ {{ fuel_load.payment_amount|floatformat:2 }}</td>
                       <td class="px-4 py-3 text-gray-700">{{ fuel_load.invoice_number }}</td>
                       <td class="px-4 py-3 text-gray-700">{{ fuel_load.driver_name }}</td>
                       <td class="px-4 py-3 text-gray-700">{{ fuel_load.license_plate }}</td>
@@ -1208,6 +1210,7 @@
                     <th scope="col" class="px-4 py-3">Fecha</th>
                     <th scope="col" class="px-4 py-3">Producto</th>
                     <th scope="col" class="px-4 py-3 text-right">Cantidad</th>
+                    <th scope="col" class="px-4 py-3 text-right">Valor pagado</th>
                     <th scope="col" class="px-4 py-3">Registrado por</th>
                   </tr>
                 </thead>
@@ -1217,6 +1220,7 @@
                       <td class="px-4 py-3 text-gray-700">{{ product_load.date|date:"d/m/Y" }}</td>
                       <td class="px-4 py-3 font-medium text-gray-900">{{ product_load.product.product_type }}</td>
                       <td class="px-4 py-3 text-right text-gray-900">{{ product_load.quantity_added }}</td>
+                      <td class="px-4 py-3 text-right text-gray-900">$ {{ product_load.payment_amount|floatformat:2 }}</td>
                       <td class="px-4 py-3 text-gray-700">
                         {{ product_load.responsible.user_FK.get_full_name|default:product_load.responsible.user_FK.username }}
                       </td>
@@ -1326,6 +1330,13 @@
             {% endif %}
           </div>
           <div>
+            <label for="{{ product_load_form.payment_amount.id_for_label }}" class="block text-sm font-medium text-gray-700">Valor pagado</label>
+            {{ product_load_form.payment_amount }}
+            {% if product_load_form.payment_amount.errors %}
+              <p class="mt-1 text-sm text-red-600">{{ product_load_form.payment_amount.errors|striptags }}</p>
+            {% endif %}
+          </div>
+          <div>
             <span class="block text-sm font-medium text-gray-700">Responsable</span>
             {% if product_load_responsible %}
               <p class="mt-2 rounded-md border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-700">
@@ -1414,6 +1425,13 @@
             {{ fuel_load_form.liters_added }}
             {% if fuel_load_form.liters_added.errors %}
               <p class="mt-1 text-sm text-red-600">{{ fuel_load_form.liters_added.errors|striptags }}</p>
+            {% endif %}
+          </div>
+          <div>
+            <label for="{{ fuel_load_form.payment_amount.id_for_label }}" class="block text-sm font-medium text-gray-700">Valor pagado</label>
+            {{ fuel_load_form.payment_amount }}
+            {% if fuel_load_form.payment_amount.errors %}
+              <p class="mt-1 text-sm text-red-600">{{ fuel_load_form.payment_amount.errors|striptags }}</p>
             {% endif %}
           </div>
           <div>

@@ -649,6 +649,12 @@ class ServiceSessionFuelLoad(models.Model):
     )
     driver_name = models.CharField("Nombre del chofer", max_length=150)
     license_plate = models.CharField("Patente", max_length=20)
+    payment_amount = models.DecimalField(
+        "Valor pagado",
+        max_digits=12,
+        decimal_places=2,
+        default=0,
+    )
     date = models.DateField("Fecha")
     created_at = models.DateTimeField("Fecha de creación", auto_now_add=True)
     updated_at = models.DateTimeField("Fecha de actualización", auto_now=True)
@@ -684,6 +690,12 @@ class ServiceSessionProductLoad(models.Model):
         on_delete=models.PROTECT,
         related_name="product_loads",
         verbose_name="Responsable",
+    )
+    payment_amount = models.DecimalField(
+        "Valor pagado",
+        max_digits=12,
+        decimal_places=2,
+        default=0,
     )
     date = models.DateField("Fecha")
     created_at = models.DateTimeField("Fecha de creación", auto_now_add=True)
