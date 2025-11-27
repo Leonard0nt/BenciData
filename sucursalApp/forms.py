@@ -178,6 +178,13 @@ class MachineForm(forms.ModelForm):
             )
         return fuel_inventory
 
+    def clean(self):
+        cleaned_data = super().clean()
+        fuel_inventory = cleaned_data.get("fuel_inventory")
+        if fuel_inventory:
+            cleaned_data["fuel_type"] = fuel_inventory.fuel_type
+        return cleaned_data
+
     class Meta:
         model = Machine
         fields = [
