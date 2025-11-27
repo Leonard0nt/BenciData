@@ -1676,6 +1676,11 @@ class ServiceSessionDetailView(OwnerCompanyMixin, DetailView):
                 initial=[{"machine_id": machine.pk} for machine in branch_machines],
             )
         machine_close_pairs = list(zip(branch_machines, close_session_formset.forms))
+        close_session_flow_details = kwargs.get("close_session_flow_details")
+        close_session_flow_total = kwargs.get("close_session_flow_total")
+        close_session_flow_missing_prices = kwargs.get(
+            "close_session_flow_missing_prices", set()
+        )
         context.update(
             {
                 "shift": self.object.shift,
@@ -1726,6 +1731,9 @@ class ServiceSessionDetailView(OwnerCompanyMixin, DetailView):
                 "service_session_closed": self.object.ended_at is not None,
                 "turn_profit": turn_profit,
                 "net_turn_profit": net_turn_profit,
+                "close_session_flow_details": close_session_flow_details,
+                "close_session_flow_total": close_session_flow_total,
+                "close_session_flow_missing_prices": close_session_flow_missing_prices,
                 "turn_profit_components": {
                     "initial_budget": initial_budget,
                     "credit_sales": credit_sales_total,
@@ -1753,6 +1761,8 @@ class ServiceSessionDetailView(OwnerCompanyMixin, DetailView):
             return redirect("service_session_start")
 
         if form_type == "close-session":
+            close_action = request.POST.get("close_action", "close")
+            branch = self.object.shift.sucursal
             if self.object.ended_at:
                 messages.info(
                     request,
@@ -1760,9 +1770,9 @@ class ServiceSessionDetailView(OwnerCompanyMixin, DetailView):
                 )
                 return redirect("service_session_start")
             branch_machines = list(
-                Machine.objects.filter(
-                    island__sucursal=self.object.shift.sucursal
-                ).select_related("island")
+                Machine.objects.filter(island__sucursal=branch).select_related(
+                    "island", "fuel_inventory"
+                )
             )
             close_session_formset = ServiceSessionMachineClosingFormSet(
                 data=request.POST,
@@ -1771,6 +1781,69 @@ class ServiceSessionDetailView(OwnerCompanyMixin, DetailView):
             )
             if close_session_formset.is_valid():
                 machines_by_id = {machine.pk: machine for machine in branch_machines}
+                decimal_zero = Decimal("0")
+
+                if close_action == "check":
+                    fuel_prices = {}
+                    for price in FuelPrice.objects.filter(sucursal=branch).order_by(
+                        "fuel_type", "-created_at", "-pk"
+                    ):
+                        fuel_prices.setdefault(price.fuel_type, price.price)
+
+                    close_session_flow_total = decimal_zero
+                    close_session_flow_details = []
+                    missing_price_types = set()
+
+                    for form in close_session_formset:
+                        machine_id = form.cleaned_data.get("machine_id")
+                        numeral = form.cleaned_data.get("numeral")
+                        if machine_id is None or numeral is None:
+                            continue
+
+                        machine = machines_by_id.get(machine_id)
+                        if machine is None:
+                            continue
+
+                        liters_sold = numeral - machine.numeral
+                        fuel_type = (
+                            machine.fuel_type
+                            or getattr(machine.fuel_inventory, "fuel_type", "")
+                        )
+                        price = fuel_prices.get(fuel_type)
+
+                        if price is None:
+                            missing_price_types.add(fuel_type or "Desconocido")
+                            flow_amount = decimal_zero
+                        else:
+                            flow_amount = liters_sold * price
+
+                        close_session_flow_total += flow_amount
+                        close_session_flow_details.append(
+                            {
+                                "machine": machine,
+                                "liters_sold": liters_sold,
+                                "fuel_type": fuel_type,
+                                "price": price,
+                                "flow_amount": flow_amount,
+                            }
+                        )
+
+                    if missing_price_types:
+                        messages.warning(
+                            request,
+                            "Falta registrar precio para: "
+                            + ", ".join(sorted(missing_price_types)),
+                        )
+
+                    context = self.get_context_data(
+                        service_close_formset=close_session_formset,
+                        branch_machines=branch_machines,
+                        close_session_flow_total=close_session_flow_total,
+                        close_session_flow_details=close_session_flow_details,
+                        close_session_flow_missing_prices=sorted(missing_price_types),
+                    )
+                    return self.render_to_response(context)
+
                 closure_time = timezone.now()
                 with transaction.atomic():
                     for form in close_session_formset:
