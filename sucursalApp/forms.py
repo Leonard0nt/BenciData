@@ -49,7 +49,7 @@ class SucursalForm(forms.ModelForm):
         widget=forms.CheckboxSelectMultiple(
             attrs={"class": "profile-checkbox-grid"}
         ),
-        label="Contadores",
+        label="Secretario(a)",
     )
     firefighters = forms.ModelMultipleChoiceField(
         queryset=Profile.objects.none(),

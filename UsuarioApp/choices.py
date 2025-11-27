@@ -1,7 +1,7 @@
 PERMISOS = [
     ("OWNER", "Dueño"),
     ("ADMINISTRATOR", "Administrador"),
-    ("ACCOUNTANT", "Contador"),
+    ("ACCOUNTANT", "Secretario(a)"),
     ("HEAD_ATTENDANT", "Bombero encargado"),
     ("ATTENDANT", "Bombero"),
 
