@@ -202,7 +202,11 @@ class Machine(models.Model):
         blank=True,
         null=True,
     )
-    fuel_type = models.CharField("Tipo de combustible", max_length=50, blank=True)
+    fuel_type = models.CharField(
+        "Tipo de combustible",
+        max_length=50,
+        blank=True,
+    )
     description = models.CharField("Descripción", max_length=255, blank=True)
     created_at = models.DateTimeField("Fecha de creación", auto_now_add=True)
     updated_at = models.DateTimeField("Fecha de actualización", auto_now=True)
@@ -216,6 +220,16 @@ class Machine(models.Model):
     def __str__(self) -> str:
         return f"Máquina {self.number} - {self.island}"
 
+    def save(self, *args, **kwargs):
+        if self.fuel_inventory:
+            self.fuel_type = self.fuel_inventory.fuel_type
+        else:
+            self.fuel_type = ""
+
+        super().save(*args, **kwargs)
+
+        if self.pk:
+            self.nozzles.update(fuel_type=self.fuel_type)
 
 class Nozzle(models.Model):
     """Representa una pistola asociada a una máquina."""
@@ -227,7 +241,12 @@ class Nozzle(models.Model):
         verbose_name="Máquina",
     )
     number = models.PositiveIntegerField("Número")
-    fuel_type = models.CharField("Tipo de combustible", max_length=50, blank=True)
+
+    fuel_type = models.CharField(
+        "Tipo de combustible",
+        max_length=50,
+        blank=True,
+    )
     description = models.CharField("Descripción", max_length=255, blank=True)
     created_at = models.DateTimeField("Fecha de creación", auto_now_add=True)
     updated_at = models.DateTimeField("Fecha de actualización", auto_now=True)
@@ -241,6 +260,13 @@ class Nozzle(models.Model):
     def __str__(self) -> str:
         return f"Pistola {self.number} - {self.machine}"
 
+    def save(self, *args, **kwargs):
+        if self.machine:
+            self.fuel_type = getattr(self.machine, "fuel_type", "")
+        else:
+            self.fuel_type = ""
+
+        super().save(*args, **kwargs)
 
 class Shift(models.Model):
     """Gestiona los turnos configurados para una sucursal."""

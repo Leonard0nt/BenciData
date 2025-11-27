@@ -192,7 +192,6 @@ class MachineForm(forms.ModelForm):
             "number",
             "numeral",
             "fuel_inventory",
-            "fuel_type",
             "description",
         ]
         widgets = {
@@ -202,7 +201,6 @@ class MachineForm(forms.ModelForm):
             "fuel_inventory": forms.Select(
                 attrs={"class": "w-full border rounded p-2"}
             ),
-            "fuel_type": forms.TextInput(attrs={"class": "w-full border rounded p-2"}),
             "description": forms.TextInput(attrs={"class": "w-full border rounded p-2"}),
         }
 
@@ -213,13 +211,11 @@ class NozzleForm(forms.ModelForm):
         fields = [
             "machine",
             "number",
-            "fuel_type",
             "description",
         ]
         widgets = {
             "machine": forms.HiddenInput(),
             "number": forms.NumberInput(attrs={"class": "w-full border rounded p-2"}),
-            "fuel_type": forms.TextInput(attrs={"class": "w-full border rounded p-2"}),
             "description": forms.TextInput(attrs={"class": "w-full border rounded p-2"}),
         }
 
