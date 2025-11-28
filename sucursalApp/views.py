@@ -1854,6 +1854,11 @@ class ServiceSessionDetailView(OwnerCompanyMixin, DetailView):
                         machine = machines_by_id.get(machine_id)
                         if machine is None:
                             continue
+                        liters_sold = numeral - machine.numeral
+                        if machine.fuel_inventory_id and liters_sold > decimal_zero:
+                            FuelInventory.objects.filter(pk=machine.fuel_inventory_id).update(
+                                liters=F("liters") - liters_sold
+                            )
                         machine.numeral = numeral
                         machine.save(
                             update_fields=[
