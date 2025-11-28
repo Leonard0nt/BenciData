@@ -1381,7 +1381,7 @@
           <span class="inline-flex items-center rounded-full bg-indigo-50 px-3 py-1 text-sm font-medium text-indigo-700">
             {{ branch_credit_sales_count|default:0 }} registro{{ branch_credit_sales_count|default:0|pluralize:"s" }}
           </span>
-          <span class="inline-flex items-center rounded-full bg-gray-100 px-3 py-1 text-sm text-gray-700">
+          <span class="inline-flex items-center rounded-full bg-gray-100 px-3 py-1 text-sm text-gray-700 whitespace-nowrap tabular-nums">
             Total: $ {{ branch_credit_sales_total|default:0|floatformat:0 }}
           </span>
         </div>
