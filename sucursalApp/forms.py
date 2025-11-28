@@ -143,6 +143,113 @@ class SucursalForm(forms.ModelForm):
                     defaults={"role": role},
                 )
 
+
+class BranchStaffForm(forms.Form):
+    administrators = forms.ModelMultipleChoiceField(
+        queryset=Profile.objects.none(),
+        required=False,
+        widget=forms.CheckboxSelectMultiple(
+            attrs={"class": "profile-checkbox-grid"}
+        ),
+        label="Administradores",
+    )
+    accountants = forms.ModelMultipleChoiceField(
+        queryset=Profile.objects.none(),
+        required=False,
+        widget=forms.CheckboxSelectMultiple(
+            attrs={"class": "profile-checkbox-grid"}
+        ),
+        label="Secretario(a)",
+    )
+    firefighters = forms.ModelMultipleChoiceField(
+        queryset=Profile.objects.none(),
+        required=False,
+        widget=forms.CheckboxSelectMultiple(
+            attrs={"class": "profile-checkbox-grid"}
+        ),
+        label="Bomberos",
+        help_text="Incluye perfiles con rol de bombero.",
+    )
+
+    STAFF_ROLE_FIELDS = SucursalForm.STAFF_ROLE_FIELDS
+
+    def __init__(
+        self,
+        *args,
+        company: Optional["homeApp.models.Company"] = None,
+        instance: Optional[Sucursal] = None,
+        allow_admin_assignment: bool = True,
+        **kwargs,
+    ):
+        super().__init__(*args, **kwargs)
+        self.instance = instance
+        self.company = company or getattr(instance, "company", None)
+        self.allow_admin_assignment = allow_admin_assignment
+
+        queryset = Profile.objects.select_related("position_FK", "user_FK")
+        if self.company is not None:
+            queryset = queryset.filter(company_rut=self.company.rut)
+
+        for field_name, roles in self.STAFF_ROLE_FIELDS.items():
+            if field_name == "administrators" and not self.allow_admin_assignment:
+                self.fields.pop(field_name, None)
+                continue
+
+            field_queryset = queryset.filter(
+                position_FK__permission_code__in=roles
+            )
+            field = self.fields[field_name]
+            field.queryset = field_queryset.order_by("user_FK__username")
+
+            if self.instance and self.instance.pk:
+                initial_ids = self.instance.staff.filter(
+                    role__in=roles
+                ).values_list("profile_id", flat=True)
+                field.initial = list(initial_ids)
+
+            widget = field.widget
+            base_class = widget.attrs.get("class", "")
+            extra_class = "profile-checkbox-grid"
+            if extra_class not in base_class:
+                widget.attrs["class"] = f"{base_class} {extra_class}".strip()
+
+    def _save_staff_assignments(self) -> None:
+        if not self.instance:
+            raise ValueError("Branch instance is required to save staff assignments")
+
+        for field_name, roles in self.STAFF_ROLE_FIELDS.items():
+            if field_name not in self.fields:
+                continue
+
+            selected_profiles = self.cleaned_data.get(field_name)
+            if selected_profiles is None:
+                continue
+
+            selected_ids = [profile.pk for profile in selected_profiles]
+            self.instance.staff.filter(role__in=roles).exclude(
+                profile_id__in=selected_ids
+            ).delete()
+
+            for profile in selected_profiles:
+                role = None
+                if getattr(profile, "position_FK", None):
+                    role = profile.position_FK.permission_code
+                SucursalStaff.objects.update_or_create(
+                    sucursal=self.instance,
+                    profile=profile,
+                    defaults={"role": role},
+                )
+
+    def save(self) -> Sucursal:
+        if not self.is_valid():
+            raise ValueError("Cannot save an invalid form")
+
+        if not self.instance:
+            raise ValueError("Branch instance is required to save staff assignments")
+
+        self._save_staff_assignments()
+        return self.instance
+
 class IslandForm(forms.ModelForm):
     class Meta:
         model = Island

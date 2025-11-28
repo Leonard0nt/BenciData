@@ -17,12 +17,14 @@ from django.views import View
 
 from django.views.generic import CreateView, DeleteView, DetailView, ListView, UpdateView
 from django.views.generic.edit import FormMixin
-
+from django.views.generic.detail import SingleObjectMixin
+from django.views.generic.edit import FormView
 from core.mixins import RoleRequiredMixin
 from homeApp.models import Company
 from .forms import (
     BranchProductForm,
     FuelInventoryForm,
+    BranchStaffForm,
     FuelPriceForm,
     IslandForm,
     MachineForm,
@@ -640,6 +642,45 @@ class SucursalUpdateView(OwnerCompanyMixin, UpdateView):
                 shift_context.update_form = form
                 break
         return response
+
+
+
+class BranchStaffManageView(OwnerCompanyMixin, SingleObjectMixin, FormView):
+    model = Sucursal
+    form_class = BranchStaffForm
+    template_name = "pages/usuarios/usuarios_lista.html"
+    allowed_roles = ["OWNER", "ADMINISTRATOR"]
+    http_method_names = ["post"]
+
+    def get_queryset(self):
+        return self.get_managed_branches_queryset()
+
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        branch = self.get_object()
+        profile = getattr(self.request.user, "profile", None)
+        kwargs.update(
+            {
+                "instance": branch,
+                "company": getattr(branch, "company", None),
+                "allow_admin_assignment": bool(profile and profile.is_owner()),
+            }
+        )
+        return kwargs
+
+    def form_valid(self, form):
+        form.save()
+        messages.success(
+            self.request, "Personal de la sucursal actualizado correctamente."
+        )
+        return redirect("User")
+
+    def form_invalid(self, form):
+        messages.error(
+            self.request,
+            "No se pudo actualizar el personal de la sucursal. Revisa los datos.",
+        )
+        return redirect("User")
 
     def _handle_fuel_inventory_update(self, request) -> Any:
         inventory_id = request.POST.get("object_id")

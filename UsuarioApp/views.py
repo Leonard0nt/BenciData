@@ -23,6 +23,7 @@ from django.contrib import messages
 from django.urls import reverse_lazy
 from core.mixins import PermitsPositionMixin, RoleRequiredMixin
 from .models import Profile
+from sucursalApp.forms import BranchStaffForm
 from sucursalApp.models import Sucursal, SucursalStaff
 from homeApp.models import Company
 
@@ -126,6 +127,17 @@ class UserListView(LoginRequiredMixin, ListView):
         access = self._get_access_scope()
         accessible_branches: list[Sucursal] = access.get("branches", [])
         branch_lookup = {branch.id: branch for branch in accessible_branches if branch}
+
+        staff_forms: dict[int, BranchStaffForm] = {}
+        if access.get("is_owner") or access.get("is_admin"):
+            for branch in accessible_branches:
+                if not branch or branch.id is None:
+                    continue
+                staff_forms[branch.id] = BranchStaffForm(
+                    instance=branch,
+                    company=branch.company,
+                    allow_admin_assignment=access.get("is_owner", False),
+                )
 
         base_queryset = getattr(self, "object_list", self.get_queryset())
         filtered_users = list(
@@ -234,6 +246,7 @@ class UserListView(LoginRequiredMixin, ListView):
                         "inactive_users": inactive_users,
                         "recent_users": recent_users,
                     },
+                    "staff_form": staff_forms.get(branch_id),
                 }
             )
 
