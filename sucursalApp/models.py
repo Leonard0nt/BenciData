@@ -517,6 +517,26 @@ class ServiceSession(models.Model):
         editable=False,
         default=0,
     )
+    FLOW_MISMATCH_NONE = "NONE"
+    FLOW_MISMATCH_POSITIVE = "POSITIVE"
+    FLOW_MISMATCH_NEGATIVE = "NEGATIVE"
+    FLOW_MISMATCH_CHOICES = (
+        (FLOW_MISMATCH_NONE, "Sin descuadre"),
+        (FLOW_MISMATCH_POSITIVE, "Descuadre positivo"),
+        (FLOW_MISMATCH_NEGATIVE, "Descuadre negativo"),
+    )
+    flow_mismatch_amount = models.DecimalField(
+        "Monto de descuadre",
+        max_digits=12,
+        decimal_places=2,
+        default=0,
+    )
+    flow_mismatch_type = models.CharField(
+        "Tipo de descuadre",
+        max_length=20,
+        choices=FLOW_MISMATCH_CHOICES,
+        default=FLOW_MISMATCH_NONE,
+    )
     ended_at = models.DateTimeField(
         "Fecha de cierre",
         null=True,

@@ -1697,6 +1697,14 @@ class ServiceSessionDetailView(OwnerCompanyMixin, DetailView):
             for product_load in product_loads
         )
 
+        close_session_flow_gap = kwargs.get(
+            "close_session_flow_gap", self.object.flow_mismatch_amount
+        )
+        close_session_flow_mismatch_type = kwargs.get(
+            "close_session_flow_mismatch_type", self.object.flow_mismatch_type
+        )
+        flow_mismatch_labels = dict(ServiceSession.FLOW_MISMATCH_CHOICES)
+
         turn_profit = (
             credit_sales_total
             + transbank_vouchers_total
@@ -1782,6 +1790,12 @@ class ServiceSessionDetailView(OwnerCompanyMixin, DetailView):
                 "net_turn_profit": net_turn_profit,
                 "close_session_flow_details": close_session_flow_details,
                 "close_session_flow_total": close_session_flow_total,
+                "close_session_flow_gap": close_session_flow_gap,
+                "close_session_flow_mismatch_type": close_session_flow_mismatch_type,
+                "close_session_flow_mismatch_label": flow_mismatch_labels.get(
+                    close_session_flow_mismatch_type,
+                    flow_mismatch_labels[ServiceSession.FLOW_MISMATCH_NONE],
+                ),
                 "close_session_flow_missing_prices": close_session_flow_missing_prices,
                 "turn_profit_components": {
                     "initial_budget": initial_budget,
@@ -1890,6 +1904,34 @@ class ServiceSessionDetailView(OwnerCompanyMixin, DetailView):
                         close_session_flow_total=close_session_flow_total,
                         close_session_flow_details=close_session_flow_details,
                         close_session_flow_missing_prices=sorted(missing_price_types),
+                    )
+
+                    turn_profit = context.get("turn_profit") or decimal_zero
+                    close_session_flow_gap = close_session_flow_total - turn_profit
+
+                    if close_session_flow_gap > decimal_zero:
+                        flow_mismatch_type = ServiceSession.FLOW_MISMATCH_POSITIVE
+                    elif close_session_flow_gap < decimal_zero:
+                        flow_mismatch_type = ServiceSession.FLOW_MISMATCH_NEGATIVE
+                    else:
+                        flow_mismatch_type = ServiceSession.FLOW_MISMATCH_NONE
+
+                    self.object.flow_mismatch_amount = close_session_flow_gap
+                    self.object.flow_mismatch_type = flow_mismatch_type
+                    self.object.save(
+                        update_fields=["flow_mismatch_amount", "flow_mismatch_type"]
+                    )
+
+                    flow_mismatch_labels = dict(ServiceSession.FLOW_MISMATCH_CHOICES)
+                    context.update(
+                        {
+                            "close_session_flow_gap": close_session_flow_gap,
+                            "close_session_flow_mismatch_type": flow_mismatch_type,
+                            "close_session_flow_mismatch_label": flow_mismatch_labels.get(
+                                flow_mismatch_type,
+                                flow_mismatch_labels[ServiceSession.FLOW_MISMATCH_NONE],
+                            ),
+                        }
                     )
                     return self.render_to_response(context)
 
