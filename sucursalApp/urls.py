@@ -97,4 +97,14 @@ urlpatterns = [
         views.NozzleDeleteView.as_view(),
         name="sucursal_nozzle_delete",
     ),
+    path(
+        "creditos/<int:pk>/pagar/",
+        views.CreditSaleMarkPaidView.as_view(),
+        name="credit_sale_mark_paid",
+    ),
+    path(
+        "creditos/<int:pk>/eliminar/",
+        views.CreditSaleDeleteView.as_view(),
+        name="credit_sale_delete",
+    ),
 ]

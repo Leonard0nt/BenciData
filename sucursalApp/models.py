@@ -739,6 +739,10 @@ class ServiceSessionProductLoad(models.Model):
 class ServiceSessionCreditSale(models.Model):
     """Registra las ventas realizadas a crédito durante un servicio."""
 
+    class Status(models.TextChoices):
+        PENDING = "PENDING", "Pendiente"
+        PAID = "PAID", "Pagado"
+
     service_session = models.ForeignKey(
         ServiceSession,
         on_delete=models.CASCADE,
@@ -763,6 +767,12 @@ class ServiceSessionCreditSale(models.Model):
         on_delete=models.PROTECT,
         related_name="credit_sales",
         verbose_name="Responsable",
+    )
+    status = models.CharField(
+        "Estado",
+        max_length=20,
+        choices=Status.choices,
+        default=Status.PENDING,
     )
     created_at = models.DateTimeField("Fecha de registro", auto_now_add=True)
     updated_at = models.DateTimeField("Fecha de actualización", auto_now=True)

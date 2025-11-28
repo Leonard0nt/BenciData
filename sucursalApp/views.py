@@ -1058,6 +1058,28 @@ class BranchProductDeleteView(BranchProductAccessMixin, View):
         product.delete()
         return HttpResponseRedirect(success_url)
 
+
+class CreditSaleAccessMixin(OwnerCompanyMixin):
+    model = ServiceSessionCreditSale
+    allowed_roles = ["OWNER", "ADMINISTRATOR"]
+
+    def get_queryset(self) -> QuerySet[ServiceSessionCreditSale]:
+        branch_ids = self.get_managed_branch_ids()
+        if not branch_ids:
+            return ServiceSessionCreditSale.objects.none()
+        return ServiceSessionCreditSale.objects.filter(
+            service_session__shift__sucursal_id__in=branch_ids
+        ).select_related("service_session__shift__sucursal")
+
+    def get_object(self) -> ServiceSessionCreditSale:
+        return get_object_or_404(self.get_queryset(), pk=self.kwargs.get("pk"))
+
+    def get_success_url(self, obj: ServiceSessionCreditSale | None = None) -> str:
+        instance = obj or getattr(self, "object", None)
+        if instance is None:
+            instance = self.get_object()
+        return reverse("sucursal_update", args=[instance.service_session.shift.sucursal_id])
+
 class IslandAccessMixin(OwnerCompanyMixin):
     model = Island
     allowed_roles = ["OWNER", "ADMINISTRATOR"]
@@ -1099,6 +1121,27 @@ class MachineAccessMixin(OwnerCompanyMixin):
             instance = self.get_object()
         return reverse("sucursal_update", args=[instance.island.sucursal_id])
 
+
+class CreditSaleMarkPaidView(CreditSaleAccessMixin, View):
+    def post(self, request, *args, **kwargs) -> HttpResponseRedirect:
+        credit_sale = self.get_object()
+        if credit_sale.status != ServiceSessionCreditSale.Status.PAID:
+            ServiceSessionCreditSale.objects.filter(pk=credit_sale.pk).update(
+                status=ServiceSessionCreditSale.Status.PAID
+            )
+            messages.success(request, "El crédito fue marcado como pagado.")
+        else:
+            messages.info(request, "El crédito ya estaba pagado.")
+        return HttpResponseRedirect(self.get_success_url(credit_sale))
+
+
+class CreditSaleDeleteView(CreditSaleAccessMixin, View):
+    def post(self, request, *args, **kwargs) -> HttpResponseRedirect:
+        credit_sale = self.get_object()
+        success_url = self.get_success_url(credit_sale)
+        credit_sale.delete()
+        messages.success(request, "El crédito fue eliminado correctamente.")
+        return HttpResponseRedirect(success_url)
 
 class NozzleAccessMixin(OwnerCompanyMixin):
     model = Nozzle
