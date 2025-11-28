@@ -430,6 +430,7 @@ class SucursalUpdateView(OwnerCompanyMixin, UpdateView):
 
             history_records = []
             decimal_zero = Decimal("0")
+            flow_mismatch_labels = dict(ServiceSession.FLOW_MISMATCH_CHOICES)
             for session in closed_service_sessions:
                 credit_sales = list(session.credit_sales.all())
                 fuel_loads = list(session.fuel_loads.all())
@@ -529,12 +530,14 @@ class SucursalUpdateView(OwnerCompanyMixin, UpdateView):
                         "product_sales_value": product_sale_value_total,
                         "vouchers": vouchers,
                         "withdrawal_total": withdrawal_total,
-                        "voucher_count": sum(
-                            (voucher.voucher_count or 0) for voucher in vouchers
-                        ),
                         "voucher_total": voucher_total,
                         "firefighter_payments": firefighter_payments,
                         "firefighter_payments_total": firefighter_payments_total,
+                        "flow_mismatch_amount": session.flow_mismatch_amount,
+                        "flow_mismatch_label": flow_mismatch_labels.get(
+                            session.flow_mismatch_type,
+                            flow_mismatch_labels[ServiceSession.FLOW_MISMATCH_NONE],
+                        ),
                         "turn_profit": turn_profit,
                         "net_turn_profit": net_turn_profit,
                     }

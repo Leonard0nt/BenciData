@@ -258,7 +258,6 @@ class ServiceSessionCreditSaleAdmin(admin.ModelAdmin):
 class ServiceSessionTransbankVoucherAdmin(admin.ModelAdmin):
     list_display = (
         "service_session",
-        "voucher_count",
         "total_amount",
         "responsible",
         "registered_at",

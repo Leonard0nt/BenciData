@@ -613,7 +613,6 @@ class ServiceSessionTransbankVoucher(models.Model):
         related_name="transbank_vouchers",
         verbose_name="Responsable",
     )
-    voucher_count = models.PositiveIntegerField("Cantidad de vouchers")
     total_amount = models.DecimalField("Monto total", max_digits=12, decimal_places=2)
     registered_at = models.DateTimeField("Fecha de registro", auto_now_add=True)
 

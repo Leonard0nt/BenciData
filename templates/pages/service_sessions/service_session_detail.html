@@ -251,7 +251,6 @@
                   <th scope="col" class="px-4 py-3">Fecha</th>
                   <th scope="col" class="px-4 py-3">Hora</th>
                   <th scope="col" class="px-4 py-3">Encargado</th>
-                  <th scope="col" class="px-4 py-3 text-right">Cantidad</th>
                   <th scope="col" class="px-4 py-3 text-right">Monto total</th>
                 </tr>
               </thead>
@@ -259,13 +258,12 @@
                 {% for voucher in transbank_vouchers %}
                   <tr>
                     <td class="px-4 py-3 text-gray-700">{{ voucher.registered_at|date:"d/m/Y" }}</td>
-                    <td class="px-4 py-3 text-gray-700">{{ voucher.registered_at|date:"H:i" }}</td>
-                    <td class="px-4 py-3 font-medium text-gray-900">
-                      {{ voucher.responsible.user_FK.get_full_name|default:voucher.responsible.user_FK.username }}
-                    </td>
-                    <td class="px-4 py-3 text-right text-gray-900">{{ voucher.voucher_count }}</td>
-                    <td class="px-4 py-3 text-right text-gray-900">$ {{ voucher.total_amount|floatformat:0 }}</td>
-                  </tr>
+                  <td class="px-4 py-3 text-gray-700">{{ voucher.registered_at|date:"H:i" }}</td>
+                  <td class="px-4 py-3 font-medium text-gray-900">
+                    {{ voucher.responsible.user_FK.get_full_name|default:voucher.responsible.user_FK.username }}
+                  </td>
+                  <td class="px-4 py-3 text-right text-gray-900">$ {{ voucher.total_amount|floatformat:0 }}</td>
+                </tr>
                 {% endfor %}
               </tbody>
             </table>
@@ -834,7 +832,7 @@
         <div class="flex items-center justify-between">
           <div>
             <h3 class="text-lg font-semibold text-gray-900">Registrar vouchers Transbank</h3>
-            <p class="mt-1 text-sm text-gray-500">Ingresa la cantidad de vouchers y el total cobrado en Transbank.</p>
+            <p class="mt-1 text-sm text-gray-500">Ingresa el monto total cobrado en Transbank.</p>
           </div>
           <button type="button" class="rounded-md p-1 text-gray-400 hover:text-gray-600" @click="transbankVoucherModalOpen = false">
             <span class="sr-only">Cerrar</span>
@@ -883,28 +881,17 @@
             </div>
           </div>
 
-          <div class="grid gap-4 sm:grid-cols-2">
-            <div>
-              <label for="{{ transbank_voucher_form.voucher_count.id_for_label }}" class="block text-sm font-medium text-gray-700">Cantidad de vouchers</label>
-              {{ transbank_voucher_form.voucher_count }}
-              {% if transbank_voucher_form.voucher_count.errors %}
-                <p class="mt-1 text-sm text-red-600">{{ transbank_voucher_form.voucher_count.errors|striptags }}</p>
-              {% else %}
-                <p class="mt-1 text-xs text-gray-500">Indica cuántos vouchers se generaron.</p>
-              {% endif %}
+          <div>
+            <label for="{{ transbank_voucher_form.total_amount.id_for_label }}" class="block text-sm font-medium text-gray-700">Monto total</label>
+            <div class="mt-1 flex rounded-md shadow-sm">
+              <span class="inline-flex items-center rounded-l-md border border-r-0 border-gray-300 bg-gray-50 px-3 text-sm text-gray-500">$</span>
+              {{ transbank_voucher_form.total_amount }}
             </div>
-            <div>
-              <label for="{{ transbank_voucher_form.total_amount.id_for_label }}" class="block text-sm font-medium text-gray-700">Monto total</label>
-              <div class="mt-1 flex rounded-md shadow-sm">
-                <span class="inline-flex items-center rounded-l-md border border-r-0 border-gray-300 bg-gray-50 px-3 text-sm text-gray-500">$</span>
-                {{ transbank_voucher_form.total_amount }}
-              </div>
-              {% if transbank_voucher_form.total_amount.errors %}
-                <p class="mt-1 text-sm text-red-600">{{ transbank_voucher_form.total_amount.errors|striptags }}</p>
-              {% else %}
-                <p class="mt-1 text-xs text-gray-500">Ingresa el monto total cobrado mediante Transbank.</p>
-              {% endif %}
-            </div>
+            {% if transbank_voucher_form.total_amount.errors %}
+              <p class="mt-1 text-sm text-red-600">{{ transbank_voucher_form.total_amount.errors|striptags }}</p>
+            {% else %}
+              <p class="mt-1 text-xs text-gray-500">Ingresa el monto total cobrado mediante Transbank.</p>
+            {% endif %}
           </div>
 
           <div class="flex flex-wrap items-center justify-end gap-3">

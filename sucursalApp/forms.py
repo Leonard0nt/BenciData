@@ -1057,17 +1057,7 @@ class ServiceSessionTransbankVoucherForm(forms.ModelForm):
 
     class Meta:
         model = ServiceSessionTransbankVoucher
-        fields = ["voucher_count", "total_amount"]
-        widgets = {
-            "voucher_count": forms.NumberInput(
-                attrs={
-                    "class": "block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500",
-                    "min": 1,
-                    "placeholder": "Ej: 5",
-                    "inputmode": "numeric",
-                }
-            ),
-        }
+        fields = ["total_amount"]
 
     def __init__(
         self,
@@ -1114,12 +1104,6 @@ class ServiceSessionTransbankVoucherForm(forms.ModelForm):
         if amount <= 0:
             raise forms.ValidationError("El monto debe ser mayor a 0.")
         return amount.quantize(Decimal("0.01"))
-
-    def clean_voucher_count(self):
-        count = self.cleaned_data.get("voucher_count")
-        if count is None or count <= 0:
-            raise forms.ValidationError("Ingresa una cantidad válida de vouchers.")
-        return count
 
     def clean(self):
         cleaned_data = super().clean()
