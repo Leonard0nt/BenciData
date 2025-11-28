@@ -1698,8 +1698,7 @@ class ServiceSessionDetailView(OwnerCompanyMixin, DetailView):
         )
 
         turn_profit = (
-            initial_budget
-            + credit_sales_total
+            credit_sales_total
             + transbank_vouchers_total
             + withdrawals_total
             + product_sales_total
