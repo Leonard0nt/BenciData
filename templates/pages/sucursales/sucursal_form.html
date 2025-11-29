@@ -1248,8 +1248,8 @@
           <table class="min-w-full divide-y divide-gray-200">
             <thead class="bg-gray-50">
               <tr class="text-left text-xs font-semibold uppercase tracking-wide text-gray-500">
+                <th scope="col" class="px-4 py-3">N°Documento</th>
                 <th scope="col" class="px-4 py-3">Cliente</th>
-                <th scope="col" class="px-4 py-3">Combustible</th>
                 <th scope="col" class="px-4 py-3 text-right">Monto</th>
                 <th scope="col" class="px-4 py-3">Estado</th>
                 <th scope="col" class="px-4 py-3">Responsable</th>
@@ -1261,8 +1261,8 @@
             <tbody class="divide-y divide-gray-200 bg-white text-sm">
               {% for credit in branch_credit_sales %}
                 <tr>
+                  <td class="px-4 py-3 text-gray-700">{{ credit.invoice_number }}</td>
                   <td class="px-4 py-3 text-gray-700">{{ credit.customer_name }}</td>
-                  <td class="px-4 py-3 text-gray-700">{{ credit.fuel_inventory.fuel_type }}</td>
                   <td class="px-4 py-3 text-right text-gray-900">
                     <span class="currency-nowrap">$ {{ credit.amount|floatformat:0 }}</span>
                   </td>

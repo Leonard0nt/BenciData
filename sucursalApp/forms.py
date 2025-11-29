@@ -519,6 +519,19 @@ class ServiceSessionForm(forms.ModelForm):
         if current_ids:
             attendants_field.initial = current_ids
 
+    def clean(self):
+        cleaned_data = super().clean()
+        shift = cleaned_data.get("shift")
+
+        if shift and ServiceSession.objects.filter(
+            shift__sucursal=shift.sucursal, ended_at__isnull=True
+        ).exists():
+            self.add_error(
+                "shift",
+                "Ya existe un servicio en curso para esta sucursal. Cierra la caja del servicio activo antes de iniciar uno nuevo.",
+            )
+
+        return cleaned_data
         widget = attendants_field.widget
         base_class = widget.attrs.get("class", "")
         required_class = "profile-checkbox-grid"

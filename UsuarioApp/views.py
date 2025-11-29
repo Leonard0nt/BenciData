@@ -280,24 +280,36 @@ class UserCreateView(LoginRequiredMixin, PermitsPositionMixin, View):
         profile_form = ProfileCreateForm(request.POST, request.FILES, user=request.user)
 
         if user_form.is_valid() and profile_form.is_valid():
-            user = user_form.save()
-            profile = profile_form.save(commit=False)
-            profile.user_FK = user
             owner_profile = getattr(request.user, "profile", None)
-            if owner_profile is not None:
-                company = Company.objects.filter(profile=owner_profile).first()
-                if company is not None:
-                    profile.company_rut = company.rut
-                else:
-                    messages.warning(
-                        request,
-                        "No se encontró una empresa asociada al usuario actual.",
-                    )
-            else:
-                messages.warning(
+            if owner_profile is None:
+                messages.error(
                     request,
                     "No se encontró un perfil asociado al usuario actual.",
                 )
+                return render(
+                    request,
+                    self.template_name,
+                    {"user_form": user_form, "profile_form": profile_form},
+                )
+
+            company_rut = Company.normalize_rut(
+                getattr(owner_profile, "company_rut", None)
+            )
+            if not company_rut:
+                messages.error(
+                    request,
+                    "Debes completar la información de la empresa antes de registrar personal.",
+                )
+                return render(
+                    request,
+                    self.template_name,
+                    {"user_form": user_form, "profile_form": profile_form},
+                )
+
+            user = user_form.save()
+            profile = profile_form.save(commit=False)
+            profile.user_FK = user
+            profile.company_rut = company_rut
             profile.save()
             messages.success(request, "Usuario creado con Éxito.")
             return redirect("Register")
