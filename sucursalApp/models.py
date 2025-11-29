@@ -198,9 +198,15 @@ class Machine(models.Model):
         "FuelInventory",
         on_delete=models.PROTECT,
         related_name="machines",
-        verbose_name="Estanque",
+        verbose_name="Estanque principal",
         blank=True,
         null=True,
+    )
+    fuel_inventories = models.ManyToManyField(
+        "FuelInventory",
+        related_name="associated_machines",
+        verbose_name="Estanques",
+        blank=True,
     )
     fuel_type = models.CharField(
         "Tipo de combustible",
@@ -223,13 +229,25 @@ class Machine(models.Model):
     def save(self, *args, **kwargs):
         if self.fuel_inventory:
             self.fuel_type = self.fuel_inventory.fuel_type
+        elif self.pk:
+            primary_inventory = self.fuel_inventories.order_by("pk").first()
+            self.fuel_type = primary_inventory.fuel_type if primary_inventory else ""
         else:
             self.fuel_type = ""
 
         super().save(*args, **kwargs)
 
-        if self.pk:
-            self.nozzles.update(fuel_type=self.fuel_type)
+    @property
+    def primary_fuel_inventory(self):
+        return self.fuel_inventory or self.fuel_inventories.order_by("pk").first()
+
+    @property
+    def fuel_types(self) -> list[str]:
+        return list(
+            self.fuel_inventories.order_by("fuel_type")
+            .values_list("fuel_type", flat=True)
+            .distinct()
+        )
 
 class Nozzle(models.Model):
     """Representa una pistola asociada a una máquina."""
@@ -247,6 +265,14 @@ class Nozzle(models.Model):
         max_length=50,
         blank=True,
     )
+    fuel_inventory = models.ForeignKey(
+        "FuelInventory",
+        on_delete=models.PROTECT,
+        related_name="nozzles",
+        verbose_name="Estanque",
+        blank=True,
+        null=True,
+    )
     description = models.CharField("Descripción", max_length=255, blank=True)
     created_at = models.DateTimeField("Fecha de creación", auto_now_add=True)
     updated_at = models.DateTimeField("Fecha de actualización", auto_now=True)
@@ -261,8 +287,11 @@ class Nozzle(models.Model):
         return f"Pistola {self.number} - {self.machine}"
 
     def save(self, *args, **kwargs):
-        if self.machine:
-            self.fuel_type = getattr(self.machine, "fuel_type", "")
+        if self.fuel_inventory:
+            self.fuel_type = self.fuel_inventory.fuel_type
+        elif self.machine:
+            primary_inventory = getattr(self.machine, "primary_fuel_inventory", None)
+            self.fuel_type = getattr(primary_inventory, "fuel_type", "")
         else:
             self.fuel_type = ""
 

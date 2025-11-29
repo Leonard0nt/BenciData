@@ -268,29 +268,46 @@ class MachineForm(forms.ModelForm):
         self._form_island = island or instance_island or initial_island
         super().__init__(*args, **kwargs)
 
-        fuel_field = self.fields.get("fuel_inventory")
+        fuel_field = self.fields.get("fuel_inventories")
         if fuel_field:
             queryset = FuelInventory.objects.all()
             if self._form_island:
                 queryset = queryset.filter(sucursal=self._form_island.sucursal)
             fuel_field.queryset = queryset.order_by("code")
-            fuel_field.empty_label = "Selecciona un estanque"
-
-    def clean_fuel_inventory(self):
-        fuel_inventory = self.cleaned_data.get("fuel_inventory")
+            fuel_field.required = False
+    def clean_fuel_inventories(self):
+        fuel_inventories = self.cleaned_data.get("fuel_inventories")
         island = self.cleaned_data.get("island") or self._form_island
-        if fuel_inventory and island and fuel_inventory.sucursal_id != island.sucursal_id:
-            raise ValidationError(
-                "El estanque seleccionado no pertenece a la sucursal de la máquina."
-            )
-        return fuel_inventory
 
-    def clean(self):
-        cleaned_data = super().clean()
-        fuel_inventory = cleaned_data.get("fuel_inventory")
-        if fuel_inventory:
-            cleaned_data["fuel_type"] = fuel_inventory.fuel_type
-        return cleaned_data
+        if not island:
+            return fuel_inventories
+        invalid_inventories = fuel_inventories.exclude(sucursal_id=island.sucursal_id)
+        if invalid_inventories.exists():
+            raise ValidationError(
+                "Todos los estanques seleccionados deben pertenecer a la sucursal de la máquina."
+            )
+        return fuel_inventories
+
+    def save(self, commit=True):
+        machine: Machine = super().save(commit=False)
+        fuel_inventories = self.cleaned_data.get("fuel_inventories")
+        primary_inventory = None
+        if fuel_inventories:
+            primary_inventory = fuel_inventories.order_by("pk").first()
+        machine.fuel_inventory = primary_inventory
+        if commit:
+            machine.save()
+            if fuel_inventories is not None:
+                machine.fuel_inventories.set(fuel_inventories)
+        else:
+            self._pending_fuel_inventories = fuel_inventories
+        return machine
+
+    def save_m2m(self):
+        super().save_m2m()
+        fuel_inventories = getattr(self, "_pending_fuel_inventories", None)
+        if fuel_inventories is not None:
+            self.instance.fuel_inventories.set(fuel_inventories)
 
     class Meta:
         model = Machine
@@ -298,14 +315,14 @@ class MachineForm(forms.ModelForm):
             "island",
             "number",
             "numeral",
-            "fuel_inventory",
+            "fuel_inventories",
             "description",
         ]
         widgets = {
             "island": forms.HiddenInput(),
             "number": forms.NumberInput(attrs={"class": "w-full border rounded p-2"}),
             "numeral": forms.NumberInput(attrs={"class": "w-full border rounded p-2"}),
-            "fuel_inventory": forms.Select(
+            "fuel_inventories": forms.SelectMultiple(
                 attrs={"class": "w-full border rounded p-2"}
             ),
             "description": forms.TextInput(attrs={"class": "w-full border rounded p-2"}),
@@ -313,16 +330,55 @@ class MachineForm(forms.ModelForm):
 
 
 class NozzleForm(forms.ModelForm):
+    def __init__(self, *args, machine: Optional[Machine] = None, **kwargs):
+        self._form_machine = machine or kwargs.get("initial", {}).get("machine")
+        super().__init__(*args, **kwargs)
+        fuel_field = self.fields.get("fuel_inventory")
+        if fuel_field:
+            queryset = FuelInventory.objects.all()
+            if self._form_machine:
+                queryset = queryset.filter(
+                    associated_machines=self._form_machine
+                ) | queryset.filter(machines=self._form_machine)
+            fuel_field.queryset = queryset.distinct().order_by("code")
+            fuel_field.empty_label = "Selecciona un estanque"
+            fuel_field.required = True
+
+    def clean_fuel_inventory(self):
+        fuel_inventory = self.cleaned_data.get("fuel_inventory")
+        machine = self.cleaned_data.get("machine") or self._form_machine
+        if fuel_inventory and machine:
+            if not machine.fuel_inventories.filter(pk=fuel_inventory.pk).exists() and (
+                machine.fuel_inventory_id != fuel_inventory.pk
+            ):
+                raise ValidationError(
+                    "El estanque seleccionado debe estar asociado a la máquina."
+                )
+        return fuel_inventory
+
+    def save(self, commit=True):
+        nozzle: Nozzle = super().save(commit=False)
+        fuel_inventory = self.cleaned_data.get("fuel_inventory")
+        if fuel_inventory:
+            nozzle.fuel_type = fuel_inventory.fuel_type
+        if commit:
+            nozzle.save()
+        return nozzle
+
     class Meta:
         model = Nozzle
         fields = [
             "machine",
             "number",
+            "fuel_inventory",
             "description",
         ]
         widgets = {
             "machine": forms.HiddenInput(),
             "number": forms.NumberInput(attrs={"class": "w-full border rounded p-2"}),
+            "fuel_inventory": forms.Select(
+                attrs={"class": "w-full border rounded p-2"}
+            ),
             "description": forms.TextInput(attrs={"class": "w-full border rounded p-2"}),
         }
 

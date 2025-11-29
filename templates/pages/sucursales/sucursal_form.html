@@ -868,7 +868,18 @@
                       <div class="flex items-start justify-between gap-4">
                         <div>
                           <h4 class="text-base font-semibold text-gray-800">Máquina {{ machine.number }}</h4>
-                          <span class="text-sm text-gray-500">{{ machine.fuel_type }}</span>
+                          {% with inventories=machine.fuel_inventories.all %}
+                            {% if inventories %}
+                              <span class="text-sm text-gray-500">
+                                Combustibles:
+                                {% for inventory in inventories %}
+                                  {{ inventory.fuel_type }}{% if not forloop.last %}, {% endif %}
+                                {% endfor %}
+                              </span>
+                            {% elif machine.fuel_type %}
+                              <span class="text-sm text-gray-500">{{ machine.fuel_type }}</span>
+                            {% endif %}
+                          {% endwith %}
                         </div>
                         <div class="flex flex-wrap items-center gap-2">
                           <a
@@ -888,9 +899,20 @@
 
                       <dl class="mt-2 grid grid-cols-1 gap-x-4 gap-y-2 text-sm text-gray-600 sm:grid-cols-2">
                         <div class="sm:col-span-2"><dt class="font-medium text-gray-700">Numeral</dt><dd>{{ machine.numeral }}</dd></div>
-                        {% if machine.fuel_inventory %}
-                          <div class="sm:col-span-2"><dt class="font-medium text-gray-700">Estanque</dt><dd>{{ machine.fuel_inventory }}</dd></div>
-                        {% endif %}
+                        {% with inventories=machine.fuel_inventories.all %}
+                          {% if inventories %}
+                            <div class="sm:col-span-2">
+                              <dt class="font-medium text-gray-700">Estanques asociados</dt>
+                              <dd class="space-y-1">
+                                {% for inventory in inventories %}
+                                  <span class="block">{{ inventory }} · {{ inventory.fuel_type }}</span>
+                                {% endfor %}
+                              </dd>
+                            </div>
+                          {% elif machine.fuel_inventory %}
+                            <div class="sm:col-span-2"><dt class="font-medium text-gray-700">Estanque</dt><dd>{{ machine.fuel_inventory }}</dd></div>
+                          {% endif %}
+                        {% endwith %}
                       </dl>
 
                       <p class="text-sm text-gray-500 mt-2">Pistolas: {{ machine.nozzles.count }}</p>
@@ -903,6 +925,9 @@
                                 <div>
                                   <span class="text-sm font-medium text-gray-800">Pistola {{ nozzle.number }}</span>
                                   <span class="block text-xs text-gray-500">{{ nozzle.fuel_type }}</span>
+                                  {% if nozzle.fuel_inventory %}
+                                    <span class="block text-xs text-gray-500">Estanque: {{ nozzle.fuel_inventory }}</span>
+                                  {% endif %}
                                   {% if nozzle.description %}<p class="mt-1 text-xs text-gray-500">{{ nozzle.description }}</p>{% endif %}
                                 </div>
                                 <div class="flex flex-wrap items-center gap-2">

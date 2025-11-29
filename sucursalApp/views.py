@@ -561,10 +561,12 @@ class SucursalUpdateView(OwnerCompanyMixin, UpdateView):
                     machine.nozzle_create_form = NozzleForm(
                         auto_id=f"new-nozzle-{machine.pk}_%s",
                         initial={"machine": machine},
+                        machine=machine,
                     )
                     nozzles = list(machine.nozzles.all())
                     for nozzle in nozzles:
                         nozzle.update_form = NozzleForm(
+                            machine=machine,
                             instance=nozzle, auto_id=f"edit-nozzle-{nozzle.pk}_%s"
                         )
                     machine.nozzles_list = nozzles
@@ -1385,6 +1387,12 @@ class NozzleCreateView(OwnerCompanyMixin, CreateView):
         initial.setdefault("machine", self.get_machine())
         return initial
 
+
+    def get_form_kwargs(self) -> Dict[str, Any]:
+        kwargs = super().get_form_kwargs()
+        kwargs.setdefault("machine", getattr(self, "object", None) or self.get_machine())
+        return kwargs
+
     def form_valid(self, form: NozzleForm) -> HttpResponseRedirect:
         form.instance.machine = self.get_machine()
         return super().form_valid(form)
@@ -1416,6 +1424,11 @@ class NozzleUpdateView(NozzleAccessMixin, UpdateView):
             self.object.machine.island.sucursal_id,
             f"nozzle-edit-{self.object.pk}",
         )
+
+    def get_form_kwargs(self) -> Dict[str, Any]:
+        kwargs = super().get_form_kwargs()
+        kwargs.setdefault("machine", getattr(self, "object", None) and self.object.machine)
+        return kwargs
 
     def form_valid(self, form: NozzleForm) -> HttpResponseRedirect:
         form.instance.machine = self.object.machine
