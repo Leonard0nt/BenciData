@@ -19,6 +19,7 @@ from .models import (
     FuelPrice,
     Island,
     Machine,
+    MachineFuelInventoryNumeral,
     Nozzle,
     Shift,
     ServiceSessionFirefighterPayment,
@@ -266,6 +267,8 @@ class MachineForm(forms.ModelForm):
         instance_island = getattr(kwargs.get("instance"), "island", None)
         initial_island = kwargs.get("initial", {}).get("island")
         self._form_island = island or instance_island or initial_island
+
+        self.inventory_numeral_fields: list[tuple[str, FuelInventory]] = []
         super().__init__(*args, **kwargs)
 
         fuel_field = self.fields.get("fuel_inventories")
@@ -275,6 +278,33 @@ class MachineForm(forms.ModelForm):
                 queryset = queryset.filter(sucursal=self._form_island.sucursal)
             fuel_field.queryset = queryset.order_by("code")
             fuel_field.required = False
+
+            for inventory in fuel_field.queryset:
+                field_name = f"numeral_{inventory.pk}"
+                self.inventory_numeral_fields.append((field_name, inventory))
+                initial_numeral = Decimal("0")
+                if self.instance and self.instance.pk:
+                    initial_numeral = self.instance.get_numeral_for_inventory(
+                        inventory
+                    )
+                self.fields[field_name] = forms.DecimalField(
+                    label=f"Numeral {inventory.code} ({inventory.fuel_type})",
+                    required=False,
+                    max_digits=12,
+                    decimal_places=2,
+                    min_value=Decimal("0"),
+                    initial=initial_numeral,
+                    help_text=(
+                        "Se guarda solo si la máquina está asociada a este estanque."
+                    ),
+                    widget=forms.NumberInput(
+                        attrs={
+                            "class": "w-full border rounded p-2",
+                            "step": "0.01",
+                        }
+                    ),
+                )
+
     def clean_fuel_inventories(self):
         fuel_inventories = self.cleaned_data.get("fuel_inventories")
         island = self.cleaned_data.get("island") or self._form_island
@@ -299,8 +329,10 @@ class MachineForm(forms.ModelForm):
             machine.save()
             if fuel_inventories is not None:
                 machine.fuel_inventories.set(fuel_inventories)
+            self._save_numerals(machine, fuel_inventories)
         else:
             self._pending_fuel_inventories = fuel_inventories
+            self._pending_numeral_save = True
         return machine
 
     def save_m2m(self):
@@ -308,7 +340,32 @@ class MachineForm(forms.ModelForm):
         fuel_inventories = getattr(self, "_pending_fuel_inventories", None)
         if fuel_inventories is not None:
             self.instance.fuel_inventories.set(fuel_inventories)
+        if getattr(self, "_pending_numeral_save", False):
+            self._save_numerals(self.instance, fuel_inventories)
+            self._pending_numeral_save = False
 
+    def _save_numerals(
+        self, machine: Machine, fuel_inventories: Iterable[FuelInventory] | None
+    ) -> None:
+        selected_inventories = list(fuel_inventories or [])
+        if machine.fuel_inventory and machine.fuel_inventory not in selected_inventories:
+            selected_inventories.insert(0, machine.fuel_inventory)
+
+        for field_name, inventory in self.inventory_numeral_fields:
+            if inventory not in selected_inventories:
+                continue
+            numeral_value = self.cleaned_data.get(field_name)
+            if numeral_value is None:
+                numeral_value = Decimal("0")
+            MachineFuelInventoryNumeral.objects.update_or_create(
+                machine=machine,
+                fuel_inventory=inventory,
+                defaults={"numeral": numeral_value},
+            )
+
+        MachineFuelInventoryNumeral.objects.filter(machine=machine).exclude(
+            fuel_inventory__in=selected_inventories
+        ).delete()
     class Meta:
         model = Machine
         fields = [
