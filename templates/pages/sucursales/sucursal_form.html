@@ -898,7 +898,20 @@
                       </div>
 
                       <dl class="mt-2 grid grid-cols-1 gap-x-4 gap-y-2 text-sm text-gray-600 sm:grid-cols-2">
-                        <div class="sm:col-span-2"><dt class="font-medium text-gray-700">Numeral</dt><dd>{{ machine.numeral }}</dd></div>
+                        <div class="sm:col-span-2">
+                          <dt class="font-medium text-gray-700">Numerales</dt>
+                          <dd class="space-y-1">
+                            {% with numerals=machine.fuel_numerals.all %}
+                              {% if numerals %}
+                                {% for numeral in numerals %}
+                                  <span class="block">Estanque {{ numeral.fuel_inventory.code }}: {{ numeral.numeral }}</span>
+                                {% endfor %}
+                              {% else %}
+                                <span class="text-gray-500">Sin numerales registrados</span>
+                              {% endif %}
+                            {% endwith %}
+                          </dd>
+                        </div>
                         {% with inventories=machine.fuel_inventories.all %}
                           {% if inventories %}
                             <div class="sm:col-span-2">

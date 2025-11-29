@@ -1,4 +1,5 @@
 from __future__ import annotations
+from decimal import Decimal
 from typing import Iterable, Sequence
 
 
@@ -193,7 +194,6 @@ class Machine(models.Model):
         verbose_name="Isla",
     )
     number = models.PositiveIntegerField("Número")
-    numeral = models.DecimalField("Numeral", max_digits=12, decimal_places=2, default=0)
     fuel_inventory = models.ForeignKey(
         "FuelInventory",
         on_delete=models.PROTECT,
@@ -237,6 +237,28 @@ class Machine(models.Model):
 
         super().save(*args, **kwargs)
 
+    def get_fuel_inventories(self):
+        inventories = list(self.fuel_inventories.all())
+        primary_inventory = self.fuel_inventory
+        if primary_inventory and primary_inventory not in inventories:
+            inventories.insert(0, primary_inventory)
+        return inventories
+
+    def get_numeral_for_inventory(self, fuel_inventory: "FuelInventory" | None):
+        if fuel_inventory is None:
+            return Decimal("0")
+
+        numeral, _ = MachineFuelInventoryNumeral.objects.get_or_create(
+            machine=self,
+            fuel_inventory=fuel_inventory,
+            defaults={"numeral": Decimal("0")},
+        )
+        return numeral.numeral
+
+    @property
+    def numeral(self) -> Decimal:
+        return self.get_numeral_for_inventory(self.primary_fuel_inventory)
+
     @property
     def primary_fuel_inventory(self):
         return self.fuel_inventory or self.fuel_inventories.order_by("pk").first()
@@ -248,6 +270,35 @@ class Machine(models.Model):
             .values_list("fuel_type", flat=True)
             .distinct()
         )
+
+
+class MachineFuelInventoryNumeral(models.Model):
+    """Registra el numeral por combinación de máquina y estanque."""
+
+    machine = models.ForeignKey(
+        Machine,
+        on_delete=models.CASCADE,
+        related_name="fuel_numerals",
+        verbose_name="Máquina",
+    )
+    fuel_inventory = models.ForeignKey(
+        "FuelInventory",
+        on_delete=models.CASCADE,
+        related_name="machine_numerals",
+        verbose_name="Estanque",
+    )
+    numeral = models.DecimalField("Numeral", max_digits=12, decimal_places=2, default=0)
+    created_at = models.DateTimeField("Fecha de creación", auto_now_add=True)
+    updated_at = models.DateTimeField("Fecha de actualización", auto_now=True)
+
+    class Meta:
+        verbose_name = "Numeral de máquina"
+        verbose_name_plural = "Numerales de máquina"
+        unique_together = ("machine", "fuel_inventory")
+
+    def __str__(self) -> str:
+        return f"Máquina {self.machine.number} · Estanque {self.fuel_inventory.code}"
+
 
 class Nozzle(models.Model):
     """Representa una pistola asociada a una máquina."""

@@ -1033,7 +1033,7 @@
           <div>
             <h3 class="text-lg font-semibold text-gray-900">Cierre de caja y servicio</h3>
             <p class="mt-1 text-sm text-gray-500">
-              Ingresa el numeral de cada máquina registrada. El valor ingresado se guardará como numeral actualizado de la máquina.
+              Ingresa el numeral de cada estanque asociado a las máquinas registradas. El valor ingresado se guardará como numeral actualizado del estanque en esa máquina.
             </p>
           </div>
           <button type="button" class="rounded-md p-1 text-gray-400 hover:text-gray-600" @click="closeSessionModalOpen = false">
@@ -1067,22 +1067,39 @@
             {% endif %}
 
             <div class="space-y-4">
-              {% if machine_close_pairs %}
-                {% for machine, form in machine_close_pairs %}
+              {% if machine_inventory_close_groups %}
+                {% for machine, inventories in machine_inventory_close_groups %}
                   <div class="rounded-lg border border-gray-200 p-4 shadow-sm">
-                    {{ form.machine_id }}
                     <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                       <div>
                         <p class="text-sm font-semibold text-gray-900">Máquina {{ machine.number }} · Isla {{ machine.island.number }}</p>
-                        <p class="mt-1 text-xs text-gray-500">Numeral actual: {{ machine.numeral }}</p>
+                        <p class="mt-1 text-xs text-gray-500">
+                          Estanques asociados:
+                          {% for inventory, current_numeral, inventory_form in inventories %}
+                            {{ inventory.code }}{% if not forloop.last %}, {% endif %}
+                          {% endfor %}
+                        </p>
                       </div>
-                      <div class="sm:w-64">
-                        <label for="{{ form.numeral.id_for_label }}" class="block text-sm font-medium text-gray-700">Numeral</label>
-                        {{ form.numeral }}
-                        {% if form.numeral.errors %}
-                          <p class="mt-1 text-sm text-red-600">{{ form.numeral.errors|striptags }}</p>
-                        {% endif %}
-                      </div>
+                    </div>
+
+                    <div class="mt-4 space-y-4">
+                      {% for inventory, current_numeral, form in inventories %}
+                        {{ form.machine_id }}
+                        {{ form.fuel_inventory_id }}
+                        <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                          <div>
+                            <p class="text-sm font-semibold text-gray-900">Estanque {{ inventory.code }} · {{ inventory.fuel_type }}</p>
+                            <p class="mt-1 text-xs text-gray-500">Numeral actual: {{ current_numeral }}</p>
+                          </div>
+                          <div class="sm:w-64">
+                            <label for="{{ form.numeral.id_for_label }}" class="block text-sm font-medium text-gray-700">Numeral</label>
+                            {{ form.numeral }}
+                            {% if form.numeral.errors %}
+                              <p class="mt-1 text-sm text-red-600">{{ form.numeral.errors|striptags }}</p>
+                            {% endif %}
+                          </div>
+                        </div>
+                      {% endfor %}
                     </div>
                   </div>
                 {% endfor %}
@@ -1103,7 +1120,7 @@
                         <div class="flex flex-col gap-2 py-3 sm:flex-row sm:items-center sm:justify-between">
                           <div>
                             <p class="font-semibold">Máquina {{ flow.machine.number }} · Isla {{ flow.machine.island.number }}</p>
-                            <p class="text-xs text-emerald-700">{{ flow.fuel_type|default:"Combustible sin definir" }}</p>
+                            <p class="text-xs text-emerald-700">Estanque {{ flow.fuel_inventory.code }} · {{ flow.fuel_type|default:"Combustible sin definir" }}</p>
                           </div>
                           <div class="grid grid-cols-2 gap-3 text-right sm:w-auto sm:grid-cols-3 sm:text-left">
                             <div>

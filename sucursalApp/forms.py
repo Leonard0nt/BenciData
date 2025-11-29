@@ -314,14 +314,12 @@ class MachineForm(forms.ModelForm):
         fields = [
             "island",
             "number",
-            "numeral",
             "fuel_inventories",
             "description",
         ]
         widgets = {
             "island": forms.HiddenInput(),
             "number": forms.NumberInput(attrs={"class": "w-full border rounded p-2"}),
-            "numeral": forms.NumberInput(attrs={"class": "w-full border rounded p-2"}),
             "fuel_inventories": forms.CheckboxSelectMultiple(
                 attrs={"class": "space-y-2"}
             ),
@@ -1407,51 +1405,78 @@ class ServiceSessionFirefighterPaymentForm(forms.Form):
         return payments
 
 
-class MachineClosingForm(forms.Form):
+
+class MachineInventoryClosingForm(forms.Form):
     machine_id = forms.IntegerField(widget=forms.HiddenInput())
+    fuel_inventory_id = forms.IntegerField(widget=forms.HiddenInput())
     numeral = forms.DecimalField(
         label="Numeral",
         max_digits=12,
         decimal_places=2,
     )
 
-    def __init__(self, *args, machine: Machine | None = None, **kwargs):
+    def __init__(
+        self,
+        *args,
+        machine: Machine | None = None,
+        fuel_inventory: FuelInventory | None = None,
+        current_numeral: Decimal | None = None,
+        **kwargs,
+    ):
         self.machine = machine
+        self.fuel_inventory = fuel_inventory
+        self.current_numeral = current_numeral or Decimal("0")
         super().__init__(*args, **kwargs)
         if machine:
             self.fields["machine_id"].initial = machine.pk
-            self.fields["numeral"].initial = machine.numeral
-            self.fields["numeral"].min_value = machine.numeral
+        if fuel_inventory:
+            self.fields["fuel_inventory_id"].initial = fuel_inventory.pk
             self.fields["numeral"].label = (
-                f"Máquina {machine.number} · Isla {machine.island.number}"
+                f"Máquina {machine.number} · Estanque {fuel_inventory.code}"
             )
-
+        self.fields["numeral"].initial = self.current_numeral
+        self.fields["numeral"].min_value = self.current_numeral
+        
     def clean_numeral(self):
         value = self.cleaned_data.get("numeral")
         if value is None:
             return value
         if value < 0:
             raise forms.ValidationError("El numeral debe ser mayor o igual a 0.")
-        if self.machine and value < self.machine.numeral:
+        if value < self.current_numeral:
             raise forms.ValidationError(
                 "El numeral no puede ser menor al valor registrado actualmente."
             )
         return value
 
 
-class MachineClosingFormSet(BaseFormSet):
-    def __init__(self, *args, machines: list[Machine] | None = None, **kwargs):
-        self.machines = machines or []
+class MachineInventoryClosingFormSet(BaseFormSet):
+    def __init__(
+        self,
+        *args,
+        machine_inventory_pairs: list[tuple[Machine, FuelInventory, Decimal]] | None = None,
+        **kwargs,
+    ):
+        self.machine_inventory_pairs = machine_inventory_pairs or []
+        kwargs.setdefault("initial", [{} for _ in self.machine_inventory_pairs])
         super().__init__(*args, **kwargs)
 
     def _construct_form(self, i, **kwargs):
         machine = None
-        if self.machines and i < len(self.machines):
-            machine = self.machines[i]
-        kwargs["machine"] = machine
+        fuel_inventory = None
+        current_numeral = None
+        if self.machine_inventory_pairs and i < len(self.machine_inventory_pairs):
+            machine, fuel_inventory, current_numeral = self.machine_inventory_pairs[i]
+        kwargs.update(
+            {
+                "machine": machine,
+                "fuel_inventory": fuel_inventory,
+                "current_numeral": current_numeral,
+            }
+        )
         return super()._construct_form(i, **kwargs)
 
 
-ServiceSessionMachineClosingFormSet = formset_factory(
-    MachineClosingForm, formset=MachineClosingFormSet, extra=0
+ServiceSessionMachineInventoryClosingFormSet = formset_factory(
+    MachineInventoryClosingForm, formset=MachineInventoryClosingFormSet, extra=0
 )
