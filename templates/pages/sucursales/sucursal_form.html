@@ -1040,20 +1040,39 @@
                           </button>
                         </div>
                         <div class="px-6 py-6 overflow-y-auto">
-                          <form method="post" class="space-y-6 mx-auto w-full max-w-[36rem]">
+                          <form method="post" class="space-y-6 mx-auto w-full max-w-[36rem] machine-form">
                             {% csrf_token %}
                             <input type="hidden" name="form_scope" value="machine-update" />
                             <input type="hidden" name="object_id" value="{{ machine.pk }}" />
                             {% for hidden in machine.update_form.hidden_fields %}{{ hidden }}{% endfor %}
                             <div class="grid grid-cols-1 gap-6 md:grid-cols-2">
                               {% for field in machine.update_form.visible_fields %}
-                                <div>
-                                  <label class="block text-sm font-medium text-gray-700 mb-1" for="{{ field.id_for_label }}">{{ field.label }}</label>
-                                  {{ field }}
-                                  {% if field.help_text %}<p class="mt-1 text-xs text-gray-500">{{ field.help_text }}</p>{% endif %}
-                                  {% if field.errors %}<ul class="mt-1 space-y-1 text-xs text-red-600">{% for e in field.errors %}<li>{{ e }}</li>{% endfor %}</ul>{% endif %}
-                                </div>
+                                {% if field.name|slice:":8" != "numeral_" %}
+                                  <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1" for="{{ field.id_for_label }}">{{ field.label }}</label>
+                                    {{ field }}
+                                    {% if field.help_text %}<p class="mt-1 text-xs text-gray-500">{{ field.help_text }}</p>{% endif %}
+                                    {% if field.errors %}<ul class="mt-1 space-y-1 text-xs text-red-600">{% for e in field.errors %}<li>{{ e }}</li>{% endfor %}</ul>{% endif %}
+                                  </div>
+                                {% endif %}
                               {% endfor %}
+                              {% if machine.update_form.inventory_numeral_fields %}
+                                {% with machine_form=machine.update_form %}
+                                  <div class="md:col-span-2 space-y-3">
+                                    <h4 class="text-sm font-semibold text-gray-800">Numerales por estanque seleccionado</h4>
+                                    <div class="grid grid-cols-1 gap-4">
+                                      {% for field, inventory in machine_form.inventory_numeral_fields %}
+                                        <div class="space-y-1 numeral-field" data-inventory-id="{{ inventory.pk }}">
+                                          <label class="block text-sm font-medium text-gray-700" for="{{ field.id_for_label }}">{{ field.label }}</label>
+                                          {{ field }}
+                                          {% if field.help_text %}<p class="mt-1 text-xs text-gray-500">{{ field.help_text }}</p>{% endif %}
+                                          {% if field.errors %}<ul class="mt-1 space-y-1 text-xs text-red-600">{% for e in field.errors %}<li>{{ e }}</li>{% endfor %}</ul>{% endif %}
+                                        </div>
+                                      {% endfor %}
+                                    </div>
+                                  </div>
+                                {% endwith %}
+                              {% endif %}
                             </div>
                             {% if machine.update_form.non_field_errors %}
                               <ul class="space-y-1 text-sm text-red-600">
@@ -1175,17 +1194,36 @@
                     </button>
                   </div>
                   <div class="px-6 py-6 overflow-y-auto">
-                    <form method="post" action="{% url 'sucursal_machine_create' form.instance.pk island.pk %}" class="grid grid-cols-1 gap-4 sm:grid-cols-2 mx-auto w-full max-w-[36rem]">
+                    <form method="post" action="{% url 'sucursal_machine_create' form.instance.pk island.pk %}" class="grid grid-cols-1 gap-4 sm:grid-cols-2 mx-auto w-full max-w-[36rem] machine-form">
                       {% csrf_token %}
                       {% for hidden in island.machine_create_form.hidden_fields %}{{ hidden }}{% endfor %}
                       {% for field in island.machine_create_form.visible_fields %}
-                        <div class="sm:col-span-1 modal-field-group">
-                          <label class="block text-sm font-medium text-gray-700 mb-1" for="{{ field.id_for_label }}">{{ field.label }}</label>
-                          {{ field }}
-                          {% if field.help_text %}<p class="mt-1 text-xs text-gray-500">{{ field.help_text }}</p>{% endif %}
-                          {% if field.errors %}<ul class="mt-1 space-y-1 text-xs text-red-600">{% for e in field.errors %}<li>{{ e }}</li>{% endfor %}</ul>{% endif %}
-                        </div>
+                        {% if field.name|slice:":8" != "numeral_" %}
+                          <div class="sm:col-span-1 modal-field-group">
+                            <label class="block text-sm font-medium text-gray-700 mb-1" for="{{ field.id_for_label }}">{{ field.label }}</label>
+                            {{ field }}
+                            {% if field.help_text %}<p class="mt-1 text-xs text-gray-500">{{ field.help_text }}</p>{% endif %}
+                            {% if field.errors %}<ul class="mt-1 space-y-1 text-xs text-red-600">{% for e in field.errors %}<li>{{ e }}</li>{% endfor %}</ul>{% endif %}
+                          </div>
+                        {% endif %}
                       {% endfor %}
+                      {% if island.machine_create_form.inventory_numeral_fields %}
+                            {% with machine_form=island.machine_create_form %}
+                              <div class="sm:col-span-2">
+                                <h4 class="text-sm font-semibold text-gray-800 mb-2">Numerales por estanque seleccionado</h4>
+                                <div class="space-y-4">
+                              {% for field, inventory in machine_form.inventory_numeral_fields %}
+                                <div class="space-y-1 numeral-field" data-inventory-id="{{ inventory.pk }}">
+                                  <label class="block text-sm font-medium text-gray-700" for="{{ field.id_for_label }}">{{ field.label }}</label>
+                                  {{ field }}
+                                  {% if field.help_text %}<p class="mt-1 text-xs text-gray-500">{{ field.help_text }}</p>{% endif %}
+                                  {% if field.errors %}<ul class="mt-1 space-y-1 text-xs text-red-600">{% for e in field.errors %}<li>{{ e }}</li>{% endfor %}</ul>{% endif %}
+                                </div>
+                              {% endfor %}
+                                </div>
+                              </div>
+                        {% endwith %}
+                      {% endif %}
                       {% if island.machine_create_form.non_field_errors %}
                         <div class="sm:col-span-2">
                           <ul class="space-y-1 text-sm text-red-600">{% for e in island.machine_create_form.non_field_errors %}<li>{{ e }}</li>{% endfor %}</ul>
@@ -1754,4 +1792,27 @@
 
 {% block javascript %}
   <script defer src="{% static 'js/tabs.js' %}"></script>
+  <script>
+    document.addEventListener("DOMContentLoaded", () => {
+      const updateNumeralVisibility = (form) => {
+        const checkedIds = new Set(
+          Array.from(form.querySelectorAll("input[name='fuel_inventories']:checked"))
+            .map((input) => input.value)
+        );
+
+        form.querySelectorAll(".numeral-field").forEach((container) => {
+          const inventoryId = container.dataset.inventoryId;
+          container.style.display = checkedIds.has(inventoryId) ? "" : "none";
+        });
+      };
+
+      document.querySelectorAll("form.machine-form").forEach((form) => {
+        const checkboxInputs = form.querySelectorAll("input[name='fuel_inventories']");
+        checkboxInputs.forEach((input) => {
+          input.addEventListener("change", () => updateNumeralVisibility(form));
+        });
+        updateNumeralVisibility(form);
+      });
+    });
+  </script>
 {% endblock javascript %}
