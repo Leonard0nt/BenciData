@@ -19,6 +19,7 @@ from .models import (
     FuelPrice,
     Island,
     Machine,
+    MachineFuelInventory,
     Nozzle,
     Shift,
     ServiceSessionFirefighterPayment,
@@ -266,7 +267,15 @@ class MachineForm(forms.ModelForm):
         instance_island = getattr(kwargs.get("instance"), "island", None)
         initial_island = kwargs.get("initial", {}).get("island")
         self._form_island = island or instance_island or initial_island
+        self.inventory_numeral_errors: dict[int, str] = {}
+        self._initial_inventory_numerals: dict[int, Decimal] = {}
         super().__init__(*args, **kwargs)
+
+        if self.instance and self.instance.pk:
+            self._initial_inventory_numerals = {
+                link.fuel_inventory_id: link.numeral
+                for link in self.instance.machinefuelinventory_set.all()
+            }
 
         fuel_field = self.fields.get("fuel_inventories")
         if fuel_field:
@@ -275,6 +284,10 @@ class MachineForm(forms.ModelForm):
                 queryset = queryset.filter(sucursal=self._form_island.sucursal)
             fuel_field.queryset = queryset.order_by("code")
             fuel_field.required = False
+
+    def _get_inventory_field_name(self, inventory_id: int) -> str:
+        return f"numeral_{inventory_id}"
+
     def clean_fuel_inventories(self):
         fuel_inventories = self.cleaned_data.get("fuel_inventories")
         island = self.cleaned_data.get("island") or self._form_island
@@ -288,9 +301,42 @@ class MachineForm(forms.ModelForm):
             )
         return fuel_inventories
 
+    def clean(self):
+        cleaned_data = super().clean()
+        fuel_inventories = cleaned_data.get("fuel_inventories") or []
+
+        numerals: dict[int, Decimal] = {}
+        errors: dict[int, str] = {}
+        for inventory in fuel_inventories:
+            field_name = self._get_inventory_field_name(inventory.pk)
+            raw_value = self.data.get(field_name)
+            if raw_value in (None, ""):
+                errors[inventory.pk] = "Ingresa el numeral para este estanque."
+                continue
+            try:
+                numeral_value = Decimal(str(raw_value))
+            except (InvalidOperation, ValueError):
+                errors[inventory.pk] = "El numeral debe ser un número válido."
+                continue
+            if numeral_value < 0:
+                errors[inventory.pk] = "El numeral debe ser mayor o igual a 0."
+                continue
+            numerals[inventory.pk] = numeral_value
+
+        self.inventory_numeral_errors = errors
+        if errors:
+            self.add_error(
+                "fuel_inventories",
+                "Corrige los numerales de los estanques seleccionados.",
+            )
+
+        cleaned_data["fuel_inventory_numerals"] = numerals
+        return cleaned_data
+
     def save(self, commit=True):
         machine: Machine = super().save(commit=False)
         fuel_inventories = self.cleaned_data.get("fuel_inventories")
+        numerals = self.cleaned_data.get("fuel_inventory_numerals", {})
         primary_inventory = None
         if fuel_inventories:
             primary_inventory = fuel_inventories.order_by("pk").first()
@@ -298,30 +344,123 @@ class MachineForm(forms.ModelForm):
         if commit:
             machine.save()
             if fuel_inventories is not None:
-                machine.fuel_inventories.set(fuel_inventories)
+                self._sync_inventory_numerals(machine, fuel_inventories, numerals)
         else:
             self._pending_fuel_inventories = fuel_inventories
+            self._pending_fuel_inventory_numerals = numerals
         return machine
 
     def save_m2m(self):
         super().save_m2m()
         fuel_inventories = getattr(self, "_pending_fuel_inventories", None)
+        numerals = getattr(self, "_pending_fuel_inventory_numerals", {})
         if fuel_inventories is not None:
-            self.instance.fuel_inventories.set(fuel_inventories)
+            self._sync_inventory_numerals(self.instance, fuel_inventories, numerals)
+
+    def _sync_inventory_numerals(
+        self,
+        machine: Machine,
+        fuel_inventories: Iterable[FuelInventory],
+        numerals: dict[int, Decimal],
+    ) -> None:
+        existing_links = {
+            link.fuel_inventory_id: link
+            for link in MachineFuelInventory.objects.filter(machine=machine)
+        }
+        processed_ids: set[int] = set()
+        for inventory in fuel_inventories:
+            numeral_value = numerals.get(
+                inventory.pk,
+                existing_links.get(inventory.pk, None)
+                and existing_links[inventory.pk].numeral
+                or Decimal("0"),
+            )
+            link = existing_links.get(inventory.pk)
+            if link:
+                if link.numeral != numeral_value:
+                    link.numeral = numeral_value
+                    link.save(update_fields=["numeral"])
+            else:
+                MachineFuelInventory.objects.create(
+                    machine=machine,
+                    fuel_inventory=inventory,
+                    numeral=numeral_value,
+                )
+            processed_ids.add(inventory.pk)
+
+        stale_links = [
+            link_id
+            for link_id in existing_links.keys()
+            if link_id not in processed_ids
+        ]
+        if stale_links:
+            MachineFuelInventory.objects.filter(
+                machine=machine, fuel_inventory_id__in=stale_links
+            ).delete()
+
+        primary_inventory = machine.fuel_inventory or (
+            fuel_inventories and fuel_inventories[0]
+        )
+        if primary_inventory:
+            new_primary_numeral = numerals.get(
+                primary_inventory.pk,
+                existing_links.get(primary_inventory.pk, None)
+                and existing_links[primary_inventory.pk].numeral
+                or machine.numeral,
+            )
+            if machine.numeral != new_primary_numeral:
+                machine.numeral = new_primary_numeral
+                machine.save(update_fields=["numeral", "updated_at"])
+
+    def get_inventory_entries(self):
+        fuel_field = self.fields.get("fuel_inventories")
+        if not fuel_field:
+            return []
+
+        if self.is_bound:
+            selected_ids = set(
+                int(pk)
+                for pk in self.data.getlist(fuel_field.html_name)
+                if pk.isdigit()
+            )
+        elif self.instance and self.instance.pk:
+            selected_ids = set(
+                self.instance.fuel_inventories.values_list("pk", flat=True)
+            )
+        else:
+            selected_ids = set()
+
+        entries = []
+        errors = getattr(self, "inventory_numeral_errors", {}) or {}
+        for inventory in fuel_field.queryset:
+            field_name = self._get_inventory_field_name(inventory.pk)
+            value = (
+                self.data.get(field_name)
+                if self.is_bound
+                else self._initial_inventory_numerals.get(inventory.pk, "")
+            )
+            entries.append(
+                {
+                    "inventory": inventory,
+                    "field_name": field_name,
+                    "value": value,
+                    "checked": inventory.pk in selected_ids,
+                    "error": errors.get(inventory.pk),
+                }
+            )
+        return entries
 
     class Meta:
         model = Machine
         fields = [
             "island",
             "number",
-            "numeral",
             "fuel_inventories",
             "description",
         ]
         widgets = {
             "island": forms.HiddenInput(),
             "number": forms.NumberInput(attrs={"class": "w-full border rounded p-2"}),
-            "numeral": forms.NumberInput(attrs={"class": "w-full border rounded p-2"}),
             "fuel_inventories": forms.CheckboxSelectMultiple(
                 attrs={"class": "space-y-2"}
             ),
@@ -1409,21 +1548,36 @@ class ServiceSessionFirefighterPaymentForm(forms.Form):
 
 class MachineClosingForm(forms.Form):
     machine_id = forms.IntegerField(widget=forms.HiddenInput())
+    fuel_inventory_id = forms.IntegerField(widget=forms.HiddenInput(), required=False)
     numeral = forms.DecimalField(
         label="Numeral",
         max_digits=12,
         decimal_places=2,
     )
 
-    def __init__(self, *args, machine: Machine | None = None, **kwargs):
-        self.machine = machine
+    def __init__(
+        self, *args, machine: Machine | None = None, machine_inventory=None, **kwargs
+    ):
+        self.machine = machine or getattr(machine_inventory, "machine", None)
+        self.machine_inventory = machine_inventory
         super().__init__(*args, **kwargs)
-        if machine:
-            self.fields["machine_id"].initial = machine.pk
-            self.fields["numeral"].initial = machine.numeral
-            self.fields["numeral"].min_value = machine.numeral
+        if self.machine:
+            self.fields["machine_id"].initial = self.machine.pk
+        if self.machine_inventory:
+            self.fields["fuel_inventory_id"].initial = (
+                self.machine_inventory.fuel_inventory_id
+            )
+            self.fields["numeral"].initial = self.machine_inventory.numeral
+            self.fields["numeral"].min_value = self.machine_inventory.numeral
+            fuel_label = self.machine_inventory.fuel_inventory.code
             self.fields["numeral"].label = (
-                f"Máquina {machine.number} · Isla {machine.island.number}"
+                f"Máquina {self.machine.number} · Isla {self.machine.island.number} · {fuel_label}"
+            )
+        elif self.machine:
+            self.fields["numeral"].initial = self.machine.numeral
+            self.fields["numeral"].min_value = self.machine.numeral
+            self.fields["numeral"].label = (
+                f"Máquina {self.machine.number} · Isla {self.machine.island.number}"
             )
 
     def clean_numeral(self):
@@ -1432,7 +1586,14 @@ class MachineClosingForm(forms.Form):
             return value
         if value < 0:
             raise forms.ValidationError("El numeral debe ser mayor o igual a 0.")
-        if self.machine and value < self.machine.numeral:
+
+        previous_numeral = None
+        if self.machine_inventory:
+            previous_numeral = self.machine_inventory.numeral
+        elif self.machine:
+            previous_numeral = self.machine.numeral
+
+        if previous_numeral is not None and value < previous_numeral:
             raise forms.ValidationError(
                 "El numeral no puede ser menor al valor registrado actualmente."
             )
@@ -1440,15 +1601,21 @@ class MachineClosingForm(forms.Form):
 
 
 class MachineClosingFormSet(BaseFormSet):
-    def __init__(self, *args, machines: list[Machine] | None = None, **kwargs):
-        self.machines = machines or []
+    def __init__(
+        self,
+        *args,
+        machine_inventories: list[MachineFuelInventory] | None = None,
+        **kwargs,
+    ):
+        self.machine_inventories = machine_inventories or []
         super().__init__(*args, **kwargs)
 
     def _construct_form(self, i, **kwargs):
-        machine = None
-        if self.machines and i < len(self.machines):
-            machine = self.machines[i]
-        kwargs["machine"] = machine
+        machine_inventory = None
+        if self.machine_inventories and i < len(self.machine_inventories):
+            machine_inventory = self.machine_inventories[i]
+        kwargs["machine_inventory"] = machine_inventory
+        kwargs["machine"] = getattr(machine_inventory, "machine", None)
         return super()._construct_form(i, **kwargs)
 
 

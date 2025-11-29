@@ -133,10 +133,16 @@ class IslandAdmin(admin.ModelAdmin):
 
 @admin.register(Machine)
 class MachineAdmin(admin.ModelAdmin):
-    list_display = ("number", "island", "fuel_type", "numeral")
+    list_display = ("number", "island", "fuel_type", "inventory_numerals")
     list_filter = ("island__sucursal", "fuel_type")
     search_fields = ("number", "island__sucursal__name")
     inlines = [NozzleInline]
+
+    @admin.display(description="Numerales")
+    def inventory_numerals(self, obj):
+        return ", ".join(
+            f"{link.fuel_inventory.code}: {link.numeral}" for link in obj.inventory_links
+        ) or ""
 
 
 @admin.register(Nozzle)

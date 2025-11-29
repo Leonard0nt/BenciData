@@ -204,6 +204,7 @@ class Machine(models.Model):
     )
     fuel_inventories = models.ManyToManyField(
         "FuelInventory",
+        through="MachineFuelInventory",
         related_name="associated_machines",
         verbose_name="Estanques",
         blank=True,
@@ -248,6 +249,52 @@ class Machine(models.Model):
             .values_list("fuel_type", flat=True)
             .distinct()
         )
+
+    @property
+    def inventory_links(self):
+        prefetched = getattr(self, "_prefetched_objects_cache", {}).get(
+            "machinefuelinventory_set"
+        )
+        if prefetched is not None:
+            return prefetched
+        return self.machinefuelinventory_set.select_related("fuel_inventory").order_by(
+            "fuel_inventory__code"
+        )
+
+    def get_inventory_numeral(self, inventory: "FuelInventory"):
+        return next(
+            (
+                link.numeral
+                for link in self.inventory_links
+                if link.fuel_inventory_id == inventory.pk
+            ),
+            None,
+        )
+
+
+class MachineFuelInventory(models.Model):
+    machine = models.ForeignKey(
+        Machine,
+        on_delete=models.CASCADE,
+        related_name="machinefuelinventory_set",
+        verbose_name="Máquina",
+    )
+    fuel_inventory = models.ForeignKey(
+        "FuelInventory",
+        on_delete=models.CASCADE,
+        related_name="machinefuelinventory_set",
+        verbose_name="Estanque",
+    )
+    numeral = models.DecimalField("Numeral", max_digits=12, decimal_places=2, default=0)
+
+    class Meta:
+        verbose_name = "Numeral de estanque"
+        verbose_name_plural = "Numerales de estanque"
+        unique_together = ("machine", "fuel_inventory")
+
+    def __str__(self) -> str:
+        return f"{self.machine} · {self.fuel_inventory}"
+
 
 class Nozzle(models.Model):
     """Representa una pistola asociada a una máquina."""

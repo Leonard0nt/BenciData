@@ -898,21 +898,19 @@
                       </div>
 
                       <dl class="mt-2 grid grid-cols-1 gap-x-4 gap-y-2 text-sm text-gray-600 sm:grid-cols-2">
-                        <div class="sm:col-span-2"><dt class="font-medium text-gray-700">Numeral</dt><dd>{{ machine.numeral }}</dd></div>
-                        {% with inventories=machine.fuel_inventories.all %}
-                          {% if inventories %}
-                            <div class="sm:col-span-2">
-                              <dt class="font-medium text-gray-700">Estanques asociados</dt>
-                              <dd class="space-y-1">
-                                {% for inventory in inventories %}
-                                  <span class="block">{{ inventory }} · {{ inventory.fuel_type }}</span>
-                                {% endfor %}
-                              </dd>
-                            </div>
-                          {% elif machine.fuel_inventory %}
-                            <div class="sm:col-span-2"><dt class="font-medium text-gray-700">Estanque</dt><dd>{{ machine.fuel_inventory }}</dd></div>
-                          {% endif %}
-                        {% endwith %}
+                        <div class="sm:col-span-2">
+                          <dt class="font-medium text-gray-700">Numerales por estanque</dt>
+                          <dd class="space-y-1">
+                            {% for link in machine.inventory_links %}
+                              <div class="flex flex-wrap items-center justify-between gap-2 rounded border border-gray-200 bg-white px-3 py-2">
+                                <span class="text-gray-700">{{ link.fuel_inventory }}</span>
+                                <span class="font-semibold text-gray-900">{{ link.numeral }}</span>
+                              </div>
+                            {% empty %}
+                              <span class="text-gray-500">Sin estanques asociados.</span>
+                            {% endfor %}
+                          </dd>
+                        </div>
                       </dl>
 
                       <p class="text-sm text-gray-500 mt-2">Pistolas: {{ machine.nozzles.count }}</p>
@@ -1036,7 +1034,25 @@
                               {% for field in machine.update_form.visible_fields %}
                                 <div>
                                   <label class="block text-sm font-medium text-gray-700 mb-1" for="{{ field.id_for_label }}">{{ field.label }}</label>
-                                  {{ field }}
+                                  {% if field.name == 'fuel_inventories' %}
+                                    <div class="space-y-4">
+                                      {% for inventory_entry in machine.update_form.get_inventory_entries %}
+                                        <div class="rounded border border-gray-200 p-3 space-y-2">
+                                          <label class="flex items-start gap-2 text-sm font-medium text-gray-700">
+                                            <input type="checkbox" name="{{ field.html_name }}" value="{{ inventory_entry.inventory.pk }}" class="mt-1 h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500" {% if inventory_entry.checked %}checked{% endif %} />
+                                            <span>{{ inventory_entry.inventory }}</span>
+                                          </label>
+                                          <div>
+                                            <label class="block text-xs font-medium text-gray-600" for="{{ inventory_entry.field_name }}">Numeral</label>
+                                            <input type="number" step="0.01" name="{{ inventory_entry.field_name }}" id="{{ inventory_entry.field_name }}" value="{{ inventory_entry.value }}" class="mt-1 w-full rounded border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-indigo-500 focus:ring-indigo-500" />
+                                            {% if inventory_entry.error %}<p class="mt-1 text-xs text-red-600">{{ inventory_entry.error }}</p>{% endif %}
+                                          </div>
+                                        </div>
+                                      {% endfor %}
+                                    </div>
+                                  {% else %}
+                                    {{ field }}
+                                  {% endif %}
                                   {% if field.help_text %}<p class="mt-1 text-xs text-gray-500">{{ field.help_text }}</p>{% endif %}
                                   {% if field.errors %}<ul class="mt-1 space-y-1 text-xs text-red-600">{% for e in field.errors %}<li>{{ e }}</li>{% endfor %}</ul>{% endif %}
                                 </div>
@@ -1168,7 +1184,25 @@
                       {% for field in island.machine_create_form.visible_fields %}
                         <div class="sm:col-span-1 modal-field-group">
                           <label class="block text-sm font-medium text-gray-700 mb-1" for="{{ field.id_for_label }}">{{ field.label }}</label>
-                          {{ field }}
+                          {% if field.name == 'fuel_inventories' %}
+                            <div class="space-y-4">
+                              {% for inventory_entry in island.machine_create_form.get_inventory_entries %}
+                                <div class="rounded border border-gray-200 p-3 space-y-2">
+                                  <label class="flex items-start gap-2 text-sm font-medium text-gray-700">
+                                    <input type="checkbox" name="{{ field.html_name }}" value="{{ inventory_entry.inventory.pk }}" class="mt-1 h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500" {% if inventory_entry.checked %}checked{% endif %} />
+                                    <span>{{ inventory_entry.inventory }}</span>
+                                  </label>
+                                  <div>
+                                    <label class="block text-xs font-medium text-gray-600" for="{{ inventory_entry.field_name }}">Numeral</label>
+                                    <input type="number" step="0.01" name="{{ inventory_entry.field_name }}" id="{{ inventory_entry.field_name }}" value="{{ inventory_entry.value }}" class="mt-1 w-full rounded border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-indigo-500 focus:ring-indigo-500" />
+                                    {% if inventory_entry.error %}<p class="mt-1 text-xs text-red-600">{{ inventory_entry.error }}</p>{% endif %}
+                                  </div>
+                                </div>
+                              {% endfor %}
+                            </div>
+                          {% else %}
+                            {{ field }}
+                          {% endif %}
                           {% if field.help_text %}<p class="mt-1 text-xs text-gray-500">{{ field.help_text }}</p>{% endif %}
                           {% if field.errors %}<ul class="mt-1 space-y-1 text-xs text-red-600">{% for e in field.errors %}<li>{{ e }}</li>{% endfor %}</ul>{% endif %}
                         </div>

@@ -1035,6 +1035,9 @@
             <p class="mt-1 text-sm text-gray-500">
               Ingresa el numeral de cada máquina registrada. El valor ingresado se guardará como numeral actualizado de la máquina.
             </p>
+            <p class="mt-2 text-xs text-gray-500">
+              Si una máquina está conectada a más de un estanque, verás una tarjeta para cada estanque con su numeral independiente.
+            </p>
           </div>
           <button type="button" class="rounded-md p-1 text-gray-400 hover:text-gray-600" @click="closeSessionModalOpen = false">
             <span class="sr-only">Cerrar</span>
@@ -1068,23 +1071,30 @@
 
             <div class="space-y-4">
               {% if machine_close_pairs %}
-                {% for machine, form in machine_close_pairs %}
-                  <div class="rounded-lg border border-gray-200 p-4 shadow-sm">
-                    {{ form.machine_id }}
-                    <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-                      <div>
-                        <p class="text-sm font-semibold text-gray-900">Máquina {{ machine.number }} · Isla {{ machine.island.number }}</p>
-                        <p class="mt-1 text-xs text-gray-500">Numeral actual: {{ machine.numeral }}</p>
-                      </div>
-                      <div class="sm:w-64">
-                        <label for="{{ form.numeral.id_for_label }}" class="block text-sm font-medium text-gray-700">Numeral</label>
-                        {{ form.numeral }}
-                        {% if form.numeral.errors %}
-                          <p class="mt-1 text-sm text-red-600">{{ form.numeral.errors|striptags }}</p>
-                        {% endif %}
+                {% for machine_inventory, form in machine_close_pairs %}
+                  {% with machine=machine_inventory.machine inventory=machine_inventory.fuel_inventory %}
+                    <div class="rounded-lg border border-gray-200 bg-gray-50 p-4 shadow-sm">
+                      {{ form.machine_id }}
+                      {{ form.fuel_inventory_id }}
+                      <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                        <div>
+                          <p class="text-sm font-semibold text-gray-900">Máquina {{ machine.number }} · Isla {{ machine.island.number }}</p>
+                          <div class="mt-1 flex flex-wrap items-center gap-2 text-xs">
+                            <span class="rounded-full bg-indigo-100 px-2 py-0.5 font-semibold text-indigo-700">Estanque {{ inventory.code }}</span>
+                            <span class="rounded-full bg-gray-200 px-2 py-0.5 text-gray-700">{{ inventory.fuel_type|default:"Combustible sin definir" }}</span>
+                          </div>
+                          <p class="mt-1 text-xs text-gray-500">Numeral actual para este estanque: {{ machine_inventory.numeral }}</p>
+                        </div>
+                        <div class="sm:w-64">
+                          <label for="{{ form.numeral.id_for_label }}" class="block text-sm font-medium text-gray-700">Numeral</label>
+                          {{ form.numeral }}
+                          {% if form.numeral.errors %}
+                            <p class="mt-1 text-sm text-red-600">{{ form.numeral.errors|striptags }}</p>
+                          {% endif %}
+                        </div>
                       </div>
                     </div>
-                  </div>
+                  {% endwith %}
                 {% endfor %}
                 {% if close_session_flow_details %}
                   <div class="rounded-lg border border-emerald-200 bg-emerald-50 p-4">
@@ -1102,7 +1112,7 @@
                       {% for flow in close_session_flow_details %}
                         <div class="flex flex-col gap-2 py-3 sm:flex-row sm:items-center sm:justify-between">
                           <div>
-                            <p class="font-semibold">Máquina {{ flow.machine.number }} · Isla {{ flow.machine.island.number }}</p>
+                            <p class="font-semibold">Máquina {{ flow.machine.number }} · Isla {{ flow.machine.island.number }} · {{ flow.fuel_inventory.code }}</p>
                             <p class="text-xs text-emerald-700">{{ flow.fuel_type|default:"Combustible sin definir" }}</p>
                           </div>
                           <div class="grid grid-cols-2 gap-3 text-right sm:w-auto sm:grid-cols-3 sm:text-left">

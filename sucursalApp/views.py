@@ -48,6 +48,7 @@ from .models import (
     FuelPrice,
     Island,
     Machine,
+    MachineFuelInventory,
     Nozzle,
     ServiceSessionCreditSale,
     ServiceSessionFuelLoad,
@@ -158,7 +159,10 @@ class SucursalListView(OwnerCompanyMixin, FormMixin, ListView):
                     queryset=Island.objects.prefetch_related(
                         Prefetch(
                             "machines",
-                            queryset=Machine.objects.prefetch_related("nozzles"),
+                            queryset=Machine.objects.prefetch_related(
+                                "nozzles",
+                                "machinefuelinventory_set__fuel_inventory",
+                            ),
                         )
                     ),
                 ),
@@ -223,7 +227,8 @@ class SucursalUpdateView(OwnerCompanyMixin, UpdateView):
                         Prefetch(
                             "machines",
                             queryset=Machine.objects.order_by("number").prefetch_related(
-                                "nozzles"
+                                "nozzles",
+                                "machinefuelinventory_set__fuel_inventory",
                             ),
                         )
                     ),
@@ -1686,7 +1691,15 @@ class ServiceSessionDetailView(OwnerCompanyMixin, DetailView):
         branch_machines = kwargs.get("branch_machines")
         if branch_machines is None:
             branch_machines = list(
-                Machine.objects.filter(island__sucursal=branch).select_related("island")
+                MachineFuelInventory.objects.filter(
+                    machine__island__sucursal=branch
+                )
+                .select_related(
+                    "machine__island",
+                    "machine__fuel_inventory",
+                    "fuel_inventory",
+                )
+                .order_by("machine__island__number", "machine__number", "fuel_inventory__code")
             )
         attendants = list(self.object.attendants.all())
         fuel_loads = list(self.object.fuel_loads.all())
@@ -1786,8 +1799,14 @@ class ServiceSessionDetailView(OwnerCompanyMixin, DetailView):
         if close_session_formset is None:
             close_session_formset = ServiceSessionMachineClosingFormSet(
                 prefix=self.close_session_form_prefix,
-                machines=branch_machines,
-                initial=[{"machine_id": machine.pk} for machine in branch_machines],
+                machine_inventories=branch_machines,
+                initial=[
+                    {
+                        "machine_id": link.machine_id,
+                        "fuel_inventory_id": link.fuel_inventory_id,
+                    }
+                    for link in branch_machines
+                ],
             )
         machine_close_pairs = list(zip(branch_machines, close_session_formset.forms))
         close_session_flow_details = kwargs.get("close_session_flow_details")
@@ -1890,17 +1909,29 @@ class ServiceSessionDetailView(OwnerCompanyMixin, DetailView):
                 )
                 return redirect("service_session_start")
             branch_machines = list(
-                Machine.objects.filter(island__sucursal=branch).select_related(
-                    "island", "fuel_inventory"
+                MachineFuelInventory.objects.filter(
+                    machine__island__sucursal=branch
                 )
+                .select_related(
+                    "machine__island",
+                    "machine__fuel_inventory",
+                    "fuel_inventory",
+                )
+                .order_by("machine__island__number", "machine__number", "fuel_inventory__code")
             )
             close_session_formset = ServiceSessionMachineClosingFormSet(
                 data=request.POST,
                 prefix=self.close_session_form_prefix,
-                machines=branch_machines,
+                machine_inventories=branch_machines,
             )
             if close_session_formset.is_valid():
-                machines_by_id = {machine.pk: machine for machine in branch_machines}
+                machines_by_id = {
+                    link.machine_id: link.machine for link in branch_machines
+                }
+                inventory_links = {
+                    (link.machine_id, link.fuel_inventory_id): link
+                    for link in branch_machines
+                }
                 decimal_zero = Decimal("0")
 
                 if close_action == "check":
@@ -1916,6 +1947,7 @@ class ServiceSessionDetailView(OwnerCompanyMixin, DetailView):
 
                     for form in close_session_formset:
                         machine_id = form.cleaned_data.get("machine_id")
+                        inventory_id = form.cleaned_data.get("fuel_inventory_id")
                         numeral = form.cleaned_data.get("numeral")
                         if machine_id is None or numeral is None:
                             continue
@@ -1924,11 +1956,13 @@ class ServiceSessionDetailView(OwnerCompanyMixin, DetailView):
                         if machine is None:
                             continue
 
-                        liters_sold = numeral - machine.numeral
-                        fuel_type = (
-                            machine.fuel_type
-                            or getattr(machine.fuel_inventory, "fuel_type", "")
-                        )
+                        link = inventory_links.get((machine_id, inventory_id))
+                        if link is None:
+                            continue
+                        previous_numeral = getattr(link, "numeral", machine.numeral)
+                        liters_sold = numeral - previous_numeral
+                        fuel_inventory = getattr(link, "fuel_inventory", None)
+                        fuel_type = getattr(fuel_inventory, "fuel_type", machine.fuel_type)
                         price = fuel_prices.get(fuel_type)
 
                         if price is None:
@@ -1941,6 +1975,7 @@ class ServiceSessionDetailView(OwnerCompanyMixin, DetailView):
                         close_session_flow_details.append(
                             {
                                 "machine": machine,
+                                "fuel_inventory": fuel_inventory,
                                 "liters_sold": liters_sold,
                                 "fuel_type": fuel_type,
                                 "price": price,
@@ -1994,26 +2029,51 @@ class ServiceSessionDetailView(OwnerCompanyMixin, DetailView):
 
                 closure_time = timezone.now()
                 with transaction.atomic():
+                    inventory_flow_totals: dict[int, Decimal] = {}
                     for form in close_session_formset:
                         machine_id = form.cleaned_data.get("machine_id")
+                        inventory_id = form.cleaned_data.get("fuel_inventory_id")
                         numeral = form.cleaned_data.get("numeral")
                         if machine_id is None or numeral is None:
                             continue
                         machine = machines_by_id.get(machine_id)
                         if machine is None:
                             continue
-                        liters_sold = numeral - machine.numeral
-                        if machine.fuel_inventory_id and liters_sold > decimal_zero:
-                            FuelInventory.objects.filter(pk=machine.fuel_inventory_id).update(
+                        link = inventory_links.get((machine_id, inventory_id))
+                        if link is None:
+                            continue
+                        previous_numeral = getattr(link, "numeral", machine.numeral)
+                        liters_sold = numeral - previous_numeral
+
+                        if link.fuel_inventory_id:
+                            inventory_flow_totals[link.fuel_inventory_id] = (
+                                inventory_flow_totals.get(link.fuel_inventory_id, decimal_zero)
+                                + liters_sold
+                            )
+
+                        if link.numeral != numeral:
+                            link.numeral = numeral
+                            link.save(update_fields=["numeral"])
+
+                        primary_inventory_id = getattr(
+                            machine.primary_fuel_inventory, "id", None
+                        )
+                        if primary_inventory_id == inventory_id and (
+                            machine.numeral != numeral
+                        ):
+                            machine.numeral = numeral
+                            machine.save(
+                                update_fields=[
+                                    "numeral",
+                                    "updated_at",
+                                ]
+                            )
+
+                    for inventory_id, liters_sold in inventory_flow_totals.items():
+                        if liters_sold > decimal_zero:
+                            FuelInventory.objects.filter(pk=inventory_id).update(
                                 liters=F("liters") - liters_sold
                             )
-                        machine.numeral = numeral
-                        machine.save(
-                            update_fields=[
-                                "numeral",
-                                "updated_at",
-                            ]
-                        )
                     ServiceSession.objects.filter(
                         shift__sucursal=self.object.shift.sucursal,
                         ended_at__isnull=True,
