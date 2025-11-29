@@ -1061,12 +1061,38 @@
                                   <div class="md:col-span-2 space-y-3">
                                     <h4 class="text-sm font-semibold text-gray-800">Numerales por estanque seleccionado</h4>
                                     <div class="grid grid-cols-1 gap-4">
-                                      {% for field, inventory in machine_form.inventory_numeral_fields %}
-                                        <div class="space-y-1 numeral-field" data-inventory-id="{{ inventory.pk }}">
-                                          <label class="block text-sm font-medium text-gray-700" for="{{ field.id_for_label }}">{{ field.label }}</label>
-                                          {{ field }}
-                                          {% if field.help_text %}<p class="mt-1 text-xs text-gray-500">{{ field.help_text }}</p>{% endif %}
-                                          {% if field.errors %}<ul class="mt-1 space-y-1 text-xs text-red-600">{% for e in field.errors %}<li>{{ e }}</li>{% endfor %}</ul>{% endif %}
+                                      {% for inventory, fields in machine_form.inventory_numeral_fields %}
+                                        <div
+                                          class="space-y-2 border border-gray-200 rounded-lg p-4 numeral-group"
+                                          data-inventory-id="{{ inventory.pk }}"
+                                          data-label-base="Numeral {{ inventory.code }} ({{ inventory.fuel_type }})"
+                                          data-help-text="{{ fields.0.help_text|default:''|escape }}"
+                                        >
+                                          <input
+                                            type="hidden"
+                                            name="numeral_count_{{ inventory.pk }}"
+                                            value="{{ fields|length }}"
+                                            class="numeral-count-input"
+                                          />
+                                          <div class="space-y-3 numeral-fields">
+                                            {% for field in fields %}
+                                              <div class="space-y-1 numeral-field-instance">
+                                                <label class="block text-sm font-medium text-gray-700" for="{{ field.id_for_label }}">{{ field.label }}</label>
+                                                {{ field }}
+                                                {% if field.help_text %}<p class="mt-1 text-xs text-gray-500">{{ field.help_text }}</p>{% endif %}
+                                                {% if field.errors %}<ul class="mt-1 space-y-1 text-xs text-red-600">{% for e in field.errors %}<li>{{ e }}</li>{% endfor %}</ul>{% endif %}
+                                              </div>
+                                            {% endfor %}
+                                          </div>
+                                          <div class="flex justify-end">
+                                            <button
+                                              type="button"
+                                              class="inline-flex items-center rounded-md border border-gray-300 px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-100 add-numeral-btn"
+                                              data-inventory-id="{{ inventory.pk }}"
+                                            >
+                                              Agregar numeral
+                                            </button>
+                                          </div>
                                         </div>
                                       {% endfor %}
                                     </div>
@@ -1212,12 +1238,38 @@
                               <div class="sm:col-span-2">
                                 <h4 class="text-sm font-semibold text-gray-800 mb-2">Numerales por estanque seleccionado</h4>
                                 <div class="space-y-4">
-                              {% for field, inventory in machine_form.inventory_numeral_fields %}
-                                <div class="space-y-1 numeral-field" data-inventory-id="{{ inventory.pk }}">
-                                  <label class="block text-sm font-medium text-gray-700" for="{{ field.id_for_label }}">{{ field.label }}</label>
-                                  {{ field }}
-                                  {% if field.help_text %}<p class="mt-1 text-xs text-gray-500">{{ field.help_text }}</p>{% endif %}
-                                  {% if field.errors %}<ul class="mt-1 space-y-1 text-xs text-red-600">{% for e in field.errors %}<li>{{ e }}</li>{% endfor %}</ul>{% endif %}
+                              {% for inventory, fields in machine_form.inventory_numeral_fields %}
+                                <div
+                                  class="space-y-2 border border-gray-200 rounded-lg p-4 numeral-group"
+                                  data-inventory-id="{{ inventory.pk }}"
+                                  data-label-base="Numeral {{ inventory.code }} ({{ inventory.fuel_type }})"
+                                  data-help-text="{{ fields.0.help_text|default:''|escape }}"
+                                >
+                                  <input
+                                    type="hidden"
+                                    name="numeral_count_{{ inventory.pk }}"
+                                    value="{{ fields|length }}"
+                                    class="numeral-count-input"
+                                  />
+                                  <div class="space-y-3 numeral-fields">
+                                    {% for field in fields %}
+                                      <div class="space-y-1 numeral-field-instance">
+                                        <label class="block text-sm font-medium text-gray-700" for="{{ field.id_for_label }}">{{ field.label }}</label>
+                                        {{ field }}
+                                        {% if field.help_text %}<p class="mt-1 text-xs text-gray-500">{{ field.help_text }}</p>{% endif %}
+                                        {% if field.errors %}<ul class="mt-1 space-y-1 text-xs text-red-600">{% for e in field.errors %}<li>{{ e }}</li>{% endfor %}</ul>{% endif %}
+                                      </div>
+                                    {% endfor %}
+                                  </div>
+                                  <div class="flex justify-end">
+                                    <button
+                                      type="button"
+                                      class="inline-flex items-center rounded-md border border-gray-300 px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-100 add-numeral-btn"
+                                      data-inventory-id="{{ inventory.pk }}"
+                                    >
+                                      Agregar numeral
+                                    </button>
+                                  </div>
                                 </div>
                               {% endfor %}
                                 </div>
@@ -1800,9 +1852,68 @@
             .map((input) => input.value)
         );
 
-        form.querySelectorAll(".numeral-field").forEach((container) => {
+        form.querySelectorAll(".numeral-group").forEach((container) => {
           const inventoryId = container.dataset.inventoryId;
           container.style.display = checkedIds.has(inventoryId) ? "" : "none";
+        });
+      };
+
+      const createNumeralField = (group, slot) => {
+        const inventoryId = group.dataset.inventoryId;
+        const labelBase = group.dataset.labelBase || "Numeral";
+        const helpText = group.dataset.helpText;
+        const prototypeInput = group.querySelector(".numeral-fields input[type='number']");
+
+        const wrapper = document.createElement("div");
+        wrapper.className = "space-y-1 numeral-field-instance";
+
+        const label = document.createElement("label");
+        label.className = "block text-sm font-medium text-gray-700";
+        label.setAttribute("for", `id_numeral_${inventoryId}_${slot}`);
+        label.textContent = `${labelBase} #${slot}`;
+
+        const input = prototypeInput ? prototypeInput.cloneNode() : document.createElement("input");
+        input.type = "number";
+        input.name = `numeral_${inventoryId}_${slot}`;
+        input.id = `id_numeral_${inventoryId}_${slot}`;
+        input.value = "";
+        input.step = "0.01";
+        input.className = prototypeInput?.className || "w-full border rounded p-2";
+        if (prototypeInput?.getAttribute("min")) {
+          input.setAttribute("min", prototypeInput.getAttribute("min"));
+        }
+        if (prototypeInput?.getAttribute("max")) {
+          input.setAttribute("max", prototypeInput.getAttribute("max"));
+        }
+
+        wrapper.appendChild(label);
+        wrapper.appendChild(input);
+
+        if (helpText) {
+          const help = document.createElement("p");
+          help.className = "mt-1 text-xs text-gray-500";
+          help.textContent = helpText;
+          wrapper.appendChild(help);
+        }
+
+        return wrapper;
+      };
+
+      const attachNumeralAdder = (form) => {
+        form.querySelectorAll(".numeral-group").forEach((group) => {
+          const countInput = group.querySelector(".numeral-count-input");
+          const fieldsContainer = group.querySelector(".numeral-fields");
+          group.querySelectorAll(".add-numeral-btn").forEach((button) => {
+            button.addEventListener("click", () => {
+              const currentCount = Number(countInput?.value || fieldsContainer.children.length || 0);
+              const nextSlot = currentCount + 1;
+              const newField = createNumeralField(group, nextSlot);
+              fieldsContainer.appendChild(newField);
+              if (countInput) {
+                countInput.value = String(nextSlot);
+              }
+            });
+          });
         });
       };
 
@@ -1811,6 +1922,7 @@
         checkboxInputs.forEach((input) => {
           input.addEventListener("change", () => updateNumeralVisibility(form));
         });
+        attachNumeralAdder(form);
         updateNumeralVisibility(form);
       });
     });

@@ -314,9 +314,8 @@ class MachineFuelInventoryNumeral(models.Model):
     class Meta:
         verbose_name = "Numeral de máquina"
         verbose_name_plural = "Numerales de máquina"
-        unique_together = ("machine", "fuel_inventory", "slot")
         ordering = ("machine", "fuel_inventory", "slot", "pk")
-        unique_together = ("machine", "fuel_inventory")
+        unique_together = (("machine", "fuel_inventory", "slot"),)
 
     def __str__(self) -> str:
         return f"Máquina {self.machine.number} · Estanque {self.fuel_inventory.code}"
