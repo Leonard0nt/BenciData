@@ -322,8 +322,8 @@ class MachineForm(forms.ModelForm):
             "island": forms.HiddenInput(),
             "number": forms.NumberInput(attrs={"class": "w-full border rounded p-2"}),
             "numeral": forms.NumberInput(attrs={"class": "w-full border rounded p-2"}),
-            "fuel_inventories": forms.SelectMultiple(
-                attrs={"class": "w-full border rounded p-2"}
+            "fuel_inventories": forms.CheckboxSelectMultiple(
+                attrs={"class": "space-y-2"}
             ),
             "description": forms.TextInput(attrs={"class": "w-full border rounded p-2"}),
         }
