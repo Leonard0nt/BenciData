@@ -597,20 +597,25 @@ class SucursalUpdateView(OwnerCompanyMixin, UpdateView):
     def post(self, request, *args, **kwargs):
         self.object = self.get_object()
         scope = request.POST.get("form_scope")
-        if scope == "shift-update":
-            return self._handle_shift_update(request)
-        if scope == "fuel-inventory-update":
-            return self._handle_fuel_inventory_update(request)
-        if scope == "fuel-price-create":
-            return self._handle_fuel_price_create(request)
-        if scope == "product-update":
-            return self._handle_product_update(request)
-        if scope == "island-update":
-            return self._handle_island_update(request)
-        if scope == "machine-update":
-            return self._handle_machine_update(request)
-        if scope == "nozzle-update":
-            return self._handle_nozzle_update(request)
+
+        handler_map = {
+            "shift-update": "_handle_shift_update",
+            "fuel-inventory-update": "_handle_fuel_inventory_update",
+            "fuel-price-create": "_handle_fuel_price_create",
+            "product-update": "_handle_product_update",
+            "island-update": "_handle_island_update",
+            "machine-update": "_handle_machine_update",
+            "nozzle-update": "_handle_nozzle_update",
+        }
+
+        handler_name = handler_map.get(scope)
+        if handler_name:
+            handler = getattr(self, handler_name, None)
+            if handler:
+                return handler(request)
+            messages.error(request, "No se pudo procesar el formulario solicitado.")
+            return redirect("sucursal_update", pk=self.object.pk)
+
         return super().post(request, *args, **kwargs)
 
     def _get_branch_form(self) -> SucursalForm:
