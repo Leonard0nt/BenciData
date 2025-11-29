@@ -202,7 +202,7 @@
 
         {% if withdrawals %}
           <div class="mt-4 overflow-hidden rounded-lg border border-gray-200">
-            <table class="min-w-full divide-y divide-gray-200">
+            <table class="min-w-full w-full divide-y divide-gray-200">
               <thead class="bg-gray-50">
                 <tr class="text-left text-xs font-semibold uppercase tracking-wide text-gray-500">
                   <th scope="col" class="px-4 py-3">Fecha</th>
@@ -245,7 +245,7 @@
 
         {% if transbank_vouchers %}
           <div class="mt-4 overflow-hidden rounded-lg border border-gray-200">
-            <table class="min-w-full divide-y divide-gray-200">
+            <table class="min-w-full w-full divide-y divide-gray-200">
               <thead class="bg-gray-50">
                 <tr class="text-left text-xs font-semibold uppercase tracking-wide text-gray-500">
                   <th scope="col" class="px-4 py-3">Fecha</th>
@@ -288,7 +288,7 @@
 
         {% if firefighter_payments %}
           <div class="mt-4 overflow-hidden rounded-lg border border-gray-200">
-            <table class="min-w-full divide-y divide-gray-200">
+            <table class="min-w-full w-full divide-y divide-gray-200">
               <thead class="bg-gray-50">
                 <tr class="text-left text-xs font-semibold uppercase tracking-wide text-gray-500">
                   <th scope="col" class="px-4 py-3">Bombero</th>
@@ -331,7 +331,7 @@
 
         {% if credit_sales %}
           <div class="mt-4 overflow-hidden rounded-lg border border-gray-200 bg-white">
-            <table class="min-w-full divide-y divide-gray-200">
+            <table class="min-w-full w-full divide-y divide-gray-200">
               <thead class="bg-gray-50">
                 <tr class="text-left text-xs font-semibold uppercase tracking-wide text-gray-500">
                   <th scope="col" class="px-4 py-3">Factura</th>
@@ -565,7 +565,7 @@
             </button>
             <button
               type="submit"
-              class="inline-flex items-center rounded-md bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500"
+              class="inline-flex items-center rounded-md bg-gradient-to-br px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500"
             >
               Registrar venta
             </button>
@@ -708,7 +708,7 @@
             </button>
             <button
               type="submit"
-              class="inline-flex items-center rounded-md bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500"
+              class="inline-flex items-center rounded-md bg-gradient-to-br px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500"
             >
               Registrar crédito
             </button>
@@ -808,7 +808,7 @@
             </button>
             <button
               type="submit"
-              class="inline-flex items-center rounded-md bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500"
+              class="inline-flex items-center rounded-md bg-gradient-to-br px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500"
             >
               Registrar tirada
             </button>
@@ -904,7 +904,7 @@
             </button>
             <button
               type="submit"
-              class="inline-flex items-center rounded-md bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500"
+              class="inline-flex items-center rounded-md bg-gradient-to-br px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500"
             >
               Registrar vouchers
             </button>
@@ -1008,7 +1008,7 @@
             </button>
             <button
               type="submit"
-              class="inline-flex items-center rounded-md bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500"
+              class="inline-flex items-center rounded-md bg-gradient-to-br px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500"
             >
               Registrar pagos
             </button>
@@ -1193,7 +1193,7 @@
                 type="submit"
                 name="close_action"
                 value="close"
-                class="inline-flex items-center rounded-md bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500"
+                class="inline-flex items-center rounded-md bg-gradient-to-br px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500"
               >
                 Cerrar servicio
               </button>
@@ -1219,7 +1219,7 @@
         {% if fuel_inventories %}
           <button
             type="button"
-            class="inline-flex items-center rounded-md bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500"
+            class="inline-flex items-center rounded-md bg-gradient-to-br px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500"
             @click="openModal = 'fuel-load'"
           >
             Agregar combustible
@@ -1229,7 +1229,7 @@
 
       {% if fuel_inventories %}
         <div class="mt-6 overflow-hidden rounded-lg border border-gray-200">
-          <table class="min-w-full divide-y divide-gray-200">
+          <table class="min-w-full w-full divide-y divide-gray-200">
             <thead class="bg-gray-50">
               <tr class="text-left text-xs font-semibold uppercase tracking-wide text-gray-500">
                 <th scope="col" class="px-4 py-3">Tanque</th>
@@ -1255,7 +1255,7 @@
           <div class="mt-8">
             <h3 class="text-sm font-semibold uppercase tracking-wide text-gray-500">Historial de cargas</h3>
             <div class="mt-3 overflow-hidden rounded-lg border border-gray-200">
-              <table class="min-w-full divide-y divide-gray-200">
+              <table class="min-w-full w-full divide-y divide-gray-200">
                 <thead class="bg-gray-50">
                   <tr class="text-left text-xs font-semibold uppercase tracking-wide text-gray-500">
                     <th scope="col" class="px-4 py-3">Fecha</th>
@@ -1297,16 +1297,16 @@
           <h2 class="text-lg font-semibold text-gray-900">Inventario de productos</h2>
           <p class="mt-1 text-sm text-gray-600">Controla los productos registrados en la sucursal y los ingresos realizados durante el turno.</p>
         </div>
-        <div class="flex flex-wrap items-center gap-2">
+        <div class="flex flex-wrap items-center gap-2 sm:flex-nowrap">
           <a
             href="{% url 'sucursal_product_create' branch.pk %}"
-            class="inline-flex items-center rounded-md border border-gray-200 px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50"
+            class="inline-flex items-center whitespace-nowrap rounded-md border border-gray-200 px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50"
           >
             Administrar productos
           </a>
           <button
             type="button"
-            class="inline-flex items-center rounded-md bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500"
+            class="inline-flex items-center whitespace-nowrap rounded-md bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500"
             @click="openModal = 'product-load'"
           >
             Registrar ingreso
@@ -1316,7 +1316,7 @@
 
       {% if branch_products %}
         <div class="mt-6 overflow-hidden rounded-lg border border-gray-200">
-          <table class="min-w-full divide-y divide-gray-200">
+          <table class="min-w-full w-full divide-y divide-gray-200">
             <thead class="bg-gray-50">
               <tr class="text-left text-xs font-semibold uppercase tracking-wide text-gray-500">
                 <th scope="col" class="px-4 py-3">Producto</th>
@@ -1346,7 +1346,7 @@
           <div class="mt-8">
             <h3 class="text-sm font-semibold uppercase tracking-wide text-gray-500">Historial de ingresos</h3>
             <div class="mt-3 overflow-hidden rounded-lg border border-gray-200">
-              <table class="min-w-full divide-y divide-gray-200">
+              <table class="min-w-full w-full divide-y divide-gray-200">
                 <thead class="bg-gray-50">
                   <tr class="text-left text-xs font-semibold uppercase tracking-wide text-gray-500">
                     <th scope="col" class="px-4 py-3">Fecha</th>
@@ -1378,7 +1378,7 @@
           <div class="mt-8">
             <h3 class="text-sm font-semibold uppercase tracking-wide text-gray-500">Historial de ventas</h3>
             <div class="mt-3 overflow-hidden rounded-lg border border-gray-200">
-              <table class="min-w-full divide-y divide-gray-200">
+              <table class="min-w-full w-full divide-y divide-gray-200">
                 <thead class="bg-gray-50">
                   <tr class="text-left text-xs font-semibold uppercase tracking-wide text-gray-500">
                     <th scope="col" class="px-4 py-3">Fecha</th>
@@ -1508,7 +1508,7 @@
           </button>
           <button
             type="submit"
-            class="inline-flex items-center rounded-md bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500"
+            class="inline-flex items-center rounded-md bg-gradient-to-br px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500"
           >
             Registrar ingreso
           </button>
@@ -1627,7 +1627,7 @@
           </button>
           <button
             type="submit"
-            class="inline-flex items-center rounded-md bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500"
+            class="inline-flex items-center rounded-md bg-gradient-to-br px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500"
           >
             Guardar carga
           </button>

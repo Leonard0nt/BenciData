@@ -1647,9 +1647,9 @@ class ServiceSessionDetailView(OwnerCompanyMixin, DetailView):
         machine_inventory_pairs = []
         for machine in machines:
             for fuel_inventory in machine.get_fuel_inventories():
-                current_numeral = machine.get_numeral_for_inventory(fuel_inventory)
+                numeral_entry = machine.get_numerals_for_inventory(fuel_inventory)[0]
                 machine_inventory_pairs.append(
-                    (machine, fuel_inventory, current_numeral)
+                    (machine, fuel_inventory, numeral_entry)
                 )
 
         return machines, machine_inventory_pairs
@@ -1662,13 +1662,13 @@ class ServiceSessionDetailView(OwnerCompanyMixin, DetailView):
         current_machine = None
         current_items = []
 
-        for (machine, fuel_inventory, current_numeral), form in combined:
+        for (machine, fuel_inventory, numeral_entry), form in combined:
             if machine != current_machine:
                 if current_items:
                     grouped_pairs.append((current_machine, current_items))
                 current_machine = machine
                 current_items = []
-            current_items.append((fuel_inventory, current_numeral, form))
+            current_items.append((fuel_inventory, numeral_entry.numeral, form))
 
         if current_items:
             grouped_pairs.append((current_machine, current_items))
@@ -1963,9 +1963,9 @@ class ServiceSessionDetailView(OwnerCompanyMixin, DetailView):
                     (machine.pk, fuel_inventory.pk): (
                         machine,
                         fuel_inventory,
-                        current_numeral,
+                        numeral_entry.numeral,
                     )
-                    for machine, fuel_inventory, current_numeral in machine_inventory_pairs
+                    for machine, fuel_inventory, numeral_entry in machine_inventory_pairs
                 }
                 decimal_zero = Decimal("0")
 

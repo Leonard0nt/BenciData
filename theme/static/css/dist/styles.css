@@ -4839,3 +4839,30 @@ summary {
 .text-red-600 {
   color: red;
 }
+
+
+/* Unified table distribution */
+.table-uniform {
+  width: 100%;
+  table-layout: fixed;
+  border-collapse: separate;
+  border-spacing: 0;
+}
+
+.table-uniform thead {
+  background-color: #f9fafb;
+}
+
+.table-uniform th,
+.table-uniform td {
+  padding: 0.875rem 1rem;
+  vertical-align: middle;
+}
+
+.table-uniform tbody {
+  background-color: #ffffff;
+}
+
+.table-uniform tbody tr:hover {
+  background-color: #f3f4f6;
+}

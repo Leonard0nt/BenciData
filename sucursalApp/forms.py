@@ -1558,7 +1558,10 @@ class MachineInventoryClosingFormSet(BaseFormSet):
     def __init__(
         self,
         *args,
-        machine_inventory_pairs: list[tuple[Machine, FuelInventory, Decimal]] | None = None,
+        machine_inventory_pairs: list[
+            tuple[Machine, FuelInventory, MachineFuelInventoryNumeral]
+        ]
+        | None = None,
         **kwargs,
     ):
         self.machine_inventory_pairs = machine_inventory_pairs or []
