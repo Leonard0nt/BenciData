@@ -7,6 +7,7 @@ from typing import Iterable
 from django import forms
 from django.core.exceptions import ValidationError
 from django.forms import BaseFormSet, formset_factory
+from django.forms.boundfield import BoundField
 from django.db import transaction
 from django.db.models import F, Q, Count
 
@@ -268,7 +269,7 @@ class MachineForm(forms.ModelForm):
         initial_island = kwargs.get("initial", {}).get("island")
         self._form_island = island or instance_island or initial_island
 
-        self.inventory_numeral_fields: list[tuple[str, FuelInventory]] = []
+        self.inventory_numeral_fields: list[tuple[BoundField, FuelInventory]] = []
         super().__init__(*args, **kwargs)
 
         fuel_field = self.fields.get("fuel_inventories")
@@ -281,7 +282,7 @@ class MachineForm(forms.ModelForm):
 
             for inventory in fuel_field.queryset:
                 field_name = f"numeral_{inventory.pk}"
-                self.inventory_numeral_fields.append((field_name, inventory))
+
                 initial_numeral = Decimal("0")
                 if self.instance and self.instance.pk:
                     initial_numeral = self.instance.get_numeral_for_inventory(
@@ -304,6 +305,8 @@ class MachineForm(forms.ModelForm):
                         }
                     ),
                 )
+                self.inventory_numeral_fields.append((self[field_name], inventory))
+
 
     def clean_fuel_inventories(self):
         fuel_inventories = self.cleaned_data.get("fuel_inventories")
@@ -351,10 +354,10 @@ class MachineForm(forms.ModelForm):
         if machine.fuel_inventory and machine.fuel_inventory not in selected_inventories:
             selected_inventories.insert(0, machine.fuel_inventory)
 
-        for field_name, inventory in self.inventory_numeral_fields:
+        for field, inventory in self.inventory_numeral_fields:
             if inventory not in selected_inventories:
                 continue
-            numeral_value = self.cleaned_data.get(field_name)
+            numeral_value = self.cleaned_data.get(field.name)
             if numeral_value is None:
                 numeral_value = Decimal("0")
             MachineFuelInventoryNumeral.objects.update_or_create(
