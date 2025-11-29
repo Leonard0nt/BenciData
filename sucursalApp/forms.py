@@ -269,7 +269,8 @@ class MachineForm(forms.ModelForm):
         initial_island = kwargs.get("initial", {}).get("island")
         self._form_island = island or instance_island or initial_island
 
-        self.inventory_numeral_fields: list[tuple[BoundField, FuelInventory]] = []
+        self.inventory_numeral_fields: list[tuple[FuelInventory, list[BoundField]]] = []
+        self.inventory_numeral_counts: dict[int, int] = {}
         super().__init__(*args, **kwargs)
 
         fuel_field = self.fields.get("fuel_inventories")
@@ -281,31 +282,56 @@ class MachineForm(forms.ModelForm):
             fuel_field.required = False
 
             for inventory in fuel_field.queryset:
-                field_name = f"numeral_{inventory.pk}"
-
-                initial_numeral = Decimal("0")
+                existing_numerals: list[MachineFuelInventoryNumeral] = []
                 if self.instance and self.instance.pk:
-                    initial_numeral = self.instance.get_numeral_for_inventory(
+                    existing_numerals = self.instance.get_numerals_for_inventory(
                         inventory
                     )
-                self.fields[field_name] = forms.DecimalField(
-                    label=f"Numeral {inventory.code} ({inventory.fuel_type})",
-                    required=False,
-                    max_digits=12,
-                    decimal_places=2,
-                    min_value=Decimal("0"),
-                    initial=initial_numeral,
-                    help_text=(
-                        "Se guarda solo si la máquina está asociada a este estanque."
-                    ),
-                    widget=forms.NumberInput(
-                        attrs={
-                            "class": "w-full border rounded p-2",
-                            "step": "0.01",
-                        }
-                    ),
-                )
-                self.inventory_numeral_fields.append((self[field_name], inventory))
+
+                default_count = max(len(existing_numerals), 1)
+                count_key = f"numeral_count_{inventory.pk}"
+                if self.is_bound:
+                    try:
+                        bound_count = int(self.data.get(count_key, default_count))
+                    except (TypeError, ValueError):
+                        bound_count = default_count
+                    numeral_count = max(bound_count, 1)
+                else:
+                    numeral_count = default_count
+
+                self.inventory_numeral_counts[inventory.pk] = numeral_count
+
+                inventory_fields: list[BoundField] = []
+                for slot in range(1, numeral_count + 1):
+                    field_name = f"numeral_{inventory.pk}_{slot}"
+
+                    initial_numeral = Decimal("0")
+                    if slot - 1 < len(existing_numerals):
+                        initial_numeral = existing_numerals[slot - 1].numeral
+
+                    self.fields[field_name] = forms.DecimalField(
+                        label=(
+                            f"Numeral {inventory.code} ({inventory.fuel_type})"
+                            f" #{slot}"
+                        ),
+                        required=False,
+                        max_digits=12,
+                        decimal_places=2,
+                        min_value=Decimal("0"),
+                        initial=initial_numeral,
+                        help_text=(
+                            "Se guarda solo si la máquina está asociada a este estanque."
+                        ),
+                        widget=forms.NumberInput(
+                            attrs={
+                                "class": "w-full border rounded p-2",
+                                "step": "0.01",
+                            }
+                        ),
+                    )
+                    inventory_fields.append(self[field_name])
+
+                self.inventory_numeral_fields.append((inventory, inventory_fields))
 
 
     def clean_fuel_inventories(self):
@@ -354,17 +380,28 @@ class MachineForm(forms.ModelForm):
         if machine.fuel_inventory and machine.fuel_inventory not in selected_inventories:
             selected_inventories.insert(0, machine.fuel_inventory)
 
-        for field, inventory in self.inventory_numeral_fields:
+        for inventory, fields in self.inventory_numeral_fields:
             if inventory not in selected_inventories:
                 continue
-            numeral_value = self.cleaned_data.get(field.name)
-            if numeral_value is None:
-                numeral_value = Decimal("0")
-            MachineFuelInventoryNumeral.objects.update_or_create(
-                machine=machine,
-                fuel_inventory=inventory,
-                defaults={"numeral": numeral_value},
+
+            numeral_count = self.inventory_numeral_counts.get(
+                inventory.pk, len(fields)
             )
+
+            for idx, field in enumerate(fields, start=1):
+                numeral_value = self.cleaned_data.get(field.name)
+                if numeral_value is None:
+                    numeral_value = Decimal("0")
+                MachineFuelInventoryNumeral.objects.update_or_create(
+                    machine=machine,
+                    fuel_inventory=inventory,
+                    slot=idx,
+                    defaults={"numeral": numeral_value},
+                )
+
+            MachineFuelInventoryNumeral.objects.filter(
+                machine=machine, fuel_inventory=inventory
+            ).exclude(slot__lte=numeral_count).delete()
 
         MachineFuelInventoryNumeral.objects.filter(machine=machine).exclude(
             fuel_inventory__in=selected_inventories
@@ -1469,6 +1506,7 @@ class ServiceSessionFirefighterPaymentForm(forms.Form):
 class MachineInventoryClosingForm(forms.Form):
     machine_id = forms.IntegerField(widget=forms.HiddenInput())
     fuel_inventory_id = forms.IntegerField(widget=forms.HiddenInput())
+    slot = forms.IntegerField(widget=forms.HiddenInput())
     numeral = forms.DecimalField(
         label="Numeral",
         max_digits=12,
@@ -1481,19 +1519,25 @@ class MachineInventoryClosingForm(forms.Form):
         machine: Machine | None = None,
         fuel_inventory: FuelInventory | None = None,
         current_numeral: Decimal | None = None,
+        numeral_entry: MachineFuelInventoryNumeral | None = None,
         **kwargs,
     ):
         self.machine = machine
         self.fuel_inventory = fuel_inventory
         self.current_numeral = current_numeral or Decimal("0")
+        self.numeral_entry = numeral_entry
         super().__init__(*args, **kwargs)
         if machine:
             self.fields["machine_id"].initial = machine.pk
         if fuel_inventory:
             self.fields["fuel_inventory_id"].initial = fuel_inventory.pk
+            slot_label = numeral_entry.slot if numeral_entry else 1
             self.fields["numeral"].label = (
                 f"Máquina {machine.number} · Estanque {fuel_inventory.code}"
+                f" · Numeral #{slot_label}"
             )
+        if numeral_entry:
+            self.fields["slot"].initial = numeral_entry.slot
         self.fields["numeral"].initial = self.current_numeral
         self.fields["numeral"].min_value = self.current_numeral
         
@@ -1525,13 +1569,16 @@ class MachineInventoryClosingFormSet(BaseFormSet):
         machine = None
         fuel_inventory = None
         current_numeral = None
+        numeral_entry = None
         if self.machine_inventory_pairs and i < len(self.machine_inventory_pairs):
-            machine, fuel_inventory, current_numeral = self.machine_inventory_pairs[i]
+            machine, fuel_inventory, numeral_entry = self.machine_inventory_pairs[i]
+            current_numeral = numeral_entry.numeral if numeral_entry else None
         kwargs.update(
             {
                 "machine": machine,
                 "fuel_inventory": fuel_inventory,
                 "current_numeral": current_numeral,
+                "numeral_entry": numeral_entry,
             }
         )
         return super()._construct_form(i, **kwargs)

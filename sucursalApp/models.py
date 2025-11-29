@@ -244,16 +244,35 @@ class Machine(models.Model):
             inventories.insert(0, primary_inventory)
         return inventories
 
-    def get_numeral_for_inventory(self, fuel_inventory: "FuelInventory" | None):
-        if fuel_inventory is None:
-            return Decimal("0")
+    def get_numerals_for_inventory(
+        self, fuel_inventory: "FuelInventory" | None
+    ) -> list["MachineFuelInventoryNumeral"]:
+        if fuel_inventory is None or not self.pk:
+            return []
 
-        numeral, _ = MachineFuelInventoryNumeral.objects.get_or_create(
-            machine=self,
-            fuel_inventory=fuel_inventory,
-            defaults={"numeral": Decimal("0")},
+        numerals = list(
+            MachineFuelInventoryNumeral.objects.filter(
+                machine=self, fuel_inventory=fuel_inventory
+            ).order_by("slot", "pk")
         )
-        return numeral.numeral
+
+        if not numerals:
+            numerals.append(
+                MachineFuelInventoryNumeral.objects.create(
+                    machine=self,
+                    fuel_inventory=fuel_inventory,
+                    slot=1,
+                    numeral=Decimal("0"),
+                )
+            )
+
+        return numerals
+
+    def get_numeral_for_inventory(self, fuel_inventory: "FuelInventory" | None):
+        numerals = self.get_numerals_for_inventory(fuel_inventory)
+        if not numerals:
+            return Decimal("0")
+        return numerals[0].numeral
 
     @property
     def numeral(self) -> Decimal:
@@ -287,6 +306,7 @@ class MachineFuelInventoryNumeral(models.Model):
         related_name="machine_numerals",
         verbose_name="Estanque",
     )
+    slot = models.PositiveIntegerField("Posición", default=1)
     numeral = models.DecimalField("Numeral", max_digits=12, decimal_places=2, default=0)
     created_at = models.DateTimeField("Fecha de creación", auto_now_add=True)
     updated_at = models.DateTimeField("Fecha de actualización", auto_now=True)
@@ -294,6 +314,8 @@ class MachineFuelInventoryNumeral(models.Model):
     class Meta:
         verbose_name = "Numeral de máquina"
         verbose_name_plural = "Numerales de máquina"
+        unique_together = ("machine", "fuel_inventory", "slot")
+        ordering = ("machine", "fuel_inventory", "slot", "pk")
         unique_together = ("machine", "fuel_inventory")
 
     def __str__(self) -> str:

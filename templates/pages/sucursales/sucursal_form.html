@@ -901,10 +901,10 @@
                         <div class="sm:col-span-2">
                           <dt class="font-medium text-gray-700">Numerales</dt>
                           <dd class="space-y-1">
-                            {% with numerals=machine.fuel_numerals.all %}
+                            {% with numerals=machine.current_numerals %}
                               {% if numerals %}
                                 {% for numeral in numerals %}
-                                  <span class="block">Estanque {{ numeral.fuel_inventory.code }}: {{ numeral.numeral }}</span>
+                                  <span class="block">Estanque {{ numeral.inventory.code }}: {{ numeral.numeral }}</span>
                                 {% endfor %}
                               {% else %}
                                 <span class="text-gray-500">Sin numerales registrados</span>

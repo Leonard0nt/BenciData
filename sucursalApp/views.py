@@ -571,6 +571,14 @@ class SucursalUpdateView(OwnerCompanyMixin, UpdateView):
                             instance=nozzle, auto_id=f"edit-nozzle-{nozzle.pk}_%s"
                         )
                     machine.nozzles_list = nozzles
+                    inventories = machine.get_fuel_inventories()
+                    machine.current_numerals = [
+                        {
+                            "inventory": inventory,
+                            "numeral": machine.get_numeral_for_inventory(inventory),
+                        }
+                        for inventory in inventories
+                    ]
                 island.machines_list = machines
         else:
             context.setdefault("islands", [])
@@ -1814,6 +1822,11 @@ class ServiceSessionDetailView(OwnerCompanyMixin, DetailView):
             + withdrawals_total
             + product_sales_total
         )
+        turn_profit_excluding_product_sales = (
+            credit_sales_total
+            + transbank_vouchers_total
+            + withdrawals_total
+        )
         net_turn_profit = (
             turn_profit
             - fuel_payments_total
@@ -1891,6 +1904,7 @@ class ServiceSessionDetailView(OwnerCompanyMixin, DetailView):
                 "branch_machines": branch_machines,
                 "service_session_closed": self.object.ended_at is not None,
                 "turn_profit": turn_profit,
+                "turn_profit_excluding_product_sales": turn_profit_excluding_product_sales,
                 "net_turn_profit": net_turn_profit,
                 "close_session_flow_details": close_session_flow_details,
                 "close_session_flow_total": close_session_flow_total,
@@ -1983,11 +1997,10 @@ class ServiceSessionDetailView(OwnerCompanyMixin, DetailView):
                         if machine_inventory is None:
                             continue
 
-                        machine_inventory = machine_inventory_lookup.get(
-                            (machine_id, fuel_inventory_id)
-                        )
-                        if machine_inventory is None:
-                            price = fuel_prices.get(fuel_type)
+                        machine, fuel_inventory, current_numeral = machine_inventory
+                        liters_sold = numeral - current_numeral
+                        fuel_type = fuel_inventory.fuel_type if fuel_inventory else None
+                        price = fuel_prices.get(fuel_type)
 
                         if price is None:
                             missing_price_types.add(fuel_type or "Desconocido")
@@ -2023,8 +2036,13 @@ class ServiceSessionDetailView(OwnerCompanyMixin, DetailView):
                         close_session_flow_missing_prices=sorted(missing_price_types),
                     )
 
-                    turn_profit = context.get("turn_profit") or decimal_zero
-                    close_session_flow_gap = close_session_flow_total - turn_profit
+                    turn_profit_excluding_product_sales = (
+                        context.get("turn_profit_excluding_product_sales")
+                        or decimal_zero
+                    )
+                    close_session_flow_gap = (
+                        turn_profit_excluding_product_sales - close_session_flow_total 
+                    )
 
                     if close_session_flow_gap > decimal_zero:
                         flow_mismatch_type = ServiceSession.FLOW_MISMATCH_POSITIVE
