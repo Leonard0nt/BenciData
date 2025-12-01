@@ -1507,7 +1507,35 @@ class MachineInventoryClosingForm(forms.Form):
     machine_id = forms.IntegerField(widget=forms.HiddenInput())
     fuel_inventory_id = forms.IntegerField(widget=forms.HiddenInput())
     slot = forms.IntegerField(widget=forms.HiddenInput())
-    numeral = forms.DecimalField(
+    # Use a custom DecimalField that normalizes common user input formats
+    # (thousands separators and comma as decimal separator) before parsing.
+    class NormalizedDecimalField(forms.DecimalField):
+        def to_python(self, value):
+            if value in self.empty_values:
+                return None
+            # Keep original if already a Decimal or numeric type
+            if not isinstance(value, str):
+                return super().to_python(value)
+
+            cleaned = value.strip()
+            # remove currency symbols and non-breaking spaces
+            for ch in ("$", " ", "\u202f"):
+                cleaned = cleaned.replace(ch, "")
+            if not cleaned:
+                return None
+
+            # If comma appears, assume it is the decimal separator and dots are thousands
+            if "," in cleaned:
+                cleaned = cleaned.replace(".", "")
+                cleaned = cleaned.replace(",", ".")
+            else:
+                # If multiple dots, assume they are thousands separators and remove them
+                if cleaned.count(".") > 1:
+                    cleaned = cleaned.replace(".", "")
+
+            return super().to_python(cleaned)
+
+    numeral = NormalizedDecimalField(
         label="Numeral",
         max_digits=12,
         decimal_places=2,

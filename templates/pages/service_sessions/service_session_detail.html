@@ -1086,6 +1086,7 @@
                       {% for inventory, current_numeral, form in inventories %}
                         {{ form.machine_id }}
                         {{ form.fuel_inventory_id }}
+                        {{ form.slot }}
                         <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                           <div>
                             <p class="text-sm font-semibold text-gray-900">Estanque {{ inventory.code }} · {{ inventory.fuel_type }}</p>

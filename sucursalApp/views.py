@@ -2035,6 +2035,8 @@ class ServiceSessionDetailView(OwnerCompanyMixin, DetailView):
                         close_session_flow_details=close_session_flow_details,
                         close_session_flow_missing_prices=sorted(missing_price_types),
                     )
+                    context["closeSessionModalOpen"] = True
+
 
                     turn_profit_excluding_product_sales = (
                         context.get("turn_profit_excluding_product_sales")
