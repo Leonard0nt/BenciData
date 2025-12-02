@@ -10,10 +10,11 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 
 TEMPLATES_DIR = os.path.join(BASE_DIR, "templates")
 
-# SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = os.environ.get("SECRET_KEY")
+# -------------------------
+# SECURITY / ENVIRONMENT
+# -------------------------
+SECRET_KEY = env("SECRET_KEY", default="dev-secret-key-change-me")
 
-# SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = env.bool("DEBUG", default=False)
 
 raw_allowed_hosts = env("ALLOWED_HOSTS", default="")
@@ -54,9 +55,7 @@ THIRD_APPS = [
     "axes",
 ]
 
-
 INSTALLED_APPS = DEFAULT_DJANGO_APPS + LOCAL_APPS + THIRD_APPS
-
 
 TAILWIND_APP_NAME = "theme"
 
@@ -65,7 +64,6 @@ INTERNAL_IPS = env.list("INTERNAL_IPS", default=[])
 NPM_BIN_PATH = os.environ.get("NPM_BIN_PATH")
 
 CRISPY_ALLOWED_TEMPLATE_PACKS = "tailwind"
-
 CRISPY_TEMPLATE_PACK = "tailwind"
 
 
@@ -82,7 +80,6 @@ MIDDLEWARE = [
     "axes.middleware.AxesMiddleware",
     "homeApp.middleware.UpdateLastActivityMiddleware",
 ]
-
 
 ROOT_URLCONF = "core.urls"
 
@@ -122,17 +119,18 @@ MFA_FORMS = {
 
 SITE_ID = 1
 
-# Database
-# https://docs.djangoproject.com/en/5.1/ref/settings/#databases
+# -------------------------
+# DATABASE
+# -------------------------
 
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
-        'NAME': env("DB_NAME"),
-        'USER': env("DB_USER"),
-        'PASSWORD': env("DB_PASSWORD"),
-        'HOST': env("DB_HOST"),
-        'PORT': env("DB_PORT"),
+        'NAME': env("DB_NAME", default="bencidata"),
+        'USER': env("DB_USER", default="bencidata"),
+        'PASSWORD': env("DB_PASSWORD", default="bencidata"),
+        'HOST': env("DB_HOST", default="localhost"),
+        'PORT': env("DB_PORT", default="5432"),
     }
 }
 
@@ -144,43 +142,28 @@ PASSWORD_HASHERS = [
     "django.contrib.auth.hashers.ScryptPasswordHasher",
 ]
 
-# Password validation
-# https://docs.djangoproject.com/en/5.1/ref/settings/#auth-password-validators
-
 AUTH_PASSWORD_VALIDATORS = [
-    {
-        "NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator",
-    },
-    {
-        "NAME": "django.contrib.auth.password_validation.MinimumLengthValidator",
-    },
-    {
-        "NAME": "django.contrib.auth.password_validation.CommonPasswordValidator",
-    },
-    {
-        "NAME": "django.contrib.auth.password_validation.NumericPasswordValidator",
-    },
+    {"NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator"},
+    {"NAME": "django.contrib.auth.password_validation.MinimumLengthValidator"},
+    {"NAME": "django.contrib.auth.password_validation.CommonPasswordValidator"},
+    {"NAME": "django.contrib.auth.password_validation.NumericPasswordValidator"},
 ]
 
-
-# Internationalization
-# https://docs.djangoproject.com/en/5.1/topics/i18n/
+# -------------------------
+# INTERNATIONALIZATION
+# -------------------------
 
 LANGUAGE_CODE = "es-us"
-
 TIME_ZONE = "America/Santiago"
-
 USE_I18N = True
-
 USE_TZ = True
 
-
-# Static files (CSS, JavaScript, Images)
-# https://docs.djangoproject.com/en/5.0/howto/static-files/
+# -------------------------
+# STATIC & MEDIA
+# -------------------------
 
 STATIC_URL = '/static/'
-
-STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')  
+STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
 
 STATICFILES_DIRS = [
     os.path.join(BASE_DIR, "static"),
@@ -189,21 +172,25 @@ STATICFILES_DIRS = [
 MEDIA_URL = "/media/"
 MEDIA_ROOT = os.path.join(BASE_DIR, "media")
 
-# Default primary key field type
-# https://docs.djangoproject.com/en/5.0/ref/settings/#default-auto-field
-
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
-# if DEBUG:
+# -------------------------
+# EMAIL (con defaults)
+# -------------------------
+
 EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
-# else: EMAIL_BACKEND = [Configuración de correo]
-EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
-EMAIL_HOST = env("EMAIL_HOST")
+EMAIL_HOST = env("EMAIL_HOST", default="localhost")
 EMAIL_PORT = env.int("EMAIL_PORT", default=587)
 EMAIL_USE_TLS = env.bool("EMAIL_USE_TLS", default=True)
-EMAIL_HOST_USER = env("EMAIL_HOST_USER")
-EMAIL_HOST_PASSWORD = env("EMAIL_HOST_PASSWORD")
-DEFAULT_FROM_EMAIL = env("DEFAULT_FROM_EMAIL", default=EMAIL_HOST_USER)
+EMAIL_USE_SSL = env.bool("EMAIL_USE_SSL", default=False)
+
+EMAIL_HOST_USER = env("EMAIL_HOST_USER", default="")
+EMAIL_HOST_PASSWORD = env("EMAIL_HOST_PASSWORD", default="")
+DEFAULT_FROM_EMAIL = env("DEFAULT_FROM_EMAIL", default="noreply@example.com")
+
+# -------------------------
+# ALLAUTH
+# -------------------------
 
 ACCOUNT_FORMS = {"login": "UsuarioApp.forms.CustomLoginForm"}
 ACCOUNT_ALLOW_REGISTRATION = True
@@ -215,37 +202,35 @@ ACCOUNT_AUTHENTICATION_METHOD = "email"
 ACCOUNT_EMAIL_REQUIRED = True
 ACCOUNT_UNIQUE_EMAIL = True
 
-ACCOUNT_EMAIL_VERIFICATION = "mandatory"  #none, optional, mandatory
+ACCOUNT_EMAIL_VERIFICATION = "mandatory"
 ACCOUNT_EMAIL_CONFIRMATION_EXPIRE_DAYS = 3
 
 ACCOUNT_LOGOUT_ON_GET = True
 
-SESSION_COOKIE_AGE = 60 * 60 * 24 * 365  # 20 minutes in seconds
+SESSION_COOKIE_AGE = 60 * 60 * 24 * 365
 
 LOGIN_URL = "account_login"
 
-# -----------------------------------------------
+# -------------------------
+# MFA + AXES
+# -------------------------
 
 MFA_RECOVERY_CODE_COUNT = 10
-# El número de códigos de recuperación.
-
 MFA_TOTP_PERIOD = 30
-# El período durante el cual un código TOTP será válido, en segundos.
-
 MFA_TOTP_DIGITS = 6
-# The number of digits for TOTP codes.
-
-# -------------------------------------------------
 
 delta = dt.timedelta(minutes=5)
 
 AXES_FAILURE_LIMIT = 3
 AXES_COOLOFF_TIME = delta
-AXES_RESET_ON_SUCCESS = True  # restablecerá el número de inicios de sesión fallidos
+AXES_RESET_ON_SUCCESS = True
 AXES_ENABLE_ACCESS_FAILURE_LOG = True
-AXES_LOCK_OUT_AT_FAILURE = True  # bloquea al usuario
+AXES_LOCK_OUT_AT_FAILURE = True
 
-# ------------------------------------------
+# -------------------------
+# LOGGING
+# -------------------------
+
 if not DEBUG:
     LOGGING = {
         'version': 1,

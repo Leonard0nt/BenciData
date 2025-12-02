@@ -1,0 +1,207 @@
+/* Fallback styles for summary elements when Tailwind utilities are unavailable */
+summary {
+  list-style: none;
+  padding-inline-start: 0;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+[x-cloak] {
+  display: none !important;
+}
+
+
+details > summary svg {
+  width: 1rem;
+  height: 1rem;
+  flex-shrink: 0;
+}
+main {
+  min-height: calc(100dvh - 64px);
+}
+.qr-personalizado p {
+  display: flex;
+  justify-content: space-between;
+  flex-wrap: wrap;
+}
+.qr-personalizado span {
+  display: block;
+  padding: 12px 0;
+}
+.qr-personalizado input {
+  border-radius: 8px;
+}
+.textarea-personalizado p textarea {
+  max-height: 200px;
+  min-height: 200px;
+  border: none;
+  text-align: end;
+  flex: auto;
+  line-height: 0.5;
+  padding-left: 5px;
+  white-space: pre;
+}
+.textarea-personalizado p {
+  display: flex;
+  align-items: center;
+  padding: 10px;
+}
+@media (max-width: 600px) {
+  .textarea-personalizado p {
+    flex-direction: column;
+  }
+}
+strong {
+  display: block;
+  background-color: rgb(235, 168, 168);
+  border-radius: 0.375rem;
+  border: 1px solid rgb(111, 47, 47);
+  padding: 12px;
+  margin: 10px 0;
+  color: rgb(111, 47, 47);
+}
+
+#id_password_helptext,
+#div_id_remember {
+  display: none;
+}
+
+.summary-card-grid {
+  display: grid;
+  gap: 1.25rem;
+  grid-template-columns: repeat(auto-fit, minmax(18rem, 1fr));
+}
+
+.summary-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  border-radius: 0.875rem;
+  padding: 1.5rem;
+  padding-top: 2rem;
+  box-shadow: 0 20px 45px -25px rgba(15, 23, 42, 0.45);
+  transition: transform 150ms ease, box-shadow 150ms ease;
+  overflow: hidden;
+}
+
+.summary-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 28px 60px -30px rgba(15, 23, 42, 0.55);
+}
+
+.summary-card__accent {
+  position: absolute;
+  inset: 0 0 auto;
+  height: 0.5rem;
+}
+
+.summary-card__body {
+  display: grid;
+  gap: 1rem;
+}
+
+.summary-card__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.summary-card__title {
+  font-size: 0.875rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+
+.summary-card__value {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+}
+
+.summary-card__value-number {
+  font-size: clamp(2rem, 1.5vw + 1.5rem, 2.75rem);
+  font-weight: 700;
+  line-height: 1;
+}
+
+.summary-card__suffix {
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+.summary-card__description {
+  font-size: 0.9375rem;
+  line-height: 1.45;
+}
+
+.summary-card__details {
+  margin-top: 1.5rem;
+  padding-top: 1.25rem;
+  border-top-width: 1px;
+  display: grid;
+  gap: 0.75rem;
+  font-size: 0.875rem;
+}
+
+.summary-card__detail {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.summary-card__detail-value {
+  display: flex;
+  align-items: baseline;
+  font-weight: 600;
+  gap: 0.25rem;
+}
+
+.summary-card__detail-total {
+  font-size: 0.75rem;
+  font-weight: 500;
+  opacity: 0.7;
+}
+
+/* Fallback helpers for yellow utilities when Tailwind utilities aren't present
+   These provide minimal equivalents for `.bg-yellow-500` and focus ring. */
+.bg-yellow-500 {
+  background-color: #f59e0b !important; /* Tailwind yellow-500 */
+}
+.bg-yellow-500:hover {
+  background-color: #d97706 !important;
+}
+.text-yellow-700 {
+  color: #b45309 !important;
+}
+
+/* focus:ring equivalents: classes in templates use `focus:ring-2 focus:ring-yellow-500`
+   The focus: variant appears in the DOM as a class with a colon (e.g. `focus:ring-yellow-500`).
+   In CSS we must escape the colon. */
+.focus\:ring-yellow-500:focus {
+  box-shadow: 0 0 0 4px rgba(245,158,11,0.18) !important;
+  outline: none !important;
+}
+.ring-yellow-500 {
+  box-shadow: 0 0 0 4px rgba(245,158,11,0.18) !important;
+}
+
+/* Increase specificity for buttons inside the users list to ensure yellow shows */
+button.bg-yellow-500,
+button.items-center.bg-yellow-500,
+.inline-flex button.bg-yellow-500 {
+  background-color: #f59e0b !important;
+  color: #ffffff !important;
+  border-color: transparent !important;
+}
+.inline-flex button.bg-yellow-500:hover {
+  background-color: #d97706 !important;
+}
+
