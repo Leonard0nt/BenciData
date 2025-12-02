@@ -101,6 +101,15 @@ class Profile(models.Model):
         verbose_name="Sucursal actual",
     )
 
+    rut = models.CharField(
+        max_length=12,
+        blank=True,
+        null=True,
+        unique=True,
+        verbose_name="RUT",
+        help_text="RUT sin puntos, con guión opcional. Ej: 12345678-5",
+    )
+
     def save(self, *args, **kwargs):
         update_last_activity = kwargs.pop("update_last_activity", False)
         if update_last_activity:

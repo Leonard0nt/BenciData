@@ -26,6 +26,7 @@ from .models import Profile
 from sucursalApp.forms import BranchStaffForm
 from sucursalApp.models import Sucursal, SucursalStaff
 from homeApp.models import Company
+from django.contrib.auth.forms import SetPasswordForm
 
 # Create your views here.
 
@@ -48,6 +49,9 @@ class UserListView(LoginRequiredMixin, ListView):
         profile = getattr(self.request.user, "profile", None)
         is_owner = bool(profile and profile.is_owner())
         is_admin = bool(profile and profile.is_admin())
+        is_accountant = bool(profile and profile.is_accountant())
+        is_head_attendant = bool(profile and profile.is_head_ATTENDANT())
+        is_attendant = bool(profile and profile.is_ATTENDANT())
 
         company_rut: str | None = None
         branches_qs = Sucursal.objects.none()
@@ -75,11 +79,27 @@ class UserListView(LoginRequiredMixin, ListView):
                 if branch_ids:
                     branch_ids = list(dict.fromkeys(branch_ids))
                     branches_qs = Sucursal.objects.filter(id__in=branch_ids)
+            # Allow accountants and attendants (including head attendant)
+            # to view users limited to the branches they belong to.
+            elif is_accountant or is_head_attendant or is_attendant:
+                branch_ids = list(
+                    SucursalStaff.objects.filter(profile=profile).values_list(
+                        "sucursal_id", flat=True
+                    )
+                )
+                if profile.current_branch_id:
+                    branch_ids.append(profile.current_branch_id)
+                if branch_ids:
+                    branch_ids = list(dict.fromkeys(branch_ids))
+                    branches_qs = Sucursal.objects.filter(id__in=branch_ids)
 
         self.access_scope = {
             "profile": profile,
             "is_owner": is_owner,
             "is_admin": is_admin,
+            "is_accountant": is_accountant,
+            "is_head_attendant": is_head_attendant,
+            "is_attendant": is_attendant,
             "company_rut": company_rut,
             "branch_ids": branch_ids,
             "branches": list(branches_qs.order_by("name")),
@@ -110,6 +130,16 @@ class UserListView(LoginRequiredMixin, ListView):
             else:
                 queryset = queryset.none()
         elif access["is_admin"]:
+            branch_ids: list[int] = access.get("branch_ids", [])
+            if branch_ids:
+                queryset = queryset.filter(
+                    Q(profile__current_branch_id__in=branch_ids)
+                    | Q(profile__sucursal_staff__sucursal_id__in=branch_ids)
+                ).distinct()
+            else:
+                queryset = queryset.filter(id=self.request.user.id)
+        # Allow accountants and attendants to see users limited to their branches
+        elif access.get("is_accountant") or access.get("is_head_attendant") or access.get("is_attendant"):
             branch_ids: list[int] = access.get("branch_ids", [])
             if branch_ids:
                 queryset = queryset.filter(
@@ -257,14 +287,23 @@ class UserListView(LoginRequiredMixin, ListView):
         context["branch_groups"] = branch_groups
         context["is_owner"] = access.get("is_owner", False)
         context["is_admin"] = access.get("is_admin", False)
+        context["is_accountant"] = access.get("is_accountant", False)
         context["can_manage_users"] = access.get("is_owner", False) or access.get(
             "is_admin", False
+        )
+        # Secretarios (ACCOUNTANT) should be able to deactivate/reactivate users
+        context["can_deactivate_users"] = (
+            access.get("is_owner", False)
+            or access.get("is_admin", False)
+            or access.get("is_accountant", False)
         )
         context["request_user_id"] = getattr(self.request.user, "id", None)
         return context
 
 
 class UserCreateView(LoginRequiredMixin, PermitsPositionMixin, View):
+    # Allow only owners and administrators to access user registration
+    allowed_roles = ["OWNER", "ADMINISTRATOR"]
     template_name = "pages/usuarios/registro_usuario.html"
 
     def get(self, request, *args, **kwargs):
@@ -292,9 +331,41 @@ class UserCreateView(LoginRequiredMixin, PermitsPositionMixin, View):
                     {"user_form": user_form, "profile_form": profile_form},
                 )
 
-            company_rut = Company.normalize_rut(
-                getattr(owner_profile, "company_rut", None)
-            )
+            # Try several ways to resolve the company's RUT before failing:
+            # 1) Company object linked to the creator's profile
+            # 2) creator_profile.company_rut field (normalized)
+            # 3) the creator's current_branch or first SucursalStaff -> branch.company
+            company_rut = None
+
+            try:
+                company_obj = Company.objects.filter(profile=owner_profile).first()
+            except Exception:
+                company_obj = None
+
+            if company_obj and getattr(company_obj, "rut", None):
+                company_rut = Company.normalize_rut(company_obj.rut)
+
+            if not company_rut:
+                raw_rut = getattr(owner_profile, "company_rut", None)
+                if raw_rut:
+                    company_rut = Company.normalize_rut(raw_rut)
+
+            if not company_rut:
+                # Try to infer company from creator's branch (useful for admins)
+                branch = None
+                try:
+                    if getattr(owner_profile, "current_branch_id", None):
+                        branch = Sucursal.objects.filter(id=owner_profile.current_branch_id).first()
+                    else:
+                        staff_link = SucursalStaff.objects.filter(profile=owner_profile).select_related("sucursal").first()
+                        if staff_link:
+                            branch = getattr(staff_link, "sucursal", None)
+                except Exception:
+                    branch = None
+
+                if branch and getattr(branch, "company", None) and getattr(branch.company, "rut", None):
+                    company_rut = Company.normalize_rut(branch.company.rut)
+
             if not company_rut:
                 messages.error(
                     request,
@@ -310,6 +381,21 @@ class UserCreateView(LoginRequiredMixin, PermitsPositionMixin, View):
             profile = profile_form.save(commit=False)
             profile.user_FK = user
             profile.company_rut = company_rut
+            # If the creator has a current_branch, assign it to the new profile so
+            # the user appears associated to that sucursal immediately (useful
+            # when creating bomberos or administradores from the branch context).
+            creator_profile = getattr(request.user, "profile", None)
+            try:
+                # Only set when not already provided by the form
+                if (
+                    getattr(profile, "current_branch_id", None) is None
+                    and creator_profile is not None
+                    and getattr(creator_profile, "current_branch_id", None)
+                ):
+                    profile.current_branch_id = creator_profile.current_branch_id
+            except Exception:
+                # Defensive: ignore any unexpected attribute errors
+                pass
             profile.save()
             messages.success(request, "Usuario creado con Éxito.")
             return redirect("Register")
@@ -552,7 +638,8 @@ class UserUpdateView(
             instance=target_profile,
             user=request.user,
         )
-        return user_form, profile_form
+        password_form = SetPasswordForm(target_user, data) if data is not None else SetPasswordForm(target_user)
+        return user_form, profile_form, password_form
 
     def _handle_scope(self, request, target_user: User):
         if target_user.is_superuser:
@@ -585,13 +672,20 @@ class UserUpdateView(
         if redirect_response:
             return redirect_response
 
-        user_form, profile_form = self._build_forms(request, target_user)
+        user_form, profile_form, password_form = self._build_forms(request, target_user)
+
+        viewer_profile = getattr(request.user, "profile", None)
+        is_owner = bool(viewer_profile and viewer_profile.is_owner())
+        is_admin = bool(viewer_profile and viewer_profile.is_admin())
 
         context = {
             "user_form": user_form,
             "profile_form": profile_form,
+            "password_form": password_form,
             "target_user": target_user,
             "profile_image_url": self._get_profile_image_url(target_user),
+            "is_owner": is_owner,
+            "is_admin": is_admin,
         }
         return render(request, self.template_name, context)
 
@@ -601,13 +695,36 @@ class UserUpdateView(
         if redirect_response:
             return redirect_response
 
-        user_form, profile_form = self._build_forms(
+        user_form, profile_form, password_form = self._build_forms(
             request,
             target_user,
             data=request.POST,
             files=request.FILES,
         )
 
+        # If the password form was submitted (separate form with button name 'change_password')
+        if "change_password" in request.POST:
+            if password_form.is_valid():
+                password_form.save()
+                messages.success(request, "Contraseña actualizada correctamente.")
+                return redirect("User")
+            # Render form with errors
+            viewer_profile = getattr(request.user, "profile", None)
+            is_owner = bool(viewer_profile and viewer_profile.is_owner())
+            is_admin = bool(viewer_profile and viewer_profile.is_admin())
+            context = {
+                "user_form": user_form,
+                "profile_form": profile_form,
+                "password_form": password_form,
+                "target_user": target_user,
+                "profile_image_url": self._get_profile_image_url(target_user),
+                "is_owner": is_owner,
+                "is_admin": is_admin,
+            }
+            messages.error(request, "Corrige los errores para continuar.")
+            return render(request, self.template_name, context)
+
+        # Regular update of user/profile
         if user_form.is_valid() and profile_form.is_valid():
             user_form.save()
             profile_form.save()
@@ -617,9 +734,13 @@ class UserUpdateView(
         context = {
             "user_form": user_form,
             "profile_form": profile_form,
+            "password_form": password_form,
             "target_user": target_user,
             "profile_image_url": self._get_profile_image_url(target_user),
         }
+        viewer_profile = getattr(request.user, "profile", None)
+        context["is_owner"] = bool(viewer_profile and viewer_profile.is_owner())
+        context["is_admin"] = bool(viewer_profile and viewer_profile.is_admin())
         messages.error(request, "Corrige los errores para continuar.")
         return render(request, self.template_name, context)
 
@@ -662,11 +783,79 @@ class UserDeleteView(
                 target_profile.save(update_fields=["current_branch"])
             SucursalStaff.objects.filter(profile=target_profile).delete()
 
+        # Permanently delete the user and related profile/staff links.
+        try:
+            target_user.delete()
+            messages.success(
+                request,
+                f"El usuario {target_name} fue eliminado correctamente.",
+            )
+        except Exception:
+            messages.error(request, "No fue posible eliminar el usuario.")
+        return redirect("User")
+
+
+
+class UserReactivateView(
+    LoginRequiredMixin, RoleRequiredMixin, UserManagementScopeMixin, View
+):
+    """Reactivate a previously disabled user (sets `is_active=True`).
+
+    Allowed roles: OWNER, ADMINISTRATOR, ACCOUNTANT (Secretario)
+    """
+    allowed_roles = ["OWNER", "ADMINISTRATOR", "ACCOUNTANT"]
+
+    def post(self, request, *args, **kwargs):
+        target_user = get_object_or_404(User, pk=kwargs.get("pk"))
+
+        viewer_profile = getattr(request.user, "profile", None)
+        if not self._target_within_scope(viewer_profile, target_user):
+            messages.error(request, "No tienes permisos para reactivar este usuario.")
+            return redirect("User")
+
+        if target_user.is_active:
+            messages.info(request, "El usuario ya se encuentra activo.")
+            return redirect("User")
+
+        target_user.is_active = True
+        target_user.save(update_fields=["is_active"])
+        messages.success(request, f"El usuario {target_user.get_full_name() or target_user.username} ha sido reactivado.")
+        return redirect("User")
+
+
+class UserDeactivateView(
+    LoginRequiredMixin, RoleRequiredMixin, UserManagementScopeMixin, View
+):
+    """Deactivate (soft-delete) a user by setting `is_active=False`.
+
+    Allowed roles: OWNER, ADMINISTRATOR, ACCOUNTANT (Secretario)
+    """
+    allowed_roles = ["OWNER", "ADMINISTRATOR", "ACCOUNTANT"]
+
+    def post(self, request, *args, **kwargs):
+        target_user = get_object_or_404(User, pk=kwargs.get("pk"))
+
+        if target_user == request.user:
+            messages.error(request, "No puedes desactivar tu propia cuenta.")
+            return redirect("User")
+
+        if target_user.is_superuser:
+            messages.error(
+                request,
+                "No es posible desactivar a un superusuario desde esta interfaz.",
+            )
+            return redirect("User")
+
+        viewer_profile = getattr(request.user, "profile", None)
+        if not self._target_within_scope(viewer_profile, target_user):
+            messages.error(request, "No tienes permisos para desactivar este usuario.")
+            return redirect("User")
+
+        if not target_user.is_active:
+            messages.info(request, "El usuario ya se encuentra inactivo.")
+            return redirect("User")
+
         target_user.is_active = False
         target_user.save(update_fields=["is_active"])
-
-        messages.success(
-            request,
-            f"El usuario {target_name} fue eliminado correctamente.",
-        )
+        messages.success(request, f"El usuario {target_user.get_full_name() or target_user.username} ha sido desactivado.")
         return redirect("User")

@@ -15,6 +15,7 @@ def service_session_navigation(request):
         return {
             "service_session_link": default_link,
             "has_active_service_session": False,
+            "has_active_service_assigned": False,
         }
 
     profile = getattr(user, "profile", None)
@@ -24,6 +25,7 @@ def service_session_navigation(request):
         return {
             "service_session_link": default_link,
             "has_active_service_session": False,
+            "has_active_service_assigned": False,
         }
 
     latest_session_id = (
@@ -39,11 +41,28 @@ def service_session_navigation(request):
         return {
             "service_session_link": default_link,
             "has_active_service_session": False,
+            "has_active_service_assigned": False,
         }
+
+    # Check if the current user is assigned to that active service
+    has_assigned = False
+    try:
+        session = ServiceSession.objects.filter(pk=latest_session_id).prefetch_related("attendants", "shift__manager").first()
+        profile = getattr(request.user, "profile", None)
+        if profile and session:
+            # assigned as attendant
+            if session.attendants.filter(pk=getattr(profile, "pk", None)).exists():
+                has_assigned = True
+            # or is the manager of the shift
+            elif getattr(session.shift, "manager_id", None) == getattr(profile, "pk", None):
+                has_assigned = True
+    except Exception:
+        has_assigned = False
 
     return {
         "service_session_link": reverse(
             "service_session_detail", args=[latest_session_id]
         ),
         "has_active_service_session": True,
+        "has_active_service_assigned": has_assigned,
     }

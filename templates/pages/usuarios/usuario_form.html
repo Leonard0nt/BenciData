@@ -79,6 +79,29 @@
 
       {% include "components/btn/button.html" with button_text="Guardar cambios" %}
     </form>
+    
+    {% if is_owner or is_admin %}
+    <div class="mt-6">
+      <h2 class="text-lg font-semibold mb-2">Cambiar contraseña</h2>
+      <form method="post" class="space-y-4">
+        {% csrf_token %}
+        {% for hidden in password_form.hidden_fields %}{{ hidden }}{% endfor %}
+        <div>
+          <label class="block text-sm font-semibold text-gray-700">Nueva contraseña</label>
+          {{ password_form.new_password1 }}
+          {% if password_form.new_password1.errors %}<p class="text-sm text-red-600">{{ password_form.new_password1.errors|join:', ' }}</p>{% endif %}
+        </div>
+        <div>
+          <label class="block text-sm font-semibold text-gray-700">Confirmar contraseña</label>
+          {{ password_form.new_password2 }}
+          {% if password_form.new_password2.errors %}<p class="text-sm text-red-600">{{ password_form.new_password2.errors|join:', ' }}</p>{% endif %}
+        </div>
+        <div>
+          <button type="submit" name="change_password" class="inline-flex items-center rounded-md bg-gradient-to-br from-red-500 to-pink-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:from-red-600">Cambiar contraseña</button>
+        </div>
+      </form>
+    </div>
+    {% endif %}
   </div>
 {% endblock content_pages %}
 

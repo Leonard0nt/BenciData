@@ -113,10 +113,33 @@ class OwnerCompanyMixin(LoginRequiredMixin, RoleRequiredMixin):
             branch_ids = list(company.branches.values_list("pk", flat=True))
         else:
             profile = getattr(self.request.user, "profile", None)
-            branch_ids = get_admin_branch_ids(profile)
+            # Collect branch ids from SucursalStaff memberships (any role)
+            branch_ids_set: set[int] = set()
+            if profile:
+                staff_branch_ids = list(
+                    SucursalStaff.objects.filter(profile=profile).values_list(
+                        "sucursal_id", flat=True
+                    )
+                )
+                for bid in staff_branch_ids:
+                    if bid:
+                        branch_ids_set.add(bid)
+
+                # Also include the profile.current_branch if set
+                current_branch_id = getattr(profile, "current_branch_id", None)
+                if current_branch_id:
+                    branch_ids_set.add(current_branch_id)
+
+                # If the profile is an admin, include admin-managed branches as well
+                if getattr(profile, "is_admin", None) and profile.is_admin():
+                    for bid in get_admin_branch_ids(profile):
+                        if bid:
+                            branch_ids_set.add(bid)
+
+            branch_ids = list(branch_ids_set)
 
         # Ensure unique values and ignore None entries
-        branch_ids = list(dict.fromkeys(branch_ids))
+        branch_ids = [b for i, b in enumerate(branch_ids) if b is not None and b not in branch_ids[:i]]
         self._managed_branch_ids = branch_ids  # type: ignore[attr-defined]
         return branch_ids
 
@@ -131,11 +154,21 @@ class SucursalListView(OwnerCompanyMixin, FormMixin, ListView):
     context_object_name = "sucursales"
     form_class = SucursalForm
     success_url = reverse_lazy("sucursal_list")
-    allowed_roles = ["OWNER", "ADMINISTRATOR"]
+    # Allow owners/admins to edit; also allow other staff to view (read-only)
+    allowed_roles = [
+        "OWNER",
+        "ADMINISTRATOR",
+        "ACCOUNTANT",
+        "ATTENDANT",
+        "HEAD_ATTENDANT",
+    ]
 
     def dispatch(self, request, *args, **kwargs):
         profile = getattr(request.user, "profile", None)
-        if profile and profile.has_role("ADMINISTRATOR"):
+        # If the user has any managed branches (owner, admin, staff with membership
+        # or current_branch), redirect them directly to the first branch update
+        # page so the UX mirrors the admin behavior.
+        if profile:
             branch_ids = self.get_managed_branch_ids()
             if branch_ids:
                 current_branch_id = getattr(profile, "current_branch_id", None)
@@ -202,13 +235,21 @@ class SucursalCreateView(OwnerCompanyMixin, CreateView):
         context.setdefault("islands", [])
         context.setdefault("fuel_inventories", [])
         return context
+        
 
 class SucursalUpdateView(OwnerCompanyMixin, UpdateView):
     model = Sucursal
     form_class = SucursalForm
     template_name = "pages/sucursales/sucursal_form.html"
     success_url = reverse_lazy("sucursal_list")
-    allowed_roles = ["OWNER", "ADMINISTRATOR"]
+    allowed_roles = [
+        "OWNER",
+        "ADMINISTRATOR",
+        "ACCOUNTANT",
+        "ATTENDANT",
+        "HEAD_ATTENDANT",
+    ]
+    # Edits are still blocked server-side in `post()` for non-owner/admin users via `can_edit_branch`.
 
     def get_queryset(self) -> QuerySet[Sucursal]:
         branch_ids = self.get_managed_branch_ids()
@@ -287,11 +328,13 @@ class SucursalUpdateView(OwnerCompanyMixin, UpdateView):
                 )
             context["shifts"] = shifts
             profile = getattr(self.request.user, "profile", None)
-            can_manage_shifts = bool(
+            # Only owners and administrators can edit the branch
+            can_edit_branch = bool(
                 self.request.user.is_superuser
                 or (profile and profile.has_role("ADMINISTRATOR"))
                 or (profile and profile.has_role("OWNER"))
             )
+            can_manage_shifts = can_edit_branch
             context["can_manage_shifts"] = can_manage_shifts
             if can_manage_shifts:
                 context["shift_create_form"] = ShiftForm(
@@ -590,7 +633,9 @@ class SucursalUpdateView(OwnerCompanyMixin, UpdateView):
             context.setdefault("branch_credit_sales_count", 0)
             context.setdefault("branch_credit_sales_total", 0)
             context.setdefault("service_history", [])
-        context.setdefault("can_manage_shifts", False)
+            context.setdefault("can_manage_shifts", False)
+        # Expose read/edit capability flag to template
+        context["can_edit_branch"] = locals().get("can_edit_branch", False)
         if not context.get("active_modal"):
             requested_modal = self.request.GET.get("modal")
             if requested_modal:
@@ -605,6 +650,15 @@ class SucursalUpdateView(OwnerCompanyMixin, UpdateView):
 
     def post(self, request, *args, **kwargs):
         self.object = self.get_object()
+        profile = getattr(request.user, "profile", None)
+        can_edit_branch = bool(
+            request.user.is_superuser
+            or (profile and profile.has_role("ADMINISTRATOR"))
+            or (profile and profile.has_role("OWNER"))
+        )
+        if request.method == "POST" and not can_edit_branch:
+            messages.error(request, "No tienes permisos para editar esta sucursal.")
+            return redirect("sucursal_update", pk=self.object.pk)
         scope = request.POST.get("form_scope")
 
         handler_map = {
@@ -1476,7 +1530,8 @@ class ServiceSessionCreateView(OwnerCompanyMixin, CreateView):
     model = ServiceSession
     form_class = ServiceSessionForm
     template_name = "pages/service_sessions/service_session_start.html"
-    allowed_roles = ["OWNER", "ADMINISTRATOR"]
+    # Allow HEAD_ATTENDANT (bombero encargado) to start services
+    allowed_roles = ["OWNER", "ADMINISTRATOR", "HEAD_ATTENDANT"]
 
     def get_success_url(self):
         return reverse("service_session_detail", args=[self.object.pk])
@@ -1490,6 +1545,15 @@ class ServiceSessionCreateView(OwnerCompanyMixin, CreateView):
             .select_related("sucursal")
             .order_by("sucursal__name", "code")
         )
+        # If the current user is a head attendant, limit available shifts
+        # to those where they are the configured manager.
+        try:
+            viewer_profile = getattr(self.request.user, "profile", None)
+            if viewer_profile and getattr(viewer_profile, "is_head_ATTENDANT", None) and viewer_profile.is_head_ATTENDANT():
+                available_shifts = available_shifts.filter(manager_id=viewer_profile.id)
+        except Exception:
+            # Defensive: if any attribute access fails, fall back to unfiltered shifts
+            pass
 
         detailed_shifts = available_shifts.select_related(
             "manager__user_FK",
@@ -1521,6 +1585,21 @@ class ServiceSessionCreateView(OwnerCompanyMixin, CreateView):
         return kwargs
 
     def form_valid(self, form):
+        # Ensure head attendants can only start the shift they manage.
+        try:
+            viewer_profile = getattr(self.request.user, "profile", None)
+            if viewer_profile and getattr(viewer_profile, "is_head_ATTENDANT", None) and viewer_profile.is_head_ATTENDANT():
+                selected_shift = form.cleaned_data.get("shift")
+                if selected_shift and selected_shift.manager_id != viewer_profile.id:
+                    form.add_error("shift", "No tienes permiso para iniciar este turno.")
+                    messages.error(self.request, "No tienes permiso para iniciar este turno.")
+                    return self.form_invalid(form)
+        except Exception:
+            # Defensive: if anything goes wrong, deny to be safe
+            form.add_error("shift", "No es posible verificar permisos para iniciar el turno.")
+            messages.error(self.request, "No es posible verificar permisos para iniciar el turno.")
+            return self.form_invalid(form)
+
         response = super().form_valid(form)
         messages.success(
             self.request,
@@ -1547,7 +1626,8 @@ class ServiceSessionDetailView(OwnerCompanyMixin, DetailView):
     model = ServiceSession
     template_name = "pages/service_sessions/service_session_detail.html"
     context_object_name = "service_session"
-    allowed_roles = ["OWNER", "ADMINISTRATOR"]
+    # Allow HEAD_ATTENDANT to view/manage the running service details
+    allowed_roles = ["OWNER", "ADMINISTRATOR", "HEAD_ATTENDANT"]
     fuel_load_form_prefix = "fuel_load"
     product_load_form_prefix = "product_load"
     product_sale_form_prefix = "product_sale"
@@ -1556,6 +1636,33 @@ class ServiceSessionDetailView(OwnerCompanyMixin, DetailView):
     transbank_voucher_form_prefix = "transbank_voucher"
     firefighter_payment_form_prefix = "firefighter_payment"
     close_session_form_prefix = "close_session"
+
+    def dispatch(self, request, *args, **kwargs):
+        # Allow an attendant assigned to this specific running service to view it
+        try:
+            service_pk = kwargs.get("pk")
+            if service_pk:
+                service = (
+                    ServiceSession.objects.filter(pk=service_pk)
+                    .prefetch_related("attendants")
+                    .first()
+                )
+                viewer_profile = getattr(request.user, "profile", None)
+                if (
+                    service
+                    and viewer_profile
+                    and service.ended_at is None
+                    and service.attendants.filter(pk=getattr(viewer_profile, "pk", None)).exists()
+                ):
+                    # Delegate directly to DetailView to bypass the RoleRequiredMixin
+                    return DetailView.dispatch(self, request, *args, **kwargs)
+        except Exception:
+            # Defensive: fall back to normal dispatch which enforces role checks
+            return super().dispatch(request, *args, **kwargs)
+
+        # Default: continue with normal dispatch (enforces role checks / mixins)
+        return super().dispatch(request, *args, **kwargs)
+
 
     def get(self, request, *args, **kwargs):
         self.object = self.get_object()
@@ -1630,6 +1737,31 @@ class ServiceSessionDetailView(OwnerCompanyMixin, DetailView):
                 ),
             )
         )
+        # If the current viewer is an attendant assigned to this specific
+        # service (and the service is active), ensure the branch for that
+        # service is included so the attendant can access the detail view.
+        try:
+            viewer_profile = getattr(self.request.user, "profile", None)
+            service_pk = self.kwargs.get("pk")
+            if (
+                viewer_profile
+                and service_pk
+                and not branch_ids
+                and ServiceSession.objects.filter(
+                    pk=service_pk, attendants=viewer_profile, ended_at__isnull=True
+                ).exists()
+            ):
+                branch_id = (
+                    ServiceSession.objects.filter(pk=service_pk)
+                    .values_list("shift__sucursal_id", flat=True)
+                    .first()
+                )
+                if branch_id:
+                    branch_ids = list(dict.fromkeys(list(branch_ids) + [branch_id]))
+
+        except Exception:
+            pass
+
         if branch_ids:
             queryset = queryset.filter(shift__sucursal_id__in=branch_ids)
         else:
@@ -1782,6 +1914,18 @@ class ServiceSessionDetailView(OwnerCompanyMixin, DetailView):
         ]
         firefighter_payments = list(self.object.firefighter_payments.all())
 
+        # Determine if the current viewer is a common attendant (ATTENDANT role)
+        viewer_profile = getattr(self.request.user, "profile", None)
+        is_common_attendant = False
+        try:
+            if viewer_profile and viewer_profile.is_ATTENDANT() and not viewer_profile.is_head_ATTENDANT():
+                # viewer must be one of the attendants in this service
+                if any(a.pk == viewer_profile.pk for a in attendants):
+                    is_common_attendant = True
+        except Exception:
+            is_common_attendant = False
+
+
         decimal_zero = Decimal("0")
         initial_budget = self.object.initial_budget or decimal_zero
         credit_sales_total = sum(
@@ -1927,6 +2071,7 @@ class ServiceSessionDetailView(OwnerCompanyMixin, DetailView):
                     "firefighter_payments": firefighter_payments_total,
                     "product_loads": product_loads_total,
                 },
+                "is_common_attendant": is_common_attendant,
             }
         )
         return context

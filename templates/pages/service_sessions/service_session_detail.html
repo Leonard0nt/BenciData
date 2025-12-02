@@ -95,21 +95,6 @@
     <section class="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
       <div class="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h2 class="text-lg font-semibold text-gray-900">Resumen de caja</h2>
-          <p class="mt-1 text-sm text-gray-600">Controla el dinero disponible al inicio de este servicio.</p>
-        </div>
-      </div>
-      <dl class="mt-6 grid grid-cols-1 gap-6"></dl>
-        <div class="rounded-lg border border-gray-100 bg-gray-50 p-4">
-          <dt class="text-sm font-medium text-gray-500">Total disponible</dt>
-          <dd class="mt-2 text-2xl font-semibold text-gray-900">$ {{ service_session.initial_budget|floatformat:2 }}</dd>
-        </div>
-      </dl>
-    </section>
-
-    <section class="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
-      <div class="flex flex-wrap items-center justify-between gap-3">
-        <div>
           <h2 class="text-lg font-semibold text-gray-900">Acciones de caja</h2>
           <p class="mt-1 text-sm text-gray-600">Accede rápidamente a los registros y gestiones más frecuentes del servicio.</p>
         </div>
@@ -1299,19 +1284,36 @@
           <p class="mt-1 text-sm text-gray-600">Controla los productos registrados en la sucursal y los ingresos realizados durante el turno.</p>
         </div>
         <div class="flex flex-wrap items-center gap-2 sm:flex-nowrap">
-          <a
-            href="{% url 'sucursal_product_create' branch.pk %}"
-            class="inline-flex items-center whitespace-nowrap rounded-md border border-gray-200 px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50"
-          >
-            Administrar productos
-          </a>
-          <button
-            type="button"
-            class="inline-flex items-center whitespace-nowrap rounded-md bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500"
-            @click="openModal = 'product-load'"
-          >
-            Registrar ingreso
-          </button>
+          {% if is_common_attendant %}
+            <span
+              class="inline-flex items-center whitespace-nowrap rounded-md border border-gray-200 px-4 py-2 text-sm font-semibold text-gray-400 bg-gray-100 cursor-not-allowed"
+              aria-disabled="true"
+            >
+              Administrar productos
+            </span>
+            <button
+              type="button"
+              disabled
+              aria-disabled="true"
+              class="inline-flex items-center whitespace-nowrap rounded-md bg-indigo-200 px-4 py-2 text-sm font-semibold text-gray-500 shadow-sm cursor-not-allowed"
+            >
+              Registrar ingreso
+            </button>
+          {% else %}
+            <a
+              href="{% url 'sucursal_product_create' branch.pk %}"
+              class="inline-flex items-center whitespace-nowrap rounded-md border border-gray-200 px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50"
+            >
+              Administrar productos
+            </a>
+            <button
+              type="button"
+              class="inline-flex items-center whitespace-nowrap rounded-md bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500"
+              @click="openModal = 'product-load'"
+            >
+              Registrar ingreso
+            </button>
+          {% endif %}
         </div>
       </div>
 

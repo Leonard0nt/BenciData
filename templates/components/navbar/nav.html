@@ -31,16 +31,9 @@
             </a>
           </li>
           {% endif %}
-          <li>
-            <a href="{% url 'sucursal_list' %}" class=" menu-item {% if request.path == '/sucursales/' or '/sucursales/' in request.path %}text-white bg-current {% else %} text-gray-400 hover:text-white hover:bg-gray-800 {% endif %}">
-              <svg class="h-6 w-6 shrink-0" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" aria-hidden="true">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M3 9.75V21a.75.75 0 00.75.75H9a.75.75 0 00.75-.75v-3.75A.75.75 0 0110.5 16.5h3a.75.75 0 01.75.75V21a.75.75 0 00.75.75h5.25A.75.75 0 0021 21V9.75" />
-                <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 9.75l9.75-7.5 9.75 7.5" />
-              </svg>
-              Sucursales
-            </a>
-          </li>
-          {% if user.profile.is_admin %}
+        {% endif %}
+
+        {% if user.profile.is_owner or user.profile.is_admin or user.profile.is_head_ATTENDANT or user.profile.position_FK.permission_code == 'HEAD_ATTENDANT' or has_active_service_assigned %}
           <li>
             {% url 'service_session_start' as service_session_start_url %}
             {% with service_session_target=service_session_link|default:service_session_start_url %}
@@ -53,7 +46,21 @@
             </a>
             {% endwith %}
           </li>
-          {% endif %}
+        {% endif %}
+        {% if user.profile.is_owner or user.profile.is_admin or user.profile.is_accountant or user.profile.is_ATTENDANT or user.profile.is_head_ATTENDANT %}
+          <li>
+            {% if user.profile.current_branch %}
+              <a href="{% url 'sucursal_update' user.profile.current_branch.pk %}" class=" menu-item {% if '/sucursales/' in request.path %}text-white bg-current {% else %} text-gray-400 hover:text-white hover:bg-gray-800 {% endif %}">
+            {% else %}
+              <a href="{% url 'sucursal_list' %}" class=" menu-item {% if request.path == '/sucursales/' or '/sucursales/' in request.path %}text-white bg-current {% else %} text-gray-400 hover:text-white hover:bg-gray-800 {% endif %}">
+            {% endif %}
+              <svg class="h-6 w-6 shrink-0" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" aria-hidden="true">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M3 9.75V21a.75.75 0 00.75.75H9a.75.75 0 00.75-.75v-3.75A.75.75 0 0110.5 16.5h3a.75.75 0 01.75.75V21a.75.75 0 00.75.75h5.25A.75.75 0 0021 21V9.75" />
+                <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 9.75l9.75-7.5 9.75 7.5" />
+              </svg>
+              Sucursales
+            </a>
+          </li>
         {% endif %}
         <li>
           <a href="{% url "User" %}" class=" menu-item {% if request.path == '/usuarios/' %}text-white bg-current {% else %}  text-gray-400 hover:text-white hover:bg-gray-800 {% endif %}">

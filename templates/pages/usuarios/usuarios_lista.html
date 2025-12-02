@@ -54,15 +54,22 @@
           <div class="px-6 py-6 sm:px-8">
             {% if group.users %}
               <div class="-mx-6 -my-2 overflow-x-auto sm:-mx-8">
+                {% if is_accountant %}
+                <div class="block w-full py-2 align-middle">
+                {% else %}
                 <div class="inline-block min-w-full py-2 align-middle">
+                {% endif %}
+                  {% if is_accountant %}
+                  <table class="w-full divide-y divide-gray-200">
+                  {% else %}
                   <table class="min-w-full divide-y divide-gray-200">
+                  {% endif %}
                     <thead class="bg-gray-50">
                       <tr>
                         <th scope="col" class="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Usuario</th>
                         <th scope="col" class="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Contacto</th>
                         <th scope="col" class="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Rol y sucursal</th>
                         <th scope="col" class="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Estado</th>
-                        <th scope="col" class="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Última actividad</th>
                         <th scope="col" class="px-3 py-3.5 text-right text-sm font-semibold text-gray-900">Acciones</th>
                       </tr>
                     </thead>
@@ -99,34 +106,44 @@
                               </span>
                             </div>
                           </td>
-                          <td class="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
-                            {% with last=row.last_activity|default:row.last_login %}
-                              {% if last %}
-                                {{ last|date:'d/m/Y H:i' }}
-                              {% else %}
-                                <span class="text-gray-400">Sin registro</span>
-                              {% endif %}
-                            {% endwith %}
-                          </td>
                           <td class="whitespace-nowrap px-3 py-4 text-sm text-right">
-                            {% if can_manage_users and row.id != request_user_id %}
+                            {% if row.id != request_user_id %}
                               <div class="flex justify-end gap-2">
-                                <a href="{% url 'UserEdit' row.id %}"
-                                  class="inline-flex items-center rounded-md bg-indigo-600 px-3 py-1.5 text-xs font-semibold text-white shadow-sm hover:bg-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2">
-                                  Editar
-                                </a>
+                                {% if is_owner or is_admin %}
+                                  <a href="{% url 'UserEdit' row.id %}"
+                                    class="inline-flex items-center rounded-md bg-indigo-600 px-3 py-1.5 text-xs font-semibold text-white shadow-sm hover:bg-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2">
+                                    Editar
+                                  </a>
+                                {% endif %}
+
                                 {% if row.is_active %}
-                                  <form method="post" action="{% url 'UserDelete' row.id %}"
-                                    class="inline-flex"
-                                    onsubmit="return confirm('¿Estás seguro de eliminar a {{ row.full_name }}?');">
-                                    {% csrf_token %}
-                                    <button type="submit"
-                                      class="items-center rounded-md bg-red-600 px-3 py-1.5 text-xs font-semibold text-white shadow-sm hover:bg-red-500 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2">
-                                      Eliminar
-                                    </button>
-                                  </form>
+                                  {% if is_owner or is_admin %}
+                                    {# Owner/Admin: show both Desactivar and Eliminar #}
+                                    <form method="post" action="{% url 'UserDeactivate' row.id %}" class="inline-flex" onsubmit="return confirm('¿Estás seguro de desactivar a {{ row.full_name }}?');">
+                                      {% csrf_token %}
+                                      <button type="submit" class="items-center rounded-md bg-yellow-500 px-3 py-1.5 text-xs font-semibold text-white shadow-sm hover:bg-yellow-600 focus:outline-none focus:ring-2 focus\:ring-yellow-500 focus:ring-offset-2">Desactivar</button>
+                                    </form>
+                                    <form method="post" action="{% url 'UserDelete' row.id %}" class="inline-flex" onsubmit="return confirm('¿Estás seguro de eliminar a {{ row.full_name }}?');">
+                                      {% csrf_token %}
+                                      <button type="submit" class="items-center rounded-md bg-red-600 px-3 py-1.5 text-xs font-semibold text-white shadow-sm hover:bg-red-500 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2">Eliminar</button>
+                                    </form>
+                                  {% elif can_deactivate_users and not is_owner and not is_admin %}
+                                    {# Secretary/accountant: show Desactivar only #}
+                                    <form method="post" action="{% url 'UserDeactivate' row.id %}" class="inline-flex" onsubmit="return confirm('¿Estás seguro de desactivar a {{ row.full_name }}?');">
+                                      {% csrf_token %}
+                                      <button type="submit" class="items-center rounded-md bg-yellow-500 px-3 py-1.5 text-xs font-semibold text-white shadow-sm hover:bg-yellow-600 focus:outline-none focus:ring-2 focus\:ring-yellow-500 focus:ring-offset-2">Desactivar</button>
+                                    </form>
+                                  {% endif %}
                                 {% else %}
-                                  <span class="text-gray-400">Inactivo</span>
+                                  {# User is inactive: allow reactivation for those with rights #}
+                                  {% if can_deactivate_users %}
+                                    <form method="post" action="{% url 'UserReactivate' row.id %}" class="inline-flex">
+                                      {% csrf_token %}
+                                      <button type="submit" class="items-center rounded-md bg-yellow-500 px-3 py-1.5 text-xs font-semibold text-white shadow-sm hover:bg-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2">Reactivar</button>
+                                    </form>
+                                  {% else %}
+                                    <span class="text-gray-400">Inactivo</span>
+                                  {% endif %}
                                 {% endif %}
                               </div>
                             {% elif not row.is_active %}

@@ -96,6 +96,12 @@ class SucursalForm(forms.ModelForm):
             queryset = queryset.filter(company_rut=company.rut)
         for field_name, roles in self.STAFF_ROLE_FIELDS.items():
             field_queryset = queryset.filter(position_FK__permission_code__in=roles)
+            # If no profiles found for the expected roles (possible data inconsistency
+            # during user creation), fall back to showing all company profiles so
+            # administrators can still assign staff manually.
+            if not field_queryset.exists():
+                field_queryset = queryset
+
             self.fields[field_name].queryset = field_queryset.order_by("user_FK__username")
             if self.instance.pk:
                 initial_ids = self.instance.staff.filter(role__in=roles).values_list(
@@ -200,6 +206,9 @@ class BranchStaffForm(forms.Form):
             field_queryset = queryset.filter(
                 position_FK__permission_code__in=roles
             )
+            # Fallback: if no users match the role filter, show all company profiles
+            if not field_queryset.exists():
+                field_queryset = queryset
             field = self.fields[field_name]
             field.queryset = field_queryset.order_by("user_FK__username")
 

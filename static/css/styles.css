@@ -170,3 +170,38 @@ strong {
   opacity: 0.7;
 }
 
+/* Fallback helpers for yellow utilities when Tailwind utilities aren't present
+   These provide minimal equivalents for `.bg-yellow-500` and focus ring. */
+.bg-yellow-500 {
+  background-color: #f59e0b !important; /* Tailwind yellow-500 */
+}
+.bg-yellow-500:hover {
+  background-color: #d97706 !important;
+}
+.text-yellow-700 {
+  color: #b45309 !important;
+}
+
+/* focus:ring equivalents: classes in templates use `focus:ring-2 focus:ring-yellow-500`
+   The focus: variant appears in the DOM as a class with a colon (e.g. `focus:ring-yellow-500`).
+   In CSS we must escape the colon. */
+.focus\:ring-yellow-500:focus {
+  box-shadow: 0 0 0 4px rgba(245,158,11,0.18) !important;
+  outline: none !important;
+}
+.ring-yellow-500 {
+  box-shadow: 0 0 0 4px rgba(245,158,11,0.18) !important;
+}
+
+/* Increase specificity for buttons inside the users list to ensure yellow shows */
+button.bg-yellow-500,
+button.items-center.bg-yellow-500,
+.inline-flex button.bg-yellow-500 {
+  background-color: #f59e0b !important;
+  color: #ffffff !important;
+  border-color: transparent !important;
+}
+.inline-flex button.bg-yellow-500:hover {
+  background-color: #d97706 !important;
+}
+

@@ -13,6 +13,16 @@ urlpatterns = [
         views.UserDeleteView.as_view(),
         name="UserDelete",
     ),
+    path(
+        "usuarios/<int:pk>/desactivar/",
+        views.UserDeactivateView.as_view(),
+        name="UserDeactivate",
+    ),
+    path(
+        "usuarios/<int:pk>/reactivar/",
+        views.UserReactivateView.as_view(),
+        name="UserReactivate",
+    ),
     path("registro/", views.UserCreateView.as_view(), name="Register"),
     path("perfil/", views.ProfileUpdateView.as_view(), name="Profile"),
     path("configuracion/", views.ConfigurationView.as_view(), name="configuracion"),
