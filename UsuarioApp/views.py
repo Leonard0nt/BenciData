@@ -551,7 +551,7 @@ class UserManagementScopeMixin:
                 and viewer_company_rut == target_company_rut
             )
 
-        if viewer_profile.is_admin():
+        if viewer_profile.is_admin() or viewer_profile.is_accountant():
             accessible_branch_ids = set(self._get_branch_ids(viewer_profile))
             if not accessible_branch_ids:
                 return False

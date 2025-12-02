@@ -1831,6 +1831,12 @@
                   </div>
 
                   <div class="border-t border-gray-200 bg-gray-50 px-6 py-4 shrink-0 flex justify-end">
+                    <a
+                      href="{% url 'service_session_export_summary' record.session.shift.sucursal.pk record.session.pk %}"
+                      class="inline-flex items-center rounded-md bg-gradient-to-br from-indigo-500 to-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:from-indigo-600 hover:to-blue-700"
+                    >
+                      Descargar Excel
+                    </a>
                     <button type="button" class="inline-flex items-center rounded-md border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100" @click="modalOpen = false">Cerrar</button>
                   </div>
                 </div>

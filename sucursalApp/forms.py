@@ -639,7 +639,8 @@ class ServiceSessionForm(forms.ModelForm):
 
     def _configure_attendants_field(self) -> None:
         base_queryset = Profile.objects.select_related("user_FK", "position_FK").filter(
-            position_FK__permission_code__in=("ATTENDANT", "HEAD_ATTENDANT")
+            position_FK__permission_code__in=("ATTENDANT", "HEAD_ATTENDANT"),
+            user_FK__is_active=True
         )
 
         if self.branch_ids:

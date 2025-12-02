@@ -156,6 +156,7 @@
             <p class="mt-2 text-sm text-gray-600">Registra y revisa los comprobantes generados por Transbank.</p>
           </div>
         </button>
+
         <button
           type="button"
           class="flex h-full flex-col justify-between rounded-lg border border-gray-100 bg-gray-50 p-5 text-left transition hover:border-indigo-200 hover:bg-white {% if service_session_closed %}cursor-not-allowed opacity-60{% endif %}"
@@ -388,7 +389,7 @@
             </div>
           </dl>
         </div>
-
+{% if not is_common_attendant %}
         <div class="rounded-lg border border-amber-100 bg-amber-50/60 p-4">
           <div class="flex items-center justify-between">
             <h3 class="text-sm font-semibold uppercase tracking-wide text-amber-700">Egresos del turno</h3>
@@ -414,6 +415,7 @@
           </dl>
         </div>
       </div>
+{% endif %}
     </section>
 
     <div
@@ -1001,7 +1003,7 @@
         </form>
       </div>
     </div>
-
+    
     <div
       x-cloak
       x-show="closeSessionModalOpen"

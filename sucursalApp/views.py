@@ -1,4 +1,5 @@
 from decimal import Decimal
+import csv
 from typing import Any, Dict, List
 from urllib.parse import urlencode
 
@@ -292,7 +293,7 @@ class SucursalUpdateView(OwnerCompanyMixin, UpdateView):
                 ),
             )
         )
-
+    
     def get_form_kwargs(self) -> Dict[str, Any]:
         kwargs = super().get_form_kwargs()
         company = self.get_company()
@@ -862,7 +863,148 @@ class SucursalUpdateView(OwnerCompanyMixin, UpdateView):
         return response
 
 
+class ServiceSessionSummaryExportView(OwnerCompanyMixin, View):
+    """
+    Exporta el resumen de un servicio (turno) a un CSV abrible en Excel.
+    """
 
+    def get(self, request, pk, *args, **kwargs):
+        profile = request.user.profile
+
+        # Solo dueños, admins, contadores y bombero encargado
+        allowed_roles = {
+            profile.Roles.OWNER,
+            profile.Roles.ADMINISTRATOR,
+            profile.Roles.ACCOUNTANT,
+            profile.Roles.HEAD_ATTENDANT,
+        }
+        if profile.role not in allowed_roles:
+            raise PermissionDenied("No tienes permisos para exportar este turno.")
+
+        # Solo servicios de sucursales de la compañía del usuario
+        session = get_object_or_404(
+            ServiceSession.objects.select_related(
+                "shift__sucursal",
+                "shift__manager__user_FK",
+            ).prefetch_related(
+                "attendants__user_FK",
+                "credit_sales",
+                "fuel_loads",
+                "product_loads",
+                "product_sales__items__product",
+                "withdrawals",
+                "transbank_vouchers",
+                "firefighter_payments",
+            ),
+            pk=pk,
+            shift__sucursal__company=self.company,
+        )
+
+        decimal_zero = Decimal("0")
+
+        credit_sales = list(session.credit_sales.all())
+        fuel_loads = list(session.fuel_loads.all())
+        product_loads = list(session.product_loads.all())
+        product_sales = list(session.product_sales.all())
+        withdrawals = list(session.withdrawals.all())
+        vouchers = list(session.transbank_vouchers.all())
+        firefighter_payments = list(session.firefighter_payments.all())
+
+        # ---- mismos cálculos que usas para history_records ----
+        product_sale_items_total = sum(
+            (item.quantity for sale in product_sales for item in sale.items.all()),
+            0,
+        )
+        product_sale_value_total = sum(
+            (
+                item.quantity * item.product.value
+                for sale in product_sales
+                for item in sale.items.all()
+            ),
+            decimal_zero,
+        )
+
+        credit_total = sum(
+            ((credit.amount or decimal_zero) for credit in credit_sales),
+            decimal_zero,
+        )
+
+        fuel_load_payment_total = sum(
+            ((load.payment_amount or decimal_zero) for load in fuel_loads),
+            decimal_zero,
+        )
+
+        product_load_payment_total = sum(
+            ((load.payment_amount or decimal_zero) for load in product_loads),
+            decimal_zero,
+        )
+
+        withdrawal_total = sum(
+            ((withdrawal.amount or decimal_zero) for withdrawal in withdrawals),
+            decimal_zero,
+        )
+
+        voucher_total = sum(
+            ((voucher.total_amount or decimal_zero) for voucher in vouchers),
+            decimal_zero,
+        )
+
+        firefighter_payments_total = sum(
+            ((payment.amount or decimal_zero) for payment in firefighter_payments),
+            decimal_zero,
+        )
+
+        turn_profit = (
+            (session.initial_budget or decimal_zero)
+            + credit_total
+            + voucher_total
+            + withdrawal_total
+            + product_sale_value_total
+        )
+
+        net_turn_profit = (
+            turn_profit
+            - fuel_load_payment_total
+            - firefighter_payments_total
+            - product_load_payment_total
+        )
+
+        # -------- respuesta CSV para Excel ----------
+        filename = f"resumen_turno_{session.shift.code}_{session.pk}.csv"
+
+        response = HttpResponse(content_type="text/csv")
+        response["Content-Disposition"] = f'attachment; filename="{filename}"'
+
+        writer = csv.writer(response, delimiter=";")
+
+        writer.writerow(["Resumen del turno"])
+        writer.writerow(["Turno", session.shift.code])
+        writer.writerow(["Sucursal", session.shift.sucursal.name])
+        writer.writerow(["Inicio", session.started_at])
+        writer.writerow(["Término", session.ended_at])
+        writer.writerow([])
+
+        writer.writerow(["Personal"])
+        writer.writerow(
+            ["Encargado", session.shift.manager.user_FK.get_full_name() or session.shift.manager.user_FK.username]
+        )
+        attendants_names = ", ".join(
+            a.user_FK.get_full_name() or a.user_FK.username for a in session.attendants.all()
+        )
+        writer.writerow(["Bomberos", attendants_names or "—"])
+        writer.writerow([])
+
+        writer.writerow(["Resumen rápido"])
+        writer.writerow(["Créditos", len(credit_sales), credit_total])
+        writer.writerow(["Vouchers Transbank", "", voucher_total])
+        writer.writerow(["Tiradas a caja", "", withdrawal_total])
+        writer.writerow(["Pagos a bomberos", "", firefighter_payments_total])
+        writer.writerow(["Ventas productos (items)", product_sale_items_total, product_sale_value_total])
+        writer.writerow([])
+        writer.writerow(["Ganancia del turno", "", turn_profit])
+        writer.writerow(["Ganancia real", "", net_turn_profit])
+
+        return response
 
 class BranchStaffManageView(OwnerCompanyMixin, SingleObjectMixin, FormView):
     model = Sucursal
@@ -2080,11 +2222,24 @@ class ServiceSessionDetailView(OwnerCompanyMixin, DetailView):
         self.object = self.get_object()
         form_type = request.POST.get("form_type", "fuel-load")
 
+        # obtenemos el perfil del usuario logueado
+        viewer_profile = getattr(request.user, "profile", None)
+
         if self.object.ended_at and form_type != "close-session":
             messages.error(
                 request, "Este servicio ya fue cerrado y no admite nuevos registros."
             )
             return redirect("service_session_start")
+            # 🔒 BLOQUEAR CIERRE DE CAJA A BOMBERO COMÚN
+        if form_type == "close-session":
+            if viewer_profile and viewer_profile.is_ATTENDANT() and not viewer_profile.is_head_ATTENDANT():
+                messages.error(
+                    request,
+                    "No tienes permisos para realizar el cierre de caja. "
+                    "Solo el dueño, administrador o bombero encargado pueden cerrar el turno.",
+                )
+                return redirect("service_session_detail", pk=self.object.pk)
+
 
         if form_type == "close-session":
             close_action = request.POST.get("close_action", "close")
