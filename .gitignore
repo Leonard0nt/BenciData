@@ -2,7 +2,7 @@
 # Created by https://www.toptal.com/developers/gitignore/api/django
 # Edit at https://www.toptal.com/developers/gitignore?templates=django
 
-.env
+
 .venv
 ### Django ###
 *.log
@@ -133,6 +133,6 @@ dmypy.json
 
 # Cython debug symbols
 cython_debug/
-
+.env
 .sqlite3
 db.sqlite3
