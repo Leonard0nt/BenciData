@@ -1,5 +1,10 @@
 from decimal import Decimal
 import csv
+from io import BytesIO
+from openpyxl import Workbook
+from openpyxl.utils import get_column_letter
+from openpyxl.styles import Alignment, Font
+
 from typing import Any, Dict, List
 from urllib.parse import urlencode
 
@@ -8,7 +13,7 @@ from django.contrib.auth.mixins import LoginRequiredMixin
 from django.db import transaction
 from django.db.models import DecimalField, F, Prefetch, QuerySet, Sum, Value
 from django.db.models.functions import Coalesce
-from django.http import Http404, HttpResponseRedirect
+from django.http import Http404, HttpResponseRedirect, HttpResponse
 from django.shortcuts import get_object_or_404, redirect
 from django.urls import reverse, reverse_lazy
 from django.utils import timezone
@@ -865,23 +870,21 @@ class SucursalUpdateView(OwnerCompanyMixin, UpdateView):
 
 class ServiceSessionSummaryExportView(OwnerCompanyMixin, View):
     """
-    Exporta el resumen de un servicio (turno) a un CSV abrible en Excel.
+    Exporta el resumen de un servicio (turno) a un XLSX abrible en Excel.
     """
 
-    def get(self, request, pk, *args, **kwargs):
+    # Roles que pueden exportar
+    allowed_roles = ["OWNER", "ADMINISTRATOR", "ACCOUNTANT", "HEAD_ATTENDANT"]
+
+    def get(self, request, branch_pk, pk, *args, **kwargs):
         profile = request.user.profile
 
-        # Solo dueños, admins, contadores y bombero encargado
-        allowed_roles = {
-            profile.Roles.OWNER,
-            profile.Roles.ADMINISTRATOR,
-            profile.Roles.ACCOUNTANT,
-            profile.Roles.HEAD_ATTENDANT,
-        }
-        if profile.role not in allowed_roles:
-            raise PermissionDenied("No tienes permisos para exportar este turno.")
+        # Validar que la sucursal está dentro del alcance del usuario
+        managed_branch_ids = set(self.get_managed_branch_ids())
+        if managed_branch_ids and branch_pk not in managed_branch_ids:
+            raise PermissionDenied("No tienes permisos para esta sucursal.")
 
-        # Solo servicios de sucursales de la compañía del usuario
+        # Obtenemos la sesión del servicio SOLO de esa sucursal
         session = get_object_or_404(
             ServiceSession.objects.select_related(
                 "shift__sucursal",
@@ -897,7 +900,7 @@ class ServiceSessionSummaryExportView(OwnerCompanyMixin, View):
                 "firefighter_payments",
             ),
             pk=pk,
-            shift__sucursal__company=self.company,
+            shift__sucursal_id=branch_pk,
         )
 
         decimal_zero = Decimal("0")
@@ -910,7 +913,7 @@ class ServiceSessionSummaryExportView(OwnerCompanyMixin, View):
         vouchers = list(session.transbank_vouchers.all())
         firefighter_payments = list(session.firefighter_payments.all())
 
-        # ---- mismos cálculos que usas para history_records ----
+        # === Cálculos igual que en el historial ===
         product_sale_items_total = sum(
             (item.quantity for sale in product_sales for item in sale.items.all()),
             0,
@@ -969,42 +972,77 @@ class ServiceSessionSummaryExportView(OwnerCompanyMixin, View):
             - product_load_payment_total
         )
 
-        # -------- respuesta CSV para Excel ----------
-        filename = f"resumen_turno_{session.shift.code}_{session.pk}.csv"
+        # ================== GENERAR XLSX ==================
+        wb = Workbook()
+        ws = wb.active
+        ws.title = "Resumen Turno"
 
-        response = HttpResponse(content_type="text/csv")
-        response["Content-Disposition"] = f'attachment; filename="{filename}"'
+        headers = [
+            "FECHA",
+            "TURNO",
+            "TOTAL VENTA",
+            "CREDITO",
+            "CANT.VOUCHER",
+            "MONTO VOUCHER",
+            "CANT.TIRADA",
+            "MONTO TIRADA",
+            "PAGOS BOMBEROS",
+            "GASTO STOCK",
+            "PAGO COMBUSTIBLE",
+            "GANANCIA TURNO",
+            "GANANCIA REAL",
+        ]
 
-        writer = csv.writer(response, delimiter=";")
+        ws.append(headers)
 
-        writer.writerow(["Resumen del turno"])
-        writer.writerow(["Turno", session.shift.code])
-        writer.writerow(["Sucursal", session.shift.sucursal.name])
-        writer.writerow(["Inicio", session.started_at])
-        writer.writerow(["Término", session.ended_at])
-        writer.writerow([])
+        data_row = [
+            session.started_at.date() if session.started_at else "",
+            session.shift.code if session.shift else "",
+            float(product_sale_value_total),      # TOTAL VENTA
+            float(credit_total),                  # CREDITO
+            len(vouchers),                        # CANT.VOUCHER
+            float(voucher_total),                 # MONTO VOUCHER
+            len(withdrawals),                     # CANT.TIRADA
+            float(withdrawal_total),              # MONTO TIRADA
+            float(firefighter_payments_total),    # PAGOS BOMBEROS
+            float(product_load_payment_total),    # GASTO STOCK
+            float(fuel_load_payment_total),       # PAGO COMBUSTIBLE
+            float(turn_profit),                   # GANANCIA TURNO
+            float(net_turn_profit),               # GANANCIA REAL
+        ]
 
-        writer.writerow(["Personal"])
-        writer.writerow(
-            ["Encargado", session.shift.manager.user_FK.get_full_name() or session.shift.manager.user_FK.username]
+        ws.append(data_row)
+
+        # Estilos básicos: negrita en header y auto-ancho
+        header_font = Font(bold=True)
+        for col_idx, header in enumerate(headers, start=1):
+            cell = ws.cell(row=1, column=col_idx)
+            cell.font = header_font
+            cell.alignment = Alignment(horizontal="center")
+
+            column_letter = get_column_letter(col_idx)
+            ws.column_dimensions[column_letter].width = max(len(header) + 2, 14)
+
+        # Formato numérico con separador de miles
+        money_cols = range(3, 14)  # columnas C a M
+        for col_idx in money_cols:
+            cell = ws.cell(row=2, column=col_idx)
+            cell.number_format = "#,##0"
+
+        # Exportar a memoria y responder
+        output = BytesIO()
+        wb.save(output)
+        output.seek(0)
+
+        filename = f"resumen_turno_{session.shift.code}_{session.pk}.xlsx"
+        response = HttpResponse(
+            output.getvalue(),
+            content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
         )
-        attendants_names = ", ".join(
-            a.user_FK.get_full_name() or a.user_FK.username for a in session.attendants.all()
-        )
-        writer.writerow(["Bomberos", attendants_names or "—"])
-        writer.writerow([])
-
-        writer.writerow(["Resumen rápido"])
-        writer.writerow(["Créditos", len(credit_sales), credit_total])
-        writer.writerow(["Vouchers Transbank", "", voucher_total])
-        writer.writerow(["Tiradas a caja", "", withdrawal_total])
-        writer.writerow(["Pagos a bomberos", "", firefighter_payments_total])
-        writer.writerow(["Ventas productos (items)", product_sale_items_total, product_sale_value_total])
-        writer.writerow([])
-        writer.writerow(["Ganancia del turno", "", turn_profit])
-        writer.writerow(["Ganancia real", "", net_turn_profit])
-
+        response["Content-Disposition"] = f'attachment; filename=\"{filename}\"'
         return response
+
+
 
 class BranchStaffManageView(OwnerCompanyMixin, SingleObjectMixin, FormView):
     model = Sucursal
