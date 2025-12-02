@@ -1,7 +1,8 @@
 from django.urls import path
 
 from . import views
-from sucursalApp.views import ServiceSessionSummaryExportView
+from sucursalApp.views import ServiceSessionSummaryExportView, ServiceHistoryExportView
+
 
 urlpatterns = [
     path("", views.SucursalListView.as_view(), name="sucursal_list"),
@@ -17,6 +18,11 @@ urlpatterns = [
         "<int:branch_pk>/servicios/<int:pk>/exportar-resumen/",
         ServiceSessionSummaryExportView.as_view(),
         name="service_session_export_summary",
+    ),
+    path(
+        "<int:branch_pk>/servicios/exportar-historial/",
+        ServiceHistoryExportView.as_view(),
+        name="service_history_export",
     ),
     path(
         "<int:branch_pk>/turnos/nuevo/",

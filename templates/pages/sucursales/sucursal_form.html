@@ -1547,13 +1547,18 @@
       </form>
     </div>
 
-        <div>
-          <h2 class="text-lg font-semibold text-gray-900">Historial de servicios</h2>
-          <p class="mt-1 text-sm text-gray-600">Revisa los servicios cerrados y un resumen de sus registros.</p>
-        </div>
+
         <span class="inline-flex items-center rounded-full bg-indigo-50 px-3 py-1 text-sm font-medium text-indigo-700">
           {{ service_history|length|default:0 }} servicio{{ service_history|length|pluralize:"s" }}
         </span>
+        {% with branch_id=form.instance.pk|default:object.pk %}
+          <a
+            href="{% url 'service_history_export' branch_id %}?year={{ history_filters.year }}&month={{ history_filters.month }}&shift={{ history_filters.shift }}"
+            class="inline-flex items-center rounded-md bg-gradient-to-br from-indigo-500 to-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:from-indigo-600 hover:to-blue-700"
+          >
+            Descargar Informe 
+          </a>
+        {% endwith %}
       </div>
 
       {% if service_history %}
@@ -2063,4 +2068,74 @@
       }
     });
   </script>
+    <script>
+    document.addEventListener('DOMContentLoaded', function () {
+      // Botones de pestañas del detalle de sucursal
+      const tabButtons = document.querySelectorAll('button[data-tab-group="branch-detail"]');
+      const tabContents = document.querySelectorAll('.tab-content');
+
+      if (!tabButtons.length || !tabContents.length) {
+        return;
+      }
+
+      // Usamos el ID de la sucursal para que cada una recuerde su propia pestaña
+      const branchId = "{{ form.instance.pk|default:object.pk }}";
+      const storageKey = `branch-detail-active-tab-${branchId}`;
+      const defaultTabId = "tab-sucursal";
+
+      function showTab(targetId) {
+        // Mostrar / ocultar contenidos
+        tabContents.forEach((panel) => {
+          if (panel.id === targetId) {
+            panel.classList.remove('hidden');
+          } else {
+            panel.classList.add('hidden');
+          }
+        });
+
+        // Activar / desactivar estilos de los botones
+        tabButtons.forEach((btn) => {
+          const isActive = btn.dataset.tabTarget === targetId;
+
+          if (isActive) {
+            btn.setAttribute('aria-selected', 'true');
+            btn.classList.add('border-indigo-500', 'text-indigo-600');
+            btn.classList.remove('border-transparent', 'text-gray-500');
+          } else {
+            btn.setAttribute('aria-selected', 'false');
+            btn.classList.remove('border-indigo-500', 'text-indigo-600');
+            btn.classList.add('border-transparent', 'text-gray-500');
+          }
+        });
+      }
+
+      // Click en pestañas: cambiar vista y guardar en localStorage
+      tabButtons.forEach((btn) => {
+        btn.addEventListener('click', function () {
+          const targetId = this.dataset.tabTarget;
+          showTab(targetId);
+          try {
+            localStorage.setItem(storageKey, targetId);
+          } catch (e) {
+            // si falla localStorage, no pasa nada
+          }
+        });
+      });
+
+      // Al cargar, recuperar la última pestaña usada
+      let initialTabId = defaultTabId;
+      try {
+        const saved = localStorage.getItem(storageKey);
+        if (saved) {
+          initialTabId = saved;
+        }
+      } catch (e) {
+        // ignorar errores de localStorage
+      }
+
+      showTab(initialTabId);
+    });
+  </script>
+
+
 {% endblock javascript %}

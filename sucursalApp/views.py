@@ -1,4 +1,5 @@
 from decimal import Decimal
+import calendar
 import csv
 from io import BytesIO
 from openpyxl import Workbook
@@ -427,9 +428,16 @@ class SucursalUpdateView(OwnerCompanyMixin, UpdateView):
                 )["total"]
                 or 0
             )
-            closed_service_sessions = (
+            # --- filtros desde la URL (GET) para el historial ---
+            year = self.request.GET.get("year") or ""
+            month = self.request.GET.get("month") or ""
+            shift_query = self.request.GET.get("shift") or ""
+
+            # --- queryset base de sesiones cerradas de esta sucursal ---
+            closed_service_sessions_qs = (
                 ServiceSession.objects.filter(
-                    shift__sucursal=self.object, ended_at__isnull=False
+                    shift__sucursal=self.object,
+                    ended_at__isnull=False,
                 )
                 .select_related("shift__manager__user_FK")
                 .prefetch_related(
@@ -480,10 +488,30 @@ class SucursalUpdateView(OwnerCompanyMixin, UpdateView):
                 .order_by("-ended_at")
             )
 
+            # --- aplicar filtros sobre el queryset base ---
+            filtered_sessions = closed_service_sessions_qs
+
+            if year.isdigit():
+                filtered_sessions = filtered_sessions.filter(
+                    ended_at__year=int(year)
+                )
+
+            if month.isdigit():
+                filtered_sessions = filtered_sessions.filter(
+                    ended_at__month=int(month)
+                )
+
+            if shift_query:
+                filtered_sessions = filtered_sessions.filter(
+                    shift__code__icontains=shift_query
+                )
+
+            # --- construir registros de historial con el queryset filtrado ---
             history_records = []
             decimal_zero = Decimal("0")
             flow_mismatch_labels = dict(ServiceSession.FLOW_MISMATCH_CHOICES)
-            for session in closed_service_sessions:
+
+            for session in filtered_sessions:
                 credit_sales = list(session.credit_sales.all())
                 fuel_loads = list(session.fuel_loads.all())
                 product_loads = list(session.product_loads.all())
@@ -491,6 +519,7 @@ class SucursalUpdateView(OwnerCompanyMixin, UpdateView):
                 withdrawals = list(session.withdrawals.all())
                 vouchers = list(session.transbank_vouchers.all())
                 firefighter_payments = list(session.firefighter_payments.all())
+
                 product_sale_items_total = sum(
                     (
                         item.quantity
@@ -596,6 +625,24 @@ class SucursalUpdateView(OwnerCompanyMixin, UpdateView):
                 )
 
             context["service_history"] = history_records
+
+            # --- datos auxiliares para los selects del filtro ---
+            years_qs = closed_service_sessions_qs.datetimes(
+                "ended_at", "year", order="DESC"
+            )
+            context["history_years"] = [d.year for d in years_qs]
+
+            context["history_months"] = [
+                {"value": i, "label": calendar.month_name[i].capitalize()}
+                for i in range(1, 13)
+            ]
+
+            context["history_filters"] = {
+                "year": year,
+                "month": month,
+                "shift": shift_query,
+            }
+
             for island in islands:
                 island.update_form = IslandForm(
                     instance=island, auto_id=f"edit-island-{island.pk}_%s"
@@ -1042,6 +1089,228 @@ class ServiceSessionSummaryExportView(OwnerCompanyMixin, View):
         response["Content-Disposition"] = f'attachment; filename=\"{filename}\"'
         return response
 
+class ServiceHistoryExportView(LoginRequiredMixin, View):
+    """
+    Exporta un XLSX con todos los servicios cerrados de una sucursal,
+    aplicando los mismos filtros del Historial (año, mes, turno).
+    """
+
+    def _check_permissions(self, request):
+        profile = getattr(request.user, "profile", None)
+        allowed = bool(
+            request.user.is_superuser
+            or (profile and (
+                profile.has_role("OWNER")
+                or profile.has_role("ADMINISTRATOR")
+                or profile.has_role("ACCOUNTANT")
+                or profile.has_role("HEAD_ATTENDANT")
+            ))
+        )
+        if not allowed:
+            raise PermissionDenied("No tienes permisos para exportar este informe.")
+
+    def get(self, request, branch_pk, *args, **kwargs):
+        from sucursalApp.models import Sucursal, ServiceSession
+        from sucursalApp.models import (
+            ServiceSessionCreditSale,
+            ServiceSessionFuelLoad,
+            ServiceSessionProductLoad,
+            ServiceSessionProductSale,
+            ServiceSessionWithdrawal,
+            ServiceSessionTransbankVoucher,
+            ServiceSessionFirefighterPayment,
+        )
+        from django.db.models import Prefetch
+
+        self._check_permissions(request)
+
+        branch = get_object_or_404(Sucursal, pk=branch_pk)
+
+        # --- filtros desde la URL, mismos nombres que en el Historial ---
+        year = request.GET.get("year") or ""
+        month = request.GET.get("month") or ""
+        shift_query = request.GET.get("shift") or ""
+
+        # --- queryset base: servicios cerrados de la sucursal ---
+        sessions_qs = (
+            ServiceSession.objects.filter(
+                shift__sucursal=branch,
+                ended_at__isnull=False,
+            )
+            .select_related("shift__sucursal", "shift__manager__user_FK")
+            .prefetch_related(
+                "attendants__user_FK",
+                Prefetch(
+                    "credit_sales",
+                    queryset=ServiceSessionCreditSale.objects.select_related(
+                        "responsible__user_FK", "fuel_inventory"
+                    ),
+                ),
+                Prefetch(
+                    "fuel_loads",
+                    queryset=ServiceSessionFuelLoad.objects.select_related(
+                        "responsible__user_FK", "inventory"
+                    ),
+                ),
+                Prefetch(
+                    "product_loads",
+                    queryset=ServiceSessionProductLoad.objects.select_related(
+                        "responsible__user_FK", "product"
+                    ),
+                ),
+                Prefetch(
+                    "product_sales",
+                    queryset=ServiceSessionProductSale.objects.select_related(
+                        "responsible__user_FK"
+                    ).prefetch_related("items__product"),
+                ),
+                Prefetch(
+                    "withdrawals",
+                    queryset=ServiceSessionWithdrawal.objects.select_related(
+                        "responsible__user_FK"
+                    ),
+                ),
+                Prefetch(
+                    "transbank_vouchers",
+                    queryset=ServiceSessionTransbankVoucher.objects.select_related(
+                        "responsible__user_FK"
+                    ),
+                ),
+                Prefetch(
+                    "firefighter_payments",
+                    queryset=ServiceSessionFirefighterPayment.objects.select_related(
+                        "firefighter__user_FK"
+                    ),
+                ),
+            )
+            .order_by("-ended_at")
+        )
+
+        # --- aplicar filtros (mismos que en get_context_data del Historial) ---
+        if year.isdigit():
+            sessions_qs = sessions_qs.filter(ended_at__year=int(year))
+
+        if month.isdigit():
+            sessions_qs = sessions_qs.filter(ended_at__month=int(month))
+
+        if shift_query:
+            sessions_qs = sessions_qs.filter(shift__code__icontains=shift_query)
+
+        # --- crear workbook ---
+        wb = Workbook()
+        ws = wb.active
+        ws.title = "Historial servicios"
+
+        headers = [
+            "FECHA",
+            "TURNO",
+            "TOTAL VENTA",
+            "CRÉDITO",
+            "CANT. VOUCHERS",
+            "MONTO VOUCHERS",
+            "CANT. TIRADAS",
+            "MONTO TIRADAS",
+            "PAGOS BOMBEROS",
+            "GASTO STOCK",
+            "PAGO COMBUSTIBLE",
+            "GANANCIA TURNO",
+            "GANANCIA REAL",
+        ]
+
+        ws.append(headers)
+        for col_idx, header in enumerate(headers, start=1):
+            cell = ws.cell(row=1, column=col_idx)
+            cell.font = Font(bold=True)
+            cell.alignment = Alignment(horizontal="center")
+            ws.column_dimensions[get_column_letter(col_idx)].width = max(len(header) + 2, 14)
+
+        decimal_zero = Decimal("0")
+
+        # --- recorrer sesiones y calcular totales (igual que en Historial) ---
+        row = 2
+        for session in sessions_qs:
+            credit_sales = list(session.credit_sales.all())
+            fuel_loads = list(session.fuel_loads.all())
+            product_loads = list(session.product_loads.all())
+            product_sales = list(session.product_sales.all())
+            withdrawals = list(session.withdrawals.all())
+            vouchers = list(session.transbank_vouchers.all())
+            firefighter_payments = list(session.firefighter_payments.all())
+
+            product_sale_value_total = sum(
+                (
+                    item.quantity * item.product.value
+                    for sale in product_sales
+                    for item in sale.items.all()
+                ),
+                decimal_zero,
+            )
+            credit_total = sum(
+                ((c.amount or decimal_zero) for c in credit_sales),
+                decimal_zero,
+            )
+            fuel_load_payment_total = sum(
+                ((l.payment_amount or decimal_zero) for l in fuel_loads),
+                decimal_zero,
+            )
+            product_load_payment_total = sum(
+                ((l.payment_amount or decimal_zero) for l in product_loads),
+                decimal_zero,
+            )
+            withdrawal_total = sum(
+                ((w.amount or decimal_zero) for w in withdrawals),
+                decimal_zero,
+            )
+            voucher_total = sum(
+                ((v.total_amount or decimal_zero) for v in vouchers),
+                decimal_zero,
+            )
+            firefighter_payments_total = sum(
+                ((p.amount or decimal_zero) for p in firefighter_payments),
+                decimal_zero,
+            )
+
+            turn_profit = (
+                (session.initial_budget or decimal_zero)
+                + credit_total
+                + voucher_total
+                + withdrawal_total
+                + product_sale_value_total
+            )
+            net_turn_profit = (
+                turn_profit
+                - fuel_load_payment_total
+                - firefighter_payments_total
+                - product_load_payment_total
+            )
+
+            ws.cell(row=row, column=1, value=session.started_at.date())
+            ws.cell(row=row, column=2, value=session.shift.code)
+            ws.cell(row=row, column=3, value=float(product_sale_value_total))
+            ws.cell(row=row, column=4, value=float(credit_total))
+            ws.cell(row=row, column=5, value=len(vouchers))
+            ws.cell(row=row, column=6, value=float(voucher_total))
+            ws.cell(row=row, column=7, value=len(withdrawals))
+            ws.cell(row=row, column=8, value=float(withdrawal_total))
+            ws.cell(row=row, column=9, value=float(firefighter_payments_total))
+            ws.cell(row=row, column=10, value=float(product_load_payment_total))
+            ws.cell(row=row, column=11, value=float(fuel_load_payment_total))
+            ws.cell(row=row, column=12, value=float(turn_profit))
+            ws.cell(row=row, column=13, value=float(net_turn_profit))
+
+            row += 1
+
+        output = BytesIO()
+        wb.save(output)
+        output.seek(0)
+
+        filename = f"historial_servicios_{branch.name}_{branch_pk}.xlsx"
+        response = HttpResponse(
+            output.getvalue(),
+            content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        )
+        response["Content-Disposition"] = f'attachment; filename="{filename}"'
+        return response
 
 
 class BranchStaffManageView(OwnerCompanyMixin, SingleObjectMixin, FormView):

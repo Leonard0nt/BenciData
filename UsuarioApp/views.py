@@ -587,7 +587,8 @@ class CompanyUpdateView(LoginRequiredMixin, RoleRequiredMixin, View):
         return super().dispatch(request, *args, **kwargs)
 
     def get_form(self, data=None):
-        return self.form_class(data=data, instance=getattr(self, "company_obj", None))
+        return self.form_class(data=data, instance=getattr(self, "company_obj", None),user=self.request.user,)
+
 
     def get(self, request, *args, **kwargs):
         form = self.get_form()
@@ -605,6 +606,7 @@ class CompanyUpdateView(LoginRequiredMixin, RoleRequiredMixin, View):
                     company_rut=new_rut
                 )
             messages.success(request, "Información de la empresa actualizada con éxito.")
+
             return redirect(self.success_url)
 
         messages.error(request, "Corrige los errores para continuar.")

@@ -34,6 +34,25 @@ class CompanyForm(forms.ModelForm):
         }
 
     def __init__(self, *args, **kwargs):
+        self.user = kwargs.pop("user", None)
         super().__init__(*args, **kwargs)
         for field in self.fields.values():
             field.required = False
+    def save(self, commit=True):
+        company = super().save(commit=False)
+
+        if self.user and hasattr(self.user, "profile"):
+            profile = self.user.profile
+
+            # asociar empresa al dueño (si no existe)
+            if not company.profile_id:
+                company.profile = profile
+
+            # asignar rut al dueño
+            profile.company_rut = company.rut
+            profile.save(update_fields=["company_rut"])
+
+        if commit:
+            company.save()
+
+        return company
