@@ -1,36 +1,46 @@
 
-
 services:
   django:
     build:
       context: .
       dockerfile: Dockerfile
+    image: bencidata-django
     container_name: bencidata_django
-    command: gunicorn core.wsgi:application --bind 0.0.0.0:8000
+    command: /entrypoint.sh
     volumes:
       - .:/app
+      - static_volume:/app/staticfiles     # STATIC_ROOT
+      - media_volume:/app/media
     env_file:
       - .env
-    environment:             
-      DJANGO_SUPERUSER_EMAIL: leopoldowall9@gmail.com
+    environment:
+      # En caso de que falten en .env, puedes sobreescribir aquí:
+      DB_HOST: db
+      DB_PORT: 5432
+
+      # Superuser auto (opcional)
+      DJANGO_SUPERUSER_EMAIL: admin@bencidata.cl
       DJANGO_SUPERUSER_PASSWORD: admin123
       DJANGO_SUPERUSER_USERNAME: admin
     depends_on:
       - db
     networks:
       - bencidata_network
+    ports:
+      - "8000:8000"   # opcional, para entrar directo a Django
 
   db:
     image: postgres:15
     container_name: bencidata_postgres
     environment:
-      POSTGRES_DB: ${DB_NAME}
-      POSTGRES_USER: ${DB_USER}
+      POSTGRES_DB: ${DB_NAME}          # p.ej. bencidata
+      POSTGRES_USER: ${DB_USER}        # p.ej. bencidata
       POSTGRES_PASSWORD: ${DB_PASSWORD}
     ports:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
+      - ./postgres-init:/docker-entrypoint-initdb.d
     networks:
       - bencidata_network
 
@@ -52,7 +62,6 @@ services:
     networks:
       - bencidata_network
 
-
   nginx:
     image: nginx:latest
     container_name: bencidata_nginx
@@ -60,7 +69,7 @@ services:
       - "80:80"
     volumes:
       - ./nginx/conf.d:/etc/nginx/conf.d
-      - static_volume:/app/static
+      - static_volume:/app/staticfiles
       - media_volume:/app/media
     depends_on:
       - django

@@ -5,18 +5,19 @@ ENV PYTHONUNBUFFERED=1
 
 WORKDIR /app
 
+# Dependencias del sistema (opcional, pero útil)
+RUN apt-get update && apt-get install -y \
+    libpq-dev gcc \
+ && rm -rf /var/lib/apt/lists/*
+
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
+# Copiar código
 COPY . .
 
-# Copiamos el entrypoint que hará:
-# - collectstatic
-# - migrate
-# - crear superuser (opcional)
+# Copiar y dar permisos al entrypoint
 COPY entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
 
 EXPOSE 8000
-
-CMD ["/entrypoint.sh"]

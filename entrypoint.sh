@@ -1,42 +1,44 @@
 #!/bin/sh
 set -e
 
-echo "⚙ Esperando a la base de datos..."
+echo "🔹 Esperando a que la base de datos esté lista..."
 
-if [ -n "$DB_HOST" ] && [ -n "$DB_PORT" ]; then
-  # Espera a que el puerto de la BD esté disponible
-  until nc -z "$DB_HOST" "$DB_PORT"; do
-    echo "⏳ Base de datos no disponible aún en ${DB_HOST}:${DB_PORT}..."
+# Esperar a que Postgres esté arriba
+# (requiere que la imagen tenga el binario `pg_isready`; si no, lo quitamos)
+if command -v pg_isready > /dev/null 2>&1; then
+  until pg_isready -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USER"; do
+    echo "⏳ DB no lista aún, reintentando en 2s..."
     sleep 2
   done
 fi
 
-echo "📦 collectstatic..."
-python manage.py collectstatic --noinput
-
-echo "📚 migrate..."
+echo "✅ Base de datos lista, corriendo migraciones..."
 python manage.py migrate --noinput
 
-# Crear superusuario automático si hay variables definidas
-if [ -n "$DJANGO_SUPERUSER_EMAIL" ] && [ -n "$DJANGO_SUPERUSER_PASSWORD" ]; then
-  echo "👤 Verificando/creando superusuario..."
+echo "📦 Recogiendo archivos estáticos..."
+python manage.py collectstatic --noinput || echo "⚠️ collectstatic falló (ambiente dev), continuando..."
 
-  python manage.py shell <<EOF
+echo "👑 Creando superusuario si no existe..."
+python manage.py shell << 'EOF'
 from django.contrib.auth import get_user_model
+import os
+
 User = get_user_model()
-email = "${DJANGO_SUPERUSER_EMAIL}"
-if not User.objects.filter(email=email).exists():
+
+username = os.environ.get("DJANGO_SUPERUSER_USERNAME", "admin")
+email = os.environ.get("DJANGO_SUPERUSER_EMAIL", "leopoldowall9@gmail.com")
+password = os.environ.get("DJANGO_SUPERUSER_PASSWORD", "admin123")
+
+if not User.objects.filter(username=username).exists():
     User.objects.create_superuser(
+        username=username,
         email=email,
-        password="${DJANGO_SUPERUSER_PASSWORD}",
-        username="${DJANGO_SUPERUSER_USERNAME or 'admin'}",
+        password=password
     )
-    print("✅ Superusuario creado:", email)
+    print(f"✅ Superusuario '{username}' creado.")
 else:
-    print("ℹ Superusuario ya existe:", email)
+    print(f"ℹ️ Superusuario '{username}' ya existe, no se crea otro.")
 EOF
 
-fi
-
-echo "🚀 Levantando servidor Gunicorn..."
+echo "🚀 Levantando Gunicorn..."
 gunicorn core.wsgi:application --bind 0.0.0.0:8000
