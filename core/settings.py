@@ -3,6 +3,15 @@ import os
 import environ
 import datetime as dt
 
+# 1) Define BASE_DIR primero
+BASE_DIR = Path(__file__).resolve().parent.parent
+
+# 2) Inicializa environ y dile EXACTAMENTE dónde está el .env
+env = environ.Env()
+
+env_file = BASE_DIR / ".env"
+environ.Env.read_env(env_file)  # <- ahora sabe la ruta correcta
+
 env = environ.Env()
 environ.Env.read_env()
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -17,7 +26,7 @@ SECRET_KEY = env("SECRET_KEY", default="dev-secret-key-change-me")
 
 DEBUG = env.bool("DEBUG", default=False)
 
-raw_allowed_hosts = env("ALLOWED_HOSTS", default="")
+raw_allowed_hosts = env("ALLOWED_HOSTS", default="*")
 ALLOWED_HOSTS = (
     [host.strip() for host in raw_allowed_hosts.split(",") if host.strip()]
     if raw_allowed_hosts

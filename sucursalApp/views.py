@@ -172,10 +172,9 @@ class SucursalListView(OwnerCompanyMixin, FormMixin, ListView):
 
     def dispatch(self, request, *args, **kwargs):
         profile = getattr(request.user, "profile", None)
-        # If the user has any managed branches (owner, admin, staff with membership
-        # or current_branch), redirect them directly to the first branch update
-        # page so the UX mirrors the admin behavior.
-        if profile:
+
+        # Si el usuario **NO** es dueño, mantenemos el redirect a una sucursal
+        if profile and not profile.has_role("OWNER"):
             branch_ids = self.get_managed_branch_ids()
             if branch_ids:
                 current_branch_id = getattr(profile, "current_branch_id", None)
@@ -184,6 +183,8 @@ class SucursalListView(OwnerCompanyMixin, FormMixin, ListView):
                 else:
                     branch_id = branch_ids[0]
                 return redirect("sucursal_update", pk=branch_id)
+
+        # Si es OWNER, se queda en la lista, donde puede crear más sucursales
         return super().dispatch(request, *args, **kwargs)
         
     def get_queryset(self) -> QuerySet[Sucursal]:
@@ -239,6 +240,11 @@ class SucursalCreateView(OwnerCompanyMixin, CreateView):
 
     def get_context_data(self, **kwargs: Any) -> Dict[str, Any]:
         context = super().get_context_data(**kwargs)
+        form = context.get("form")
+        if form is not None and "object" not in context:
+            # Para la vista de creación, usamos la instancia del form
+            context["object"] = form.instance
+        context["can_edit_branch"] = True
         context.setdefault("islands", [])
         context.setdefault("fuel_inventories", [])
         return context
