@@ -45,13 +45,6 @@
       </label>
       {{ profile_form.position_FK }}
       {{ profile_form.position_FK.errors }}
-      {% if not profile_form.current_branch.is_hidden %}
-      <label for="id_current_branch" class="block text-gray-700 text-sm font-bold mb-2">
-        Sucursal
-      </label>
-      {% endif %}
-      {{ profile_form.current_branch }}
-      {{ profile_form.current_branch.errors }}
       <label for="id_phone" class="block text-gray-700 text-sm font-bold mb-2">
         Teléfono
       </label>
@@ -65,10 +58,10 @@
         Fecha de nacimiento
       </label>
       {{ profile_form.date_of_birth }}
-      <label for="id_salario" class="block text-gray-700 text-sm font-bold mb-2">
-        Salario
+      <label for="id_codigo_identificador" class="block text-gray-700 text-sm font-bold mb-2">
+        Código identificador
       </label>
-      {{ profile_form.salario }}
+      {{ profile_form.codigo_identificador }}
       <label for="id_is_partime" class="block text-gray-700 text-sm font-bold mb-2">
         Tipo de jornada
       </label>

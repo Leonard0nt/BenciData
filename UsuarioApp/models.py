@@ -69,10 +69,12 @@ class Profile(models.Model):
         blank=True,
         verbose_name="Fecha de nacimiento",
     )
-    salario = models.DecimalField(
-        max_digits=10, decimal_places=2, null=True, blank=True, verbose_name="Salario",
+    codigo_identificador = models.CharField(
+        max_length=50,
+        blank=True,
+        null=True,
+        verbose_name="Código identificador",
     )
-    address = models.CharField(max_length=255, blank=True, verbose_name="Dirección")
     date_of_hire = models.DateField(null=True, blank=True, verbose_name="Fecha de contratación")
     is_partime = models.BooleanField(
         default=False,

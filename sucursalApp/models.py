@@ -430,7 +430,7 @@ class Shift(models.Model):
         self._ensure_manager_is_head_attendant()
         if previous_manager_id and previous_manager_id != self.manager_id:
             _cleanup_branch_attendants(self.sucursal, (previous_manager_id,))
-
+            _revoke_head_attendant_status(previous_manager_id)
     def delete(self, *args, **kwargs):
         branch = self.sucursal
         attendants_ids = list(self.attendants.values_list("pk", flat=True))
@@ -442,6 +442,9 @@ class Shift(models.Model):
         if manager_id:
             affected_ids.append(manager_id)
         _cleanup_branch_attendants(branch, affected_ids)
+
+        if manager_id:
+            _revoke_head_attendant_status(manager_id)
 
 
     def _ensure_manager_is_head_attendant(self) -> None:
@@ -502,6 +505,30 @@ def _cleanup_branch_attendants(
     for assignment in staff_queryset:
         if assignment.profile_id not in active_profile_ids:
             assignment.delete()
+
+
+def _revoke_head_attendant_status(profile_id: int) -> None:
+    """Ensure a profile only keeps the head-attendant status when managing a shift."""
+
+    if Shift.objects.filter(manager_id=profile_id).exists():
+        return
+
+    try:
+        from UsuarioApp.models import Position, Profile
+
+        profile = Profile.objects.get(pk=profile_id)
+    except (ImportError, Profile.DoesNotExist):
+        return
+
+    attendant_position = Position.objects.filter(permission_code="ATTENDANT").first()
+
+    if attendant_position and profile.position_FK_id != attendant_position.id:
+        profile.position_FK = attendant_position
+        profile.save(update_fields=["position_FK"])
+
+    SucursalStaff.objects.filter(
+        profile_id=profile_id, role="HEAD_ATTENDANT"
+    ).update(role="ATTENDANT")
 
 
 @receiver(m2m_changed, sender=Shift.attendants.through)
