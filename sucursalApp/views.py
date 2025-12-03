@@ -9,6 +9,7 @@ from openpyxl.styles import Alignment, Font
 from typing import Any, Dict, List
 from urllib.parse import urlencode
 
+from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.db import transaction
@@ -316,6 +317,7 @@ class SucursalUpdateView(OwnerCompanyMixin, UpdateView):
 
     def get_context_data(self, **kwargs: Any) -> Dict[str, Any]:
         context = super().get_context_data(**kwargs)
+        context["database_iframe_url"] = getattr(settings, "DATABASE_IFRAME_URL", "")
         if self.object:
             islands = list(self.object.branch_islands.all())
             context["islands"] = islands

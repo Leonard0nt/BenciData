@@ -33,6 +33,13 @@ ALLOWED_HOSTS = (
     else []
 )
 
+
+
+
+METABASE_SITE_URL = os.getenv("METABASE_SITE_URL", "http://10.64.89.194:3000")
+METABASE_SECRET_KEY = os.getenv("METABASE_SECRET_KEY", "88fe7bf75005764203c0ec080f466b0f552d8c243c243f8dddd460ef51860845")
+
+
 # Application definition
 
 DEFAULT_DJANGO_APPS = [

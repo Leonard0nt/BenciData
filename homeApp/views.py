@@ -5,6 +5,7 @@ from django.db.models import Q
 from django.utils import timezone
 from UsuarioApp.models import Profile
 from homeApp.models import Company
+from core.metabase import metabase_iframe
 
 # Create your views here.
 
@@ -21,7 +22,6 @@ class HomeView(LoginRequiredMixin, ListView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-
         # Agrega los usuarios activos al contexto
         recent_activity_cutoff = timezone.now() - timezone.timedelta(minutes=2)
         active_users = Profile.objects.filter(
@@ -30,6 +30,7 @@ class HomeView(LoginRequiredMixin, ListView):
         context["active_users"] = active_users
 
         company = None
+        current_branch_id = None 
         try:
             profile = self.request.user.profile
         except Profile.DoesNotExist:
@@ -46,4 +47,11 @@ class HomeView(LoginRequiredMixin, ListView):
                 company = Company.objects.filter(rut=normalized_rut).first()
 
         context["company"] = company
+        if current_branch_id is not None:
+            # 👇 "branch_id" es el nombre del parámetro que vas a usar en Metabase
+            params["branch_id"] = current_branch_id
+
+        context["metabase_iframe_url"] = metabase_iframe(
+            question_id=41
+        )
         return context

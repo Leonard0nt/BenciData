@@ -28,6 +28,24 @@
       </div>
       {% endif %}
   </div>
+      {% if metabase_iframe_url %}
+      <div class="mb-6">
+        <div class="bg-white-base border border-gray-200 rounded-2xl shadow-sm px-6 py-5">
+          <p class="text-xs font-semibold uppercase tracking-wide text-gray-500">
+            Dashboard de la empresa
+          </p>
+          <div>
+            <iframe
+              src="{{ metabase_iframe_url }}"
+              frameborder="0"
+              width="100%"
+              height="500"
+              allowtransparency
+            ></iframe>
+          </div>
+        </div>
+      </div>
+      {% endif %}
 
   <!-- Activity list -->
   <div class="bg-white-base mt-3 border-gray-700 py-10 mb-5">
@@ -80,10 +98,8 @@
                     {% endif %}
                   </div>
                 </div>
-
               </td>
-              <td class="py-4 pl-0 pr-4 text-right text-sm leading-6 text-black sm:pr-6 lg:pr-8">
-              
+              <td class="py-4 pl-0 pr-4 text-right text-sm leading-6 text-black sm:pr-6 lg:pr-8">  
                   {% if user.id in active_users %}
                     <div class="flex items-center justify-end gap-x-2 sm:justify-end">
                     <div class="flex-none rounded-full p-1 text-green-400 bg-green-400/10">

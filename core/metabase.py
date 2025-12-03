@@ -1,18 +1,27 @@
-# You'll need to install PyJWT via pip 'pip install PyJWT' or your project packages file
-
-import jwt
+# homeApp/metabase_utils.py
 import time
+import jwt
+from django.conf import settings
 
-METABASE_SITE_URL = "http://192.168.1.8:3000"
-METABASE_SECRET_KEY = "88fe7bf75005764203c0ec080f466b0f552d8c243c243f8dddd460ef51860845"
 
-payload = {
-  "resource": {"question": 39},
-  "params": {
-    
-  },
-  "exp": round(time.time()) + (60 * 10) # 10 minute expiration
-}
-token = jwt.encode(payload, METABASE_SECRET_KEY, algorithm="HS256")
+def metabase_iframe(question_id: int, params=None) -> str:
+    """
+    Genera la URL de iframe firmada para una pregunta de Metabase.
+    """
+    payload = {
+        "resource": {"question": question_id},
+        "params": params or {},
+        "exp": round(time.time()) + (60 * 10),  # 10 minutos
+    }
 
-iframeUrl = METABASE_SITE_URL + "/embed/question/" + token + "#bordered=true&titled=true"
+    token = jwt.encode(
+        payload,
+        settings.METABASE_SECRET_KEY,
+        algorithm="HS256",
+    )
+
+    iframe_url = (
+        f"{settings.METABASE_SITE_URL}/embed/question/{token}"
+        "#bordered=true&titled=true"
+    )
+    return iframe_url
