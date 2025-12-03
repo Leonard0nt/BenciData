@@ -30,7 +30,6 @@ class HomeView(LoginRequiredMixin, ListView):
         context["active_users"] = active_users
 
         company = None
-        current_branch_id = None 
         try:
             profile = self.request.user.profile
         except Profile.DoesNotExist:
@@ -47,11 +46,8 @@ class HomeView(LoginRequiredMixin, ListView):
                 company = Company.objects.filter(rut=normalized_rut).first()
 
         context["company"] = company
-        if current_branch_id is not None:
-            # 👇 "branch_id" es el nombre del parámetro que vas a usar en Metabase
-            params["branch_id"] = current_branch_id
-
+        
         context["metabase_iframe_url"] = metabase_iframe(
-            question_id=41
+            question_id=42
         )
         return context
