@@ -19,9 +19,9 @@ services:
       DB_PORT: 5432
 
       # Superuser auto (opcional)
-      DJANGO_SUPERUSER_EMAIL: admin@bencidata.cl
-      DJANGO_SUPERUSER_PASSWORD: admin123
-      DJANGO_SUPERUSER_USERNAME: admin
+      DJANGO_SUPERUSER_EMAIL: leopoldowall9@gmail.com
+      DJANGO_SUPERUSER_PASSWORD: 123qaz***
+      DJANGO_SUPERUSER_USERNAME: Dueño
     depends_on:
       - db
     networks:
@@ -55,7 +55,7 @@ services:
       MB_DB_PORT: 5432
       MB_DB_USER: ${DB_USER}
       MB_DB_PASS: ${DB_PASSWORD}
-      MB_DB_HOST: db
+      MB_DB_HOST: bencidata_postgres
       MB_ENCRYPTION_SECRET_KEY: "zncD@t4_2025_M3tabase_K3y_Sh0uldBeVeryLong"
     depends_on:
       - db

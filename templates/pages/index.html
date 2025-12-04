@@ -4,10 +4,10 @@
 
 {% block content_main %} 
           
-  <div class="sm:h-dvh">
+  <div class="">
       <h2 class="text-gray-900 text-center pb-3 text-2xl" >Inicio</h2>
       {% if company %}
-      <div class="mb-6">
+      <div class="mb-2">
         <div class="bg-white-base border border-gray-200 rounded-2xl shadow-sm px-6 py-5">
           <p class="text-xs font-semibold uppercase tracking-wide text-gray-500">Información de la empresa</p>
           <div class="mt-4 grid gap-4 sm:grid-cols-3">
@@ -28,24 +28,9 @@
       </div>
       {% endif %}
   </div>
-      {% if metabase_iframe_url %}
-      <div class="mb-6">
-        <div class="bg-white-base border border-gray-200 rounded-2xl shadow-sm px-6 py-5">
-          <p class="text-xs font-semibold uppercase tracking-wide text-gray-500">
-            Dashboard de la empresa
-          </p>
-          <div>
-            <iframe
-              src="{{ metabase_iframe_url }}"
-              frameborder="0"
-              width="100%"
-              height="500"
-              allowtransparency
-            ></iframe>
-          </div>
-        </div>
-      </div>
-      {% endif %}
+            <div class="mt-4">
+              {{ metabase_iframe|safe }}
+            </div>
 
   <!-- Activity list -->
   <div class="bg-white-base mt-3 border-gray-700 py-10 mb-5">

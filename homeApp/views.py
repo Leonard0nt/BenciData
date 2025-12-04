@@ -46,8 +46,14 @@ class HomeView(LoginRequiredMixin, ListView):
                 company = Company.objects.filter(rut=normalized_rut).first()
 
         context["company"] = company
-        
-        context["metabase_iframe_url"] = metabase_iframe(
-            question_id=42
+
+        # iframe HTML completo de Metabase (question 43)
+        context["metabase_iframe"] = metabase_iframe(
+            question_id=38,
+            params={"sucursal_id": profile.current_branch}
+            # si quieres filtrar por sucursal, acá puedes pasar params={}
+            # params={"sucursal_id": profile.sucursal_id}  por ejemplo
         )
+
         return context
+
