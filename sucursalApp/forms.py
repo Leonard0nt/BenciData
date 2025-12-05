@@ -761,6 +761,9 @@ class ServiceSessionForm(forms.ModelForm):
             user_FK__is_active=True
         )
 
+        if self.selected_shift and self.selected_shift.manager_id:
+            base_queryset = base_queryset.exclude(pk=self.selected_shift.manager_id)
+
         if self.branch_ids:
             base_queryset = base_queryset.filter(
                 Q(sucursal_staff__sucursal_id__in=self.branch_ids)
@@ -798,19 +801,6 @@ class ServiceSessionForm(forms.ModelForm):
         if current_ids:
             attendants_field.initial = current_ids
 
-    def clean(self):
-        cleaned_data = super().clean()
-        shift = cleaned_data.get("shift")
-
-        if shift and ServiceSession.objects.filter(
-            shift__sucursal=shift.sucursal, ended_at__isnull=True
-        ).exists():
-            self.add_error(
-                "shift",
-                "Ya existe un servicio en curso para esta sucursal. Cierra la caja del servicio activo antes de iniciar uno nuevo.",
-            )
-
-        return cleaned_data
         widget = attendants_field.widget
         base_class = widget.attrs.get("class", "")
         required_class = "profile-checkbox-grid"
@@ -827,11 +817,33 @@ class ServiceSessionForm(forms.ModelForm):
             )
         )
 
+    def clean(self):
+        cleaned_data = super().clean()
+        shift = cleaned_data.get("shift")
+
+        if shift and ServiceSession.objects.filter(
+            shift__sucursal=shift.sucursal, ended_at__isnull=True
+        ).exists():
+            self.add_error(
+                "shift",
+                "Ya existe un servicio en curso para esta sucursal. Cierra la caja del servicio activo antes de iniciar uno nuevo.",
+            )
+
+        return cleaned_data
+
     def clean_attendants(self):
         attendants = self.cleaned_data.get("attendants")
         if not attendants:
             raise forms.ValidationError(
                 "Debes seleccionar al menos un bombero para iniciar el turno."
+
+        manager_id = getattr(self.selected_shift, "manager_id", None)
+        if manager_id:
+            for attendant in attendants:
+                if attendant.pk == manager_id:
+                    raise forms.ValidationError(
+                        "El bombero encargado ya está asignado al turno y no puede agregarse nuevamente."
+                    )
             )
         return attendants
 
