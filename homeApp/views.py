@@ -4,10 +4,12 @@ from django.views.generic import ListView
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.auth.models import User
 from django.db.models import Q
+from django.db.models import DecimalField, ExpressionWrapper, F, Sum, Value
+from django.db.models.functions import Coalesce, TruncDay, TruncMonth, TruncYear
 from django.utils import timezone
 from UsuarioApp.models import Profile
 from homeApp.models import Company
-from sucursalApp.models import Sucursal, SucursalStaff
+from sucursalApp.models import Sucursal, SucursalStaff, ServiceSession
 
 
 # Create your views here.
@@ -112,8 +114,108 @@ class HomeView(LoginRequiredMixin, ListView):
                     }
                 )
 
+        profit_dashboard: list[dict] = []
+        if branches:
+            decimal_zero = Decimal("0")
+            zero_value = Value(
+                decimal_zero,
+                output_field=DecimalField(max_digits=14, decimal_places=2),
+            )
+
+            annotated_sessions = (
+                ServiceSession.objects.filter(
+                    shift__sucursal__in=branches, ended_at__isnull=False
+                )
+                .annotate(
+                    credit_total=Coalesce(Sum("credit_sales__amount"), zero_value),
+                    withdrawal_total=Coalesce(Sum("withdrawals__amount"), zero_value),
+                    voucher_total=Coalesce(
+                        Sum("transbank_vouchers__total_amount"), zero_value
+                    ),
+                    fuel_load_payment_total=Coalesce(
+                        Sum("fuel_loads__payment_amount"), zero_value
+                    ),
+                    product_load_payment_total=Coalesce(
+                        Sum("product_loads__payment_amount"), zero_value
+                    ),
+                    firefighter_payments_total=Coalesce(
+                        Sum("firefighter_payments__amount"), zero_value
+                    ),
+                    product_sales_value=Coalesce(
+                        Sum(
+                            F("product_sales__items__quantity")
+                            * F("product_sales__items__product__value"),
+                            output_field=DecimalField(
+                                max_digits=14,
+                                decimal_places=2,
+                            ),
+                        ),
+                        zero_value,
+                    ),
+                )
+                .annotate(
+                    turn_profit=ExpressionWrapper(
+                        F("initial_budget")
+                        + F("credit_total")
+                        + F("voucher_total")
+                        + F("withdrawal_total")
+                        + F("product_sales_value"),
+                        output_field=DecimalField(
+                            max_digits=14, decimal_places=2
+                        ),
+                    ),
+                    net_turn_profit=ExpressionWrapper(
+                        F("turn_profit")
+                        - F("fuel_load_payment_total")
+                        - F("firefighter_payments_total")
+                        - F("product_load_payment_total"),
+                        output_field=DecimalField(
+                            max_digits=14, decimal_places=2
+                        ),
+                    ),
+                )
+            )
+
+            def build_series(queryset, trunc_fn, date_format: str):
+                grouped = (
+                    queryset.annotate(period=trunc_fn("ended_at"))
+                    .values("period")
+                    .annotate(total_profit=Sum("net_turn_profit"))
+                    .order_by("period")
+                )
+                return [
+                    {
+                        "label": record["period"].strftime(date_format),
+                        "value": float(record["total_profit"] or decimal_zero),
+                    }
+                    for record in grouped
+                    if record["period"]
+                ]
+
+            for branch in branches:
+                branch_sessions = annotated_sessions.filter(shift__sucursal=branch)
+                if not branch_sessions.exists():
+                    continue
+
+                profit_dashboard.append(
+                    {
+                        "branch_name": branch.name,
+                        "city": branch.city,
+                        "series": {
+                            "day": build_series(
+                                branch_sessions, TruncDay, "%d %b"
+                            ),
+                            "month": build_series(
+                                branch_sessions, TruncMonth, "%b %Y"
+                            ),
+                            "year": build_series(branch_sessions, TruncYear, "%Y"),
+                        },
+                    }
+                )
+
         context["company"] = company
         context["fuel_dashboard"] = fuel_dashboard
+        context["profit_dashboard"] = profit_dashboard
 
         return context
 

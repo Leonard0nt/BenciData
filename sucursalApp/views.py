@@ -2021,6 +2021,31 @@ class ServiceSessionCreateView(OwnerCompanyMixin, CreateView):
     # Allow HEAD_ATTENDANT (bombero encargado) to start services
     allowed_roles = ["OWNER", "ADMINISTRATOR", "HEAD_ATTENDANT"]
 
+    def dispatch(self, request, *args, **kwargs):
+        """Redirect to the running service if the current branch already has one."""
+
+        profile = getattr(request.user, "profile", None)
+        branch_id = getattr(profile, "current_branch_id", None)
+
+        if branch_id:
+            active_session = (
+                ServiceSession.objects.filter(
+                    shift__sucursal_id=branch_id, ended_at__isnull=True
+                )
+                .order_by("-started_at")
+                .first()
+            )
+
+            if active_session:
+                messages.info(
+                    request,
+                    "Ya existe un servicio en curso para esta sucursal. "
+                    "Redirigiendo al servicio en ejecución.",
+                )
+                return redirect("service_session_detail", active_session.pk)
+
+        return super().dispatch(request, *args, **kwargs)
+
     def get_success_url(self):
         return reverse("service_session_detail", args=[self.object.pk])
 

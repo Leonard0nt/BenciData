@@ -74,6 +74,47 @@
     </div>
   {% endif %}
 
+  {% if profit_dashboard %}
+    <div class="bg-white-base mt-3 border border-gray-200 rounded-2xl shadow-sm px-6 py-5">
+      <div class="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <p class="text-xs font-semibold uppercase tracking-wide text-gray-500">Ganancias</p>
+          <h3 class="text-lg font-semibold text-gray-900">Evolución por sucursal</h3>
+          <p class="text-sm text-gray-600">Ganancias calculadas desde los servicios, agrupadas por día, mes o año.</p>
+        </div>
+        <span class="text-xs font-medium text-gray-500">{{ profit_dashboard|length }} sucursales</span>
+      </div>
+
+      <div class="mt-6 grid gap-6 lg:grid-cols-2">
+        {% for branch in profit_dashboard %}
+          <div class="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
+            <div class="flex items-start justify-between gap-3">
+              <div>
+                <p class="text-sm font-semibold text-gray-800">{{ branch.branch_name }}</p>
+                <p class="text-xs text-gray-500">{{ branch.city }}</p>
+              </div>
+
+              <label class="flex items-center gap-2 text-xs text-gray-600" for="profit-range-{{ forloop.counter0 }}">
+                Intervalo
+                <select id="profit-range-{{ forloop.counter0 }}" data-branch-index="{{ forloop.counter0 }}" class="rounded-md border border-gray-200 bg-white px-2 py-1 text-xs font-medium text-gray-700 shadow-sm focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500">
+                  <option value="day">Días</option>
+                  <option value="month">Meses</option>
+                  <option value="year">Años</option>
+                </select>
+              </label>
+            </div>
+
+            <div class="mt-4 h-64">
+              <canvas id="profit-chart-{{ forloop.counter0 }}" aria-label="Gráfico de ganancias {{ branch.branch_name }}" role="img"></canvas>
+            </div>
+          </div>
+        {% endfor %}
+      </div>
+
+      {{ profit_dashboard|json_script:"profit-dashboard-data" }}
+    </div>
+  {% endif %}
+
   <!-- Activity list -->
   <div class="bg-white-base mt-3 border-gray-700 py-10 mb-5">
     <h2 class="px-4 text-base font-semibold leading-7 text-gray-900 sm:px-6 lg:px-8">Últimos usuarios conectados</h2>
@@ -153,9 +194,16 @@
 
 {% block javascript %}
 
-  {% if fuel_dashboard %}
+  {% if fuel_dashboard or profit_dashboard %}
     <script defer src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+  {% endif %}
+
+  {% if fuel_dashboard %}
     <script defer src="{% static 'js/fuel_dashboard_charts.js' %}"></script>
+  {% endif %}
+
+  {% if profit_dashboard %}
+    <script defer src="{% static 'js/profit_dashboard_charts.js' %}"></script>
   {% endif %}
 
 {% endblock javascript %}
