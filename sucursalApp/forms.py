@@ -124,6 +124,10 @@ class SucursalForm(forms.ModelForm):
                     "profile_id", flat=True
                 )
                 self.fields[field_name].initial = list(initial_ids)
+            field = self.fields[field_name]
+            field.queryset = field_queryset.order_by(
+                "user_FK__first_name", "user_FK__last_name", "user_FK__username"
+            )
             widget = self.fields[field_name].widget
             base_class = widget.attrs.get("class", "")
             extra_class = "profile-checkbox-grid"
