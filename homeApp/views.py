@@ -1,3 +1,5 @@
+from decimal import Decimal, ROUND_HALF_UP
+
 from django.views.generic import ListView
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.auth.models import User
@@ -5,7 +7,7 @@ from django.db.models import Q
 from django.utils import timezone
 from UsuarioApp.models import Profile
 from homeApp.models import Company
-from core.metabase import metabase_iframe
+
 
 # Create your views here.
 
@@ -46,6 +48,42 @@ class HomeView(LoginRequiredMixin, ListView):
                 company = Company.objects.filter(rut=normalized_rut).first()
 
         context["company"] = company
+
+        fuel_dashboard: list[dict] = []
+        if company:
+            branches = company.branches.prefetch_related("fuel_inventories").order_by(
+                "name"
+            )
+            for branch in branches:
+                inventories = []
+                for inventory in branch.fuel_inventories.all():
+                    percentage = Decimal("0")
+                    if inventory.capacity:
+                        percentage = (
+                            inventory.liters
+                            / inventory.capacity
+                            * Decimal("100")
+                        ).quantize(Decimal("0.1"), rounding=ROUND_HALF_UP)
+                        percentage = min(percentage, Decimal("100"))
+
+                    inventories.append(
+                        {
+                            "fuel_type": inventory.fuel_type,
+                            "liters": inventory.liters,
+                            "capacity": inventory.capacity,
+                            "percentage": percentage,
+                        }
+                    )
+
+                fuel_dashboard.append(
+                    {
+                        "branch_name": branch.name,
+                        "city": branch.city,
+                        "inventories": inventories,
+                    }
+                )
+
+        context["fuel_dashboard"] = fuel_dashboard
 
         return context
 
