@@ -29,6 +29,51 @@
       {% endif %}
   </div>
 
+  {% if fuel_dashboard %}
+    <div class="bg-white-base mt-3 border border-gray-200 rounded-2xl shadow-sm px-6 py-5">
+      <div class="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <p class="text-xs font-semibold uppercase tracking-wide text-gray-500">Monitoreo de combustible</p>
+          <h3 class="text-lg font-semibold text-gray-900">Medición de estanques</h3>
+          <p class="text-sm text-gray-600">Capacidad utilizada y disponible por sucursal.</p>
+        </div>
+        <span class="text-xs font-medium text-gray-500">{{ fuel_dashboard|length }} sucursales</span>
+      </div>
+
+      <div class="mt-6 grid gap-6 lg:grid-cols-2">
+        {% for branch in fuel_dashboard %}
+          <div class="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
+            <div class="flex items-start justify-between">
+              <div>
+                <p class="text-sm font-semibold text-gray-800">{{ branch.branch_name }}</p>
+                <p class="text-xs text-gray-500">{{ branch.city }}</p>
+              </div>
+              <span class="text-xs text-gray-500">{{ branch.inventories|length }} estanques</span>
+            </div>
+
+            <div class="mt-4 h-64">
+              <canvas id="fuel-chart-{{ forloop.counter0 }}" aria-label="Gráfico de estanques {{ branch.branch_name }}" role="img"></canvas>
+            </div>
+
+            <dl class="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
+              {% for inventory in branch.inventories %}
+                <div class="rounded-lg bg-sky-50 p-3 ring-1 ring-inset ring-sky-100">
+                  <dt class="text-xs font-semibold uppercase tracking-wide text-sky-800">{{ inventory.fuel_type }}</dt>
+                  <dd class="mt-1 text-sm font-semibold text-sky-900">{{ inventory.liters }} / {{ inventory.capacity }} L</dd>
+                  <dd class="text-xs text-sky-700">Disponible: {{ inventory.percentage }}%</dd>
+                </div>
+              {% empty %}
+                <p class="text-sm text-gray-500">Sin estanques configurados.</p>
+              {% endfor %}
+            </dl>
+          </div>
+        {% endfor %}
+      </div>
+
+      {{ fuel_dashboard|json_script:"fuel-dashboard-data" }}
+    </div>
+  {% endif %}
+
   <!-- Activity list -->
   <div class="bg-white-base mt-3 border-gray-700 py-10 mb-5">
     <h2 class="px-4 text-base font-semibold leading-7 text-gray-900 sm:px-6 lg:px-8">Últimos usuarios conectados</h2>
@@ -108,7 +153,9 @@
 
 {% block javascript %}
 
-  <script defer src="https://cdn.jsdelivr.net/npm/echarts@6.0.0/dist/echarts.min.js"></script>
-  <script defer src="{% static 'js/grafico_home.js' %}"></script>
+  {% if fuel_dashboard %}
+    <script defer src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+    <script defer src="{% static 'js/fuel_dashboard_charts.js' %}"></script>
+  {% endif %}
 
 {% endblock javascript %}
