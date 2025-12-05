@@ -7,6 +7,7 @@ from django.db.models import Q
 from django.utils import timezone
 from UsuarioApp.models import Profile
 from homeApp.models import Company
+from sucursalApp.models import Sucursal, SucursalStaff
 
 
 # Create your views here.
@@ -47,13 +48,32 @@ class HomeView(LoginRequiredMixin, ListView):
                 normalized_rut = Company.normalize_rut(profile.company_rut)
                 company = Company.objects.filter(rut=normalized_rut).first()
 
-        context["company"] = company
+fuel_dashboard: list[dict] = []
+        branches: list[Sucursal] | None = None
 
-        fuel_dashboard: list[dict] = []
         if company:
-            branches = company.branches.prefetch_related("fuel_inventories").order_by(
-                "name"
+            branches = list(
+                company.branches.prefetch_related("fuel_inventories").order_by("name")
             )
+        elif profile:
+            branch_ids = list(
+                SucursalStaff.objects.filter(profile=profile).values_list(
+                    "sucursal_id", flat=True
+                )
+            )
+            if profile.current_branch_id:
+                branch_ids.append(profile.current_branch_id)
+
+            if branch_ids:
+                branch_ids = list(dict.fromkeys(branch_ids))
+                branches_qs = Sucursal.objects.filter(id__in=branch_ids).prefetch_related(
+                    "fuel_inventories"
+                )
+                branches = list(branches_qs.order_by("name"))
+                if not company and branches:
+                    company = branches[0].company
+
+        if branches:
             for branch in branches:
                 inventories = []
                 for inventory in branch.fuel_inventories.all():
@@ -83,7 +103,9 @@ class HomeView(LoginRequiredMixin, ListView):
                     }
                 )
 
+        context["company"] = company
         context["fuel_dashboard"] = fuel_dashboard
 
         return context
+
 
