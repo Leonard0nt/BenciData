@@ -276,305 +276,198 @@
   </form>
   <div id="tab-turnos" class="tab-content mt-8 hidden space-y-6">
     <!-- Turnos -->
-    <section class="mt-2">
-    <div class="flex items-center justify-between mb-4">
-        <h2 class="text-xl font-semibold text-gray-900">Turnos de la sucursal</h2>
-        {% if shift_create_form %}
-          <button
-            type="button"
-            class="inline-flex items-center  text-indigo-600 border-indigo-200 bg-indigo-50 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-50"
-            @click="openModal = 'shift-create'"
-          >Agregar turno</button>
-        {% endif %}
-      </div>
+    <div class="grid gap-6 lg:grid-cols-2">
+      <section class="mt-2 space-y-4 lg:mt-0">
+        <div class="flex items-center justify-between mb-2">
+          <h2 class="text-xl font-semibold text-gray-900">Turnos de la sucursal</h2>
+          {% if shift_create_form %}
+            <button
+              type="button"
+              class="inline-flex items-center text-indigo-600 border border-indigo-200 bg-indigo-50 px-4 py-2 text-sm font-semibold shadow-sm hover:bg-indigo-50"
+              @click="openModal = 'shift-create'"
+            >Agregar turno</button>
+          {% endif %}
+        </div>
 
-      {% if shifts %}
-        <div class="space-y-4">
-          {% for shift in shifts %}
-            <div class="rounded-lg border border-gray-200 bg-white p-4">
-              <div class="flex items-start justify-between gap-4">
-                <div>
-                  <p class="text-xs font-semibold uppercase tracking-wide text-gray-500">Código</p>
-                  <h3 class="text-lg font-semibold text-gray-900">{{ shift.code }}</h3>
-                  <p class="mt-2 flex items-center gap-2 text-sm text-gray-600">
-                    <span class="inline-flex items-center gap-1 rounded-full bg-gray-100 px-3 py-1 text-xs font-medium text-gray-700">
-                      {{ shift.start_time|time:"H:i" }} - {{ shift.end_time|time:"H:i" }}
-                    </span>
-                  </p>
+        {% if shifts %}
+          <div class="space-y-4">
+            {% for shift in shifts %}
+              <div class="rounded-lg border border-gray-200 bg-white p-4">
+                <div class="flex items-start justify-between gap-4">
+                  <div>
+                    <p class="text-xs font-semibold uppercase tracking-wide text-gray-500">Código</p>
+                    <h3 class="text-lg font-semibold text-gray-900">{{ shift.code }}</h3>
+                    <p class="mt-2 flex items-center gap-2 text-sm text-gray-600">
+                      <span class="inline-flex items-center gap-1 rounded-full bg-gray-100 px-3 py-1 text-xs font-medium text-gray-700">
+                        {{ shift.start_time|time:"H:i" }} - {{ shift.end_time|time:"H:i" }}
+                      </span>
+                    </p>
+                  </div>
+                  {% if can_manage_shifts %}
+                    <div class="flex items-center gap-2">
+                      <a
+                        href="{% url 'sucursal_shift_update' shift.pk %}"
+                        class="inline-flex items-center rounded-md border border-gray-300 px-3 py-1 text-xs font-medium text-gray-700 hover:bg-gray-50"
+                        @click.prevent="openModal = 'shift-edit-{{ shift.pk }}'"
+                      >Editar</a>
+                      <form method="post" action="{% url 'sucursal_shift_delete' shift.pk %}">
+                        {% csrf_token %}
+                        <button type="submit" class="inline-flex items-center rounded-md border border-red-200 bg-red-50 px-3 py-1 text-xs font-medium text-red-600 hover:bg-red-100">Eliminar</button>
+                      </form>
+                    </div>
+
+                  {% endif %}
                 </div>
-                {% if can_manage_shifts %}
-                  <div class="flex items-center gap-2">
-                    <a
-                      href="{% url 'sucursal_shift_update' shift.pk %}"
-                      class="inline-flex items-center rounded-md border border-gray-300 px-3 py-1 text-xs font-medium text-gray-700 hover:bg-gray-50"
-                      @click.prevent="openModal = 'shift-edit-{{ shift.pk }}'"
-                    >Editar</a>
-                    <form method="post" action="{% url 'sucursal_shift_delete' shift.pk %}">
+
+
+
+                <div class="mt-4 rounded-md border border-gray-200 p-4">
+                  <p class="text-xs font-semibold uppercase tracking-wide text-gray-500">Encargado</p>
+                  <div class="mt-2 text-sm text-gray-700">
+                    {% with full_name=shift.manager.user_FK.get_full_name %}
+                      <p class="font-semibold text-gray-900">{{ full_name|default:shift.manager.user_FK.username }}</p>
+                    {% endwith %}
+                    {% if shift.manager.position_FK %}
+                      <p class="text-xs text-gray-500 mt-1">{{ shift.manager.position_FK.user_position }}</p>
+                    {% endif %}
+                  </div>
+
+                </div>
+
+                {% with attendants=shift.attendants.all %}
+                  <div class="mt-4 rounded-md border border-gray-200 p-4">
+                    <p class="text-xs font-semibold uppercase tracking-wide text-gray-500">Bomberos asignados</p>
+                    {% if attendants %}
+                      <ul class="mt-2 space-y-1 text-sm text-gray-700">
+                        {% for attendant in attendants %}
+                          {% with attendant_name=attendant.user_FK.get_full_name %}
+                            <li class="flex items-center justify-between gap-2">
+                              <span class="font-medium text-gray-900">{{ attendant_name|default:attendant.user_FK.username }}</span>
+                              {% if attendant.position_FK %}<span class="text-xs text-gray-500">{{ attendant.position_FK.user_position }}</span>{% endif %}
+                            </li>
+                          {% endwith %}
+                        {% endfor %}
+                      </ul>
+                    {% else %}
+                      <p class="mt-2 text-sm text-gray-500">No hay bomberos asignados a este turno.</p>
+                    {% endif %}
+                  </div>
+                {% endwith %}
+              </div>
+
+
+              <!-- Modal: editar turno -->
+              <div
+                x-cloak
+                x-show="openModal === 'shift-edit-{{ shift.pk }}'"
+                x-transition.opacity
+                class="fixed inset-0 z-50 flex items-center justify-center bg-transparent px-4 py-6 sm:px-6 lg:px-8"
+                @keydown.escape.window="openModal = null"
+                @click.self="openModal = null"
+                role="dialog"
+                aria-modal="true"
+              >
+                <div class="modal-panel w-full bg-white shadow-2xl flex flex-col" x-transition.scale.origin.center>
+                  <div class="flex items-start justify-between border-b border-gray-200 px-6 py-4 shrink-0">
+                    <div>
+                      <h3 class="text-lg font-semibold text-gray-900">Editar turno</h3>
+                      <p class="mt-1 text-sm text-gray-500">Actualiza los datos y horarios del turno seleccionado.</p>
+                    </div>
+                    <button type="button" class="rounded-md p-1 text-gray-400 hover:text-gray-600" @click="openModal = null">
+                      <span class="sr-only">Cerrar modal</span>
+                      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="h-5 w-5"><path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd"/></svg>
+                    </button>
+                  </div>
+                  <div class="px-6 py-6 overflow-y-auto">
+                    <form method="post" class="space-y-6 mx-auto w-full max-w-[36rem]">
                       {% csrf_token %}
-                      <button type="submit" class="inline-flex items-center rounded-md border border-red-200 bg-red-50 px-3 py-1 text-xs font-medium text-red-600 hover:bg-red-100">Eliminar</button>
+                      <input type="hidden" name="form_scope" value="shift-update" />
+                      <input type="hidden" name="object_id" value="{{ shift.pk }}" />
+                      {% for hidden in shift.update_form.hidden_fields %}{{ hidden }}{% endfor %}
+                      <div class="grid grid-cols-1 gap-6 md:grid-cols-2">
+                        {% for field in shift.update_form.visible_fields %}
+                          <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1" for="{{ field.id_for_label }}">{{ field.label }}</label>
+                            {% if field.name == "attendants" %}
+                              <div class="grid gap-2 sm:grid-cols-2">
+                                {% if field|length %}
+                                  {% for checkbox in field %}
+                                    <label for="{{ checkbox.id_for_label }}" class="attendant-option flex items-center gap-2 rounded border border-gray-200 px-3 py-2 text-sm text-gray-700 hover:border-indigo-300 hover:bg-indigo-50">
+                                      {{ checkbox.tag }}
+                                      <span class="truncate">{{ checkbox.choice_label }}</span>
+                                    </label>
+                                  {% endfor %}
+                                {% else %}
+                                  <p class="col-span-full text-sm text-gray-500">No hay bomberos disponibles para este turno. Agrega personal en la sección &quot;Personal asignado&quot; de la sucursal.</p>
+                                {% endif %}
+                              </div>
+                            {% else %}
+                              {{ field }}
+                            {% endif %}
+                            {% if field.help_text %}<p class="mt-1 text-xs text-gray-500">{{ field.help_text }}</p>{% endif %}
+                            {% if field.errors %}<ul class="mt-1 space-y-1 text-xs text-red-600">{% for e in field.errors %}<li>{{ e }}</li>{% endfor %}</ul>{% endif %}
+                          </div>
+                        {% endfor %}
+                      </div>
+                      {% if shift.update_form.non_field_errors %}
+                        <ul class="space-y-1 text-sm text-red-600">
+                          {% for e in shift.update_form.non_field_errors %}<li>{{ e }}</li>{% endfor %}
+                        </ul>
+                      {% endif %}
+                      <div class="flex justify-end gap-3">
+                        <button type="button" class="inline-flex items-center rounded-md border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100" @click="openModal = null">Cancelar</button>
+                        <button type="submit" class="inline-flex items-center rounded-md bg-gradient-to-br from-indigo-500 to-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:from-indigo-600 hover:to-blue-700">Guardar cambios</button>
+                      </div>
                     </form>
                   </div>
-                {% endif %}
+                   <div class="border-t border-gray-200 bg-gray-50 px-6 py-5 shrink-0"></div>
+                </div>                 
               </div>
 
-              <div class="mt-4 rounded-md border border-gray-200 p-4">
-                <p class="text-xs font-semibold uppercase tracking-wide text-gray-500">Encargado</p>
-                <div class="mt-2 text-sm text-gray-700">
-                  {% with full_name=shift.manager.user_FK.get_full_name %}
-                    <p class="font-semibold text-gray-900">{{ full_name|default:shift.manager.user_FK.username }}</p>
-                  {% endwith %}
-                  {% if shift.manager.position_FK %}
-                    <p class="text-xs text-gray-500 mt-1">{{ shift.manager.position_FK.user_position }}</p>
-                  {% endif %}
-                </div>
-              </div>
 
-              {% with attendants=shift.attendants.all %}
-                <div class="mt-4 rounded-md border border-gray-200 p-4">
-                  <p class="text-xs font-semibold uppercase tracking-wide text-gray-500">Bomberos asignados</p>
-                  {% if attendants %}
-                    <ul class="mt-2 space-y-1 text-sm text-gray-700">
-                      {% for attendant in attendants %}
-                        {% with attendant_name=attendant.user_FK.get_full_name %}
-                          <li class="flex items-center justify-between gap-2">
-                            <span class="font-medium text-gray-900">{{ attendant_name|default:attendant.user_FK.username }}</span>
-                            {% if attendant.position_FK %}<span class="text-xs text-gray-500">{{ attendant.position_FK.user_position }}</span>{% endif %}
-                          </li>
-                        {% endwith %}
-                      {% endfor %}
-                    </ul>
-                  {% else %}
-                    <p class="mt-2 text-sm text-gray-500">No hay bomberos asignados a este turno.</p>
-                  {% endif %}
-                </div>
-              {% endwith %}
-            </div>
-
-            <!-- Modal: editar turno -->
-            <div
-              x-cloak
-              x-show="openModal === 'shift-edit-{{ shift.pk }}'"
-              x-transition.opacity
-              class="fixed inset-0 z-50 flex items-center justify-center bg-transparent px-4 py-6 sm:px-6 lg:px-8"
-              @keydown.escape.window="openModal = null"
-              @click.self="openModal = null"
-              role="dialog"
-              aria-modal="true"
-            >
-              <div class="modal-panel w-full bg-white shadow-2xl flex flex-col" x-transition.scale.origin.center>
-                <div class="flex items-start justify-between border-b border-gray-200 px-6 py-4 shrink-0">
-                  <div>
-                    <h3 class="text-lg font-semibold text-gray-900">Editar turno</h3>
-                    <p class="mt-1 text-sm text-gray-500">Actualiza los datos y horarios del turno seleccionado.</p>
-                  </div>
-                  <button type="button" class="rounded-md p-1 text-gray-400 hover:text-gray-600" @click="openModal = null">
-                    <span class="sr-only">Cerrar modal</span>
-                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="h-5 w-5"><path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd"/></svg>
-                  </button>
-                </div>
-                <div class="px-6 py-6 overflow-y-auto">
-                  <form method="post" class="space-y-6 mx-auto w-full max-w-[36rem]">
-                    {% csrf_token %}
-                    <input type="hidden" name="form_scope" value="shift-update" />
-                    <input type="hidden" name="object_id" value="{{ shift.pk }}" />
-                    {% for hidden in shift.update_form.hidden_fields %}{{ hidden }}{% endfor %}
-                    <div class="grid grid-cols-1 gap-6 md:grid-cols-2">
-                      {% for field in shift.update_form.visible_fields %}
-                        <div>
-                          <label class="block text-sm font-medium text-gray-700 mb-1" for="{{ field.id_for_label }}">{{ field.label }}</label>
-                          {% if field.name == "attendants" %}
-                            <div class="grid gap-2 sm:grid-cols-2">
-                              {% if field|length %}
-                                {% for checkbox in field %}
-                                  <label for="{{ checkbox.id_for_label }}" class="attendant-option flex items-center gap-2 rounded border border-gray-200 px-3 py-2 text-sm text-gray-700 hover:border-indigo-300 hover:bg-indigo-50">
-                                    {{ checkbox.tag }}
-                                    <span class="truncate">{{ checkbox.choice_label }}</span>
-                                  </label>
-                                {% endfor %}
-                              {% else %}
-                                <p class="col-span-full text-sm text-gray-500">No hay bomberos disponibles para este turno. Agrega personal en la sección &quot;Personal asignado&quot; de la sucursal.</p>
-                              {% endif %}
-                            </div>
-                          {% else %}
-                            {{ field }}
-                          {% endif %}
-                          {% if field.help_text %}<p class="mt-1 text-xs text-gray-500">{{ field.help_text }}</p>{% endif %}
-                          {% if field.errors %}<ul class="mt-1 space-y-1 text-xs text-red-600">{% for e in field.errors %}<li>{{ e }}</li>{% endfor %}</ul>{% endif %}
-                        </div>
-                      {% endfor %}
-                    </div>
-                    {% if shift.update_form.non_field_errors %}
-                      <ul class="space-y-1 text-sm text-red-600">
-                        {% for e in shift.update_form.non_field_errors %}<li>{{ e }}</li>{% endfor %}
-                      </ul>
-                    {% endif %}
-                    <div class="flex justify-end gap-3">
-                      <button type="button" class="inline-flex items-center rounded-md border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100" @click="openModal = null">Cancelar</button>
-                      <button type="submit" class="inline-flex items-center rounded-md bg-gradient-to-br from-indigo-500 to-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:from-indigo-600 hover:to-blue-700">Guardar cambios</button>
-                    </div>
-                  </form>
-                </div>
-                <div class="border-t border-gray-200 bg-gray-50 px-6 py-5 shrink-0"></div>
-              </div>
-            </div>
-
-          {% endfor %}
-        </div>
-      {% else %}
-        <p class="text-sm text-gray-500">Aún no se han registrado turnos para esta sucursal.</p>
-      {% endif %}
-    </section>
-
-    <!-- Modal: crear turno -->
-    {% if shift_create_form %}
-      <div x-cloak x-show="openModal === 'shift-create'" x-transition.opacity class="fixed inset-0 z-50 flex items-center justify-center bg-transparent p-4" @keydown.escape.window="openModal = null" @click.self="openModal = null">
-        <div class="modal-panel w-full bg-white shadow-2xl flex flex-col" x-transition.scale.origin.center>
-          <div class="flex items-center justify-between border-b border-gray-200 px-6 py-4 shrink-0">
-            <h3 class="text-lg font-semibold text-gray-900">Agregar turno</h3>
-            <button type="button" class="text-gray-400 hover:text-gray-600" @click="openModal = null"><span class="sr-only">Cerrar</span>
-              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke-width="1.5" stroke="currentColor" class="h-5 w-5"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12" /></svg>
-            </button>
+            {% endfor %}
           </div>
-          <div class="px-6 py-6 overflow-y-auto">
-            <form method="post" action="{{ shift_create_url }}" class="space-y-6 mx-auto w-full max-w-[36rem]">
-              {% csrf_token %}
-              {% for hidden in shift_create_form.hidden_fields %}{{ hidden }}{% endfor %}
-              <div class="grid grid-cols-1 gap-6 md:grid-cols-2">
-                {% for field in shift_create_form.visible_fields %}
-                  <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1" for="{{ field.id_for_label }}">{{ field.label }}</label>
-                    {% if field.name == "attendants" %}
-                      <div class="profile-checkbox-grid">
-                        {% if field|length %}
-                          {% for checkbox in field %}
-                            <label for="{{ checkbox.id_for_label }}" class="profile-checkbox-option flex rounded border border-gray-200 px-3 py-2 text-sm text-gray-700 hover:border-indigo-300 hover:bg-indigo-50">
-                              {{ checkbox.tag }}
-                              <span class="leading-snug">{{ checkbox.choice_label }}</span>
-                            </label>
-                          {% endfor %}
-                        {% else %}
-                          <p class="col-span-full text-sm text-gray-500">No hay bomberos disponibles para este turno. Agrega personal en la sección &quot;Personal asignado&quot; de la sucursal.</p>
-                        {% endif %}
-                      </div>
-                    {% else %}
-                      {{ field }}
-                    {% endif %}
-                    {% if field.help_text %}<p class="mt-1 text-xs text-gray-500">{{ field.help_text }}</p>{% endif %}
-                    {% if field.errors %}<ul class="mt-1 space-y-1 text-sm text-red-600">{% for e in field.errors %}<li>{{ e }}</li>{% endfor %}</ul>{% endif %}
-                  </div>
-                {% endfor %}
-              </div>
-              {% if shift_create_form.non_field_errors %}<ul class="space-y-1 text-sm text-red-600">{% for e in shift_create_form.non_field_errors %}<li>{{ e }}</li>{% endfor %}</ul>{% endif %}
-              <div class="flex justify-end gap-3">
-                <button type="button" class="inline-flex items-center rounded-md border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50" @click="openModal = null">Cancelar</button>
-                <button type="submit" class="inline-flex items-center rounded-md bg-gradient-to-br px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-50">Guardar turno</button>
-              </div>
-            </form>
-          </div>
-          <div class="border-t border-gray-200 bg-gray-50 px-6 py-5 shrink-0"></div>
-        </div>
-      </div>
-    {% endif %}
-  </div>
-
-  <div id="tab-productos" class="tab-content mt-8 hidden space-y-6">
-    <!-- Inventario -->
-    <section class="mt-2">
-      <div class="flex items-center justify-between mb-4">
-        <h2 class="text-xl font-semibold text-gray-900">Inventario de combustible</h2>
-        {% if fuel_inventory_create_form and can_edit_branch %}
-          <button type="button" class="inline-flex items-center rounded-md text-indigo-600 border-indigo-200 bg-indigo-50 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-50" @click="openModal = 'fuel-inventory'">Agregar inventario</button>
+        {% else %}
+          <p class="text-sm text-gray-500">Aún no se han registrado turnos para esta sucursal.</p>
         {% endif %}
-      </div>
-      {% if fuel_inventories %}
-        <div class="space-y-4">
-          {% for inventory in fuel_inventories %}
-            <div class="rounded-lg border border-gray-200 bg-white p-4">
-              <div class="flex items-start justify-between gap-4">
-                <div>
-                  <p class="text-xs font-semibold uppercase tracking-wide text-gray-500">Código</p>
-                  <h3 class="text-lg font-semibold text-gray-900">{{ inventory.code }}</h3>
-                  <p class="mt-2 text-sm text-gray-600">{{ inventory.fuel_type }}</p>
-                </div>
-                {% if can_edit_branch %}
-                <div class="flex items-center gap-2">
-                  <a
-                    href="{% url 'sucursal_fuel_inventory_update' inventory.pk %}"
-                    class="inline-flex items-center rounded-md border border-gray-300 px-3 py-1 text-xs font-medium text-gray-700 hover:bg-gray-50"
-                    @click.prevent="openModal = 'fuel-inventory-edit-{{ inventory.pk }}'"
-                  >Editar</a>
-                  <form method="post" action="{% url 'sucursal_fuel_inventory_delete' inventory.pk %}">
-                    {% csrf_token %}
-                    <button type="submit" class="inline-flex items-center rounded-md border border-red-200 bg-red-50 px-3 py-2 text-xs font-medium text-red-600 hover:bg-red-100">Eliminar</button>
-                  </form>
-                </div>
+      </section>
+
+      {% if user_link_form %}
+        <section class="rounded-lg border border-gray-200 bg-white p-6 shadow-sm">
+          <div class="flex items-start justify-between gap-3">
+            <div>
+              <h2 class="text-xl font-semibold text-gray-900">Vincular usuarios</h2>
+              <p class="mt-1 text-sm text-gray-500">Asigna o libera usuarios de esta sucursal sin considerar perfiles Dueño.</p>
+            </div>
+          </div>
+          <form method="post" class="mt-4 space-y-4">
+            {% csrf_token %}
+            <input type="hidden" name="form_scope" value="branch-user-link" />
+            <div class="grid gap-4">
+              <div>
+                <label for="{{ user_link_form.available_users.id_for_label }}" class="block text-sm font-medium text-gray-700">{{ user_link_form.available_users.label }}</label>
+                {{ user_link_form.available_users }}
+                {% if user_link_form.available_users.help_text %}<p class="mt-1 text-xs text-gray-500">{{ user_link_form.available_users.help_text }}</p>{% endif %}
+                {% if user_link_form.available_users.errors %}
+                  <ul class="mt-1 space-y-1 text-xs text-red-600">{% for e in user_link_form.available_users.errors %}<li>{{ e }}</li>{% endfor %}</ul>
                 {% endif %}
               </div>
-              <dl class="mt-4 grid grid-cols-1 gap-x-4 gap-y-2 text-sm text-gray-600 sm:grid-cols-2">
-                <div><dt class="font-medium text-gray-700">Capacidad total</dt><dd>{{ inventory.capacity }} L</dd></div>
-                <div><dt class="font-medium text-gray-700">Litraje disponible</dt><dd>{{ inventory.liters }} L</dd></div>
-              </dl>
-            </div>
-
-            <!-- Modal: editar inventario -->
-            <div
-              x-cloak
-              x-show="openModal === 'fuel-inventory-edit-{{ inventory.pk }}'"
-              x-transition.opacity
-              class="fixed inset-0 z-50 flex items-center justify-center bg-transparent px-4 py-6 sm:px-6 lg:px-8"
-              @keydown.escape.window="openModal = null"
-              @click.self="openModal = null"
-              role="dialog"
-              aria-modal="true"
-            >
-              <div class="modal-panel w-full bg-white shadow-2xl flex flex-col" x-transition.scale.origin.center>
-                <div class="flex items-start justify-between border-b border-gray-200 px-6 py-4 shrink-0">
-                  <div>
-                    <h3 class="text-lg font-semibold text-gray-900">Editar inventario</h3>
-                    <p class="mt-1 text-sm text-gray-500">Modifica la información del inventario seleccionado.</p>
-                  </div>
-                  <button type="button" class="rounded-md p-1 text-gray-400 hover:text-gray-600" @click="openModal = null">
-                    <span class="sr-only">Cerrar modal</span>
-                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="h-5 w-5"><path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd"/></svg>
-                  </button>
-                </div>
-                <div class="px-6 py-6 overflow-y-auto">
-                  <form method="post" class="space-y-6 mx-auto w-full max-w-[36rem]">
-                    {% csrf_token %}
-                    <input type="hidden" name="form_scope" value="fuel-inventory-update" />
-                    <input type="hidden" name="object_id" value="{{ inventory.pk }}" />
-                    {% for hidden in inventory.update_form.hidden_fields %}{{ hidden }}{% endfor %}
-                    <div class="grid grid-cols-1 gap-6 md:grid-cols-2">
-                      {% for field in inventory.update_form.visible_fields %}
-                        <div>
-                          <label class="block text-sm font-medium text-gray-700 mb-1" for="{{ field.id_for_label }}">{{ field.label }}</label>
-                          {{ field }}
-                          {% if field.help_text %}<p class="mt-1 text-xs text-gray-500">{{ field.help_text }}</p>{% endif %}
-                          {% if field.errors %}<ul class="mt-1 space-y-1 text-xs text-red-600">{% for e in field.errors %}<li>{{ e }}</li>{% endfor %}</ul>{% endif %}
-                        </div>
-                      {% endfor %}
-                    </div>
-                    {% if inventory.update_form.non_field_errors %}
-                      <ul class="space-y-1 text-sm text-red-600">
-                        {% for e in inventory.update_form.non_field_errors %}<li>{{ e }}</li>{% endfor %}
-                      </ul>
-                    {% endif %}
-                    <div class="flex justify-end gap-3">
-                      <button type="button" class="inline-flex items-center rounded-md border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100" @click="openModal = null">Cancelar</button>
-                      <button type="submit" class="inline-flex items-center rounded-md bg-gradient-to-br from-indigo-500 to-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:from-indigo-600 hover:to-blue-700">Guardar cambios</button>
-                    </div>
-                  </form>
-                </div>
-                <div class="border-t border-gray-200 bg-gray-50 px-6 py-5 shrink-0"></div>
+              <div>
+                <label for="{{ user_link_form.assigned_users.id_for_label }}" class="block text-sm font-medium text-gray-700">{{ user_link_form.assigned_users.label }}</label>
+                {{ user_link_form.assigned_users }}
+                <p class="mt-1 text-xs text-gray-500">Quita la selección para devolver al usuario al estado &quot;sin sucursal&quot;.</p>
+                {% if user_link_form.assigned_users.errors %}
+                  <ul class="mt-1 space-y-1 text-xs text-red-600">{% for e in user_link_form.assigned_users.errors %}<li>{{ e }}</li>{% endfor %}</ul>
+                {% endif %}
               </div>
             </div>
-
-          {% endfor %}
-        </div>
-      {% else %}
-        <p class="text-sm text-gray-500">Aún no se han registrado inventarios de combustible para esta sucursal.</p>
+            <div class="flex justify-end">
+              <button type="submit" class="inline-flex items-center rounded-md bg-gradient-to-br from-indigo-500 to-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:from-indigo-600 hover:to-blue-700">Asignar usuarios</button>
+            </div>
+          </form>
+        </section>
       {% endif %}
-    </section>
+      </div>
 
     <!-- Productos -->
     <section class="mt-10">
@@ -1944,12 +1837,14 @@
   <form method="post" class="space-y-6">
     {% csrf_token %}
     {% for field in form %}
-      <div>
-        <label class="block text-sm font-medium text-gray-700 mb-1" for="{{ field.id_for_label }}">{{ field.label }}</label>
-        {{ field }}
-        {% if field.help_text %}<p class="mt-1 text-sm text-gray-500">{{ field.help_text }}</p>{% endif %}
-        {% for error in field.errors %}<p class="mt-1 text-sm text-red-600">{{ error }}</p>{% endfor %}
-      </div>
+      {% if field.name not in ['administrators', 'accountants', 'firefighters'] %}
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1" for="{{ field.id_for_label }}">{{ field.label }}</label>
+          {{ field }}
+          {% if field.help_text %}<p class="mt-1 text-sm text-gray-500">{{ field.help_text }}</p>{% endif %}
+          {% for error in field.errors %}<p class="mt-1 text-sm text-red-600">{{ error }}</p>{% endfor %}
+        </div>
+      {% endif %}
     {% endfor %}
     {% if form.non_field_errors %}
       {% for error in form.non_field_errors %}<p class="text-sm text-red-600">{{ error }}</p>{% endfor %}

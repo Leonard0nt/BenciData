@@ -33,6 +33,7 @@ from .forms import (
     BranchProductForm,
     FuelInventoryForm,
     BranchStaffForm,
+    BranchUserLinkForm,
     FuelPriceForm,
     IslandForm,
     MachineForm,
@@ -359,6 +360,14 @@ class SucursalUpdateView(OwnerCompanyMixin, UpdateView):
                 )
                 context["shift_create_url"] = reverse(
                     "sucursal_shift_create", args=[self.object.pk]
+                )
+            if can_edit_branch:
+                context["user_link_form"] = kwargs.get(
+                    "user_link_form",
+                    BranchUserLinkForm(
+                        branch=self.object,
+                        company=getattr(self.object, "company", None),
+                    ),
                 )
             fuel_inventories = list(self.object.fuel_inventories.all())
             for inventory in fuel_inventories:
@@ -730,6 +739,7 @@ class SucursalUpdateView(OwnerCompanyMixin, UpdateView):
             "island-update": "_handle_island_update",
             "machine-update": "_handle_machine_update",
             "nozzle-update": "_handle_nozzle_update",
+            "branch-user-link": "_handle_branch_user_link",
         }
 
         handler_name = handler_map.get(scope)
@@ -750,6 +760,27 @@ class SucursalUpdateView(OwnerCompanyMixin, UpdateView):
     def _render_with_inline_form(self, *, modal_name: str) -> Any:
         context = self.get_context_data(form=self._get_branch_form())
         context["active_modal"] = modal_name
+        return self.render_to_response(context)
+
+    def _handle_branch_user_link(self, request) -> Any:
+        form = BranchUserLinkForm(
+            request.POST,
+            branch=self.object,
+            company=getattr(self.object, "company", None),
+        )
+        if form.is_valid():
+            form.save()
+            messages.success(
+                request, "Usuarios asignados a la sucursal actualizados correctamente."
+            )
+            return redirect("sucursal_update", pk=self.object.pk)
+
+        messages.error(
+            request, "No se pudo actualizar el personal de la sucursal. Revisa los datos."
+        )
+        context = self.get_context_data(
+            form=self._get_branch_form(), user_link_form=form
+        )
         return self.render_to_response(context)
 
     def _handle_shift_update(self, request) -> Any:

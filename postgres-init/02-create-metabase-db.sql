@@ -1,0 +1,2 @@
+CREATE DATABASE metabase OWNER postgres;
+GRANT ALL PRIVILEGES ON DATABASE metabase TO postgres;

@@ -1,5 +1,19 @@
 FROM python:3.12-slim
 
+
+# Paquetes del sistema (incluye cliente de postgres para pg_isready)
+RUN apt-get update \
+  && apt-get install -y --no-install-recommends \
+       build-essential \
+       libpq-dev \
+       postgresql-client \
+  && rm -rf /var/lib/apt/lists/*
+
+# resto de tu Dockerfile...
+COPY entrypoint.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh
+ENTRYPOINT ["/entrypoint.sh"]
+
 ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONUNBUFFERED=1
 

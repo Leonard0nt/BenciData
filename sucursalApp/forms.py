@@ -2,7 +2,8 @@ from typing import Optional
 
 
 from decimal import Decimal, InvalidOperation
-from typing import Iterable
+from typing import Iterable, Optional
+from itertools import chain
 
 from django import forms
 from django.core.exceptions import ValidationError
@@ -259,6 +260,102 @@ class BranchStaffForm(forms.Form):
 
         self._save_staff_assignments()
         return self.instance
+
+
+class BranchUserLinkForm(forms.Form):
+    available_users = forms.ModelMultipleChoiceField(
+        queryset=Profile.objects.none(),
+        required=False,
+        widget=forms.SelectMultiple(
+            attrs={
+                "class": "mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500",
+            }
+        ),
+        label="Usuarios sin sucursal",
+        help_text="Usuarios de la compañía sin asignación a sucursal.",
+    )
+    assigned_users = forms.ModelMultipleChoiceField(
+        queryset=Profile.objects.none(),
+        required=False,
+        widget=forms.SelectMultiple(
+            attrs={
+                "class": "mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500",
+            }
+        ),
+        label="Usuarios asignados a la sucursal",
+    )
+
+    def __init__(
+        self,
+        *args,
+        branch: Sucursal,
+        company: Optional["homeApp.models.Company"] = None,
+        **kwargs,
+    ):
+        self.branch = branch
+        self.company = company or getattr(branch, "company", None)
+        super().__init__(*args, **kwargs)
+
+        base_queryset = (
+            Profile.objects.select_related("user_FK", "position_FK")
+            .filter(user_FK__is_active=True)
+            .exclude(position_FK__permission_code="OWNER")
+        )
+        if self.company is not None:
+            base_queryset = base_queryset.filter(company_rut=self.company.rut)
+
+        available_queryset = (
+            base_queryset.annotate(branch_count=Count("sucursal_staff", distinct=True))
+            .filter(branch_count=0, current_branch__isnull=True)
+            .order_by("user_FK__first_name", "user_FK__last_name", "user_FK__username")
+        )
+
+        assigned_queryset = (
+            base_queryset.filter(sucursal_staff__sucursal=self.branch)
+            .distinct()
+            .order_by("user_FK__first_name", "user_FK__last_name", "user_FK__username")
+        )
+
+        self.fields["available_users"].queryset = available_queryset
+        self.fields["assigned_users"].queryset = assigned_queryset
+        self.fields["assigned_users"].initial = list(
+            assigned_queryset.values_list("pk", flat=True)
+        )
+
+    def save(self) -> None:
+        if not self.is_valid():
+            raise ValueError("Cannot save an invalid form")
+
+        selected_profiles = list(
+            chain(
+                self.cleaned_data.get("available_users") or [],
+                self.cleaned_data.get("assigned_users") or [],
+            )
+        )
+        final_ids = {profile.pk for profile in selected_profiles}
+
+        current_staff_qs = self.branch.staff.exclude(
+            profile__position_FK__permission_code="OWNER"
+        )
+        current_ids = set(current_staff_qs.values_list("profile_id", flat=True))
+        removed_ids = current_ids - final_ids
+
+        current_staff_qs.filter(profile_id__in=removed_ids).delete()
+        Profile.objects.filter(
+            pk__in=removed_ids, current_branch=self.branch
+        ).update(current_branch=None)
+
+        for profile in selected_profiles:
+            role = None
+            if getattr(profile, "position_FK", None):
+                role = profile.position_FK.permission_code
+            SucursalStaff.objects.update_or_create(
+                sucursal=self.branch,
+                profile=profile,
+                defaults={"role": role},
+            )
+            if profile.current_branch_id != self.branch.pk:
+                Profile.objects.filter(pk=profile.pk).update(current_branch=self.branch)
 
 class IslandForm(forms.ModelForm):
     class Meta:
