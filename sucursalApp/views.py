@@ -2309,11 +2309,11 @@ class ServiceSessionDetailView(OwnerCompanyMixin, DetailView):
         machine_inventory_pairs = []
         for machine in machines:
             for fuel_inventory in machine.get_fuel_inventories():
-                numeral_entry = machine.get_numerals_for_inventory(fuel_inventory)[0]
-                machine_inventory_pairs.append(
-                    (machine, fuel_inventory, numeral_entry)
-                )
-
+                numeral_entries = machine.get_numerals_for_inventory(fuel_inventory)
+                for numeral_entry in numeral_entries:
+                    machine_inventory_pairs.append(
+                        (machine, fuel_inventory, numeral_entry)
+                    )
         return machines, machine_inventory_pairs
 
     @staticmethod
