@@ -98,7 +98,7 @@
       {% if form.name.errors or form.address.errors or form.city.errors or form.region.errors or form.phone.errors or form.email.errors %}
         openModal = 'general';
       {% elif form.administrators.errors or form.accountants.errors or form.firefighters.errors %}
-        openModal = 'staff';
+        openModal = 'assign-admin';
       {% endif %}
     {% endif %}
   "
@@ -201,11 +201,18 @@
           </div>
                 <div class="flex flex-wrap items-center justify-end gap-3">
         {% if can_edit_branch %}
-        <button
-          type="button"
-          class="inline-flex items-center rounded-md bg-gradient-to-br from-indigo-500 to-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:from-indigo-600 hover:to-blue-700"
-          @click="openModal = 'general'"
-        >Editar información</button>
+        <div class="flex flex-wrap gap-2">
+          <button
+            type="button"
+            class="inline-flex items-center rounded-md bg-gradient-to-br from-indigo-500 to-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:from-indigo-600 hover:to-blue-700"
+            @click="openModal = 'general'"
+          >Editar información</button>
+          <button
+            type="button"
+            class="inline-flex items-center rounded-md border border-indigo-200 bg-indigo-50 px-4 py-2 text-sm font-semibold text-indigo-700 shadow-sm hover:bg-white"
+            @click="openModal = 'assign-admin'"
+          >Asignar administrador</button>
+        </div>
         {% endif %}
 
       </div>
@@ -268,6 +275,62 @@
           {% if can_edit_branch %}
           <button type="submit" form="sucursal-update-form" formmethod="post" class="inline-flex items-center rounded-md bg-gradient-to-br from-indigo-500 to-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:from-indigo-600 hover:to-blue-700">Guardar</button>
           {% endif %}
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal: asignar administrador -->
+    <div
+      x-cloak
+      x-show="openModal === 'assign-admin'"
+      class="fixed inset-0 z-50 flex items-center justify-center px-4 py-6 sm:px-6 lg:px-8"
+      role="dialog"
+      aria-modal="true"
+      x-transition.opacity
+    >
+      <div class="modal-panel w-full bg-white shadow-2xl flex flex-col" @click.self="openModal = null" x-transition.scale.origin.center>
+        <div class="flex items-start justify-between border-b border-gray-200 px-6 py-4 shrink-0">
+          <div>
+            <h3 class="text-lg font-semibold text-gray-900">Asignar administrador</h3>
+            <p class="mt-1 text-sm text-gray-500">Selecciona un administrador registrado para asignarlo a esta sucursal.</p>
+          </div>
+          <button type="button" class="rounded-md p-1 text-gray-400 hover:text-gray-600" @click="openModal = null"><span class="sr-only">Cerrar modal</span>
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="h-5 w-5"><path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd"/></svg>
+          </button>
+        </div>
+        <div class="px-6 py-6 overflow-y-auto space-y-4">
+          {% if form.administrators.errors %}
+            <ul class="space-y-1 text-sm text-red-600">
+              {% for error in form.administrators.errors %}<li>{{ error }}</li>{% endfor %}
+            </ul>
+          {% endif %}
+          <p class="text-sm text-gray-600">Lista de administradores disponibles en el sistema.</p>
+          <div class="space-y-3">
+            {% with selected_admins=form.administrators.value %}
+              {% for admin in form.fields.administrators.queryset %}
+                <label class="flex items-start gap-3 rounded-lg border border-gray-200 px-4 py-3 shadow-sm hover:border-indigo-200 hover:bg-indigo-50/40">
+                  <input
+                    type="radio"
+                    name="{{ form.administrators.html_name }}"
+                    value="{{ admin.pk }}"
+                    class="mt-1 h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300"
+                    {% if selected_admins and admin.pk|stringformat:'s' in selected_admins %}checked{% endif %}
+                  >
+                  <span class="flex flex-col">
+                    <span class="font-semibold text-gray-900">{{ admin.user_FK.get_full_name|default:admin.user_FK.username }}</span>
+                    {% if admin.user_FK.email %}<span class="text-sm text-gray-600">{{ admin.user_FK.email }}</span>{% endif %}
+                    {% if admin.position_FK %}<span class="text-xs text-gray-500">{{ admin.position_FK.user_position }}</span>{% endif %}
+                  </span>
+                </label>
+              {% empty %}
+                <p class="text-sm text-gray-500">No hay administradores registrados en el sistema.</p>
+              {% endfor %}
+            {% endwith %}
+          </div>
+        </div>
+        <div class="flex justify-end gap-3 border-t border-gray-200 bg-gray-50 px-6 py-5 shrink-0">
+          <button type="button" class="inline-flex items-center rounded-md border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100" @click="openModal = null">Cancelar</button>
+          <button type="submit" form="sucursal-update-form" formmethod="post" class="inline-flex items-center rounded-md bg-gradient-to-br from-indigo-500 to-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:from-indigo-600 hover:to-blue-700">Asignar administrador</button>
         </div>
       </div>
     </div>
