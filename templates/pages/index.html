@@ -64,6 +64,53 @@
                 </div>
               {% endfor %}
             </div>
+
+            <div class="mt-6">
+              <p class="text-xs font-semibold uppercase tracking-wide text-gray-500">Medición visual de estanques</p>
+              <p class="text-xs text-gray-400">Resumen gráfico de capacidad utilizada por tanque</p>
+              <div class="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                {% for branch in fuel_dashboard %}
+                  <div class="border border-dashed border-gray-200 rounded-xl p-4 bg-gray-50">
+                    <div class="flex items-start justify-between">
+                      <div>
+                        <p class="text-sm font-semibold text-gray-900">{{ branch.branch_name }}</p>
+                        <p class="text-xs text-gray-500">{{ branch.city }}</p>
+                      </div>
+                      <span class="text-[11px] font-semibold text-gray-600">Medición</span>
+                    </div>
+
+                    {% if branch.inventories %}
+                      <div class="mt-3 space-y-3">
+                        {% for fuel in branch.inventories %}
+                          <div class="flex items-center gap-4">
+                            <div class="relative h-20 w-20 rounded-full" style="background: conic-gradient(#22c55e {{ fuel.percentage|floatformat:2 }}%, #e5e7eb {{ fuel.percentage|floatformat:2 }}%);">
+                              <div class="absolute inset-2 rounded-full bg-white flex items-center justify-center">
+                                <span class="text-sm font-semibold text-gray-900">{{ fuel.percentage|floatformat:1 }}%</span>
+                              </div>
+                            </div>
+                            <div class="flex-1 min-w-0">
+                              <p class="text-sm font-semibold text-gray-900">{{ fuel.fuel_type }}</p>
+                              <p class="text-xs text-gray-500">{{ fuel.liters|floatformat:0 }} L / {{ fuel.capacity|floatformat:0 }} L</p>
+                              <div class="mt-1 text-xs font-semibold">
+                                {% if fuel.percentage < 25 %}
+                                  <span class="text-red-600">Nivel bajo - planificar recarga</span>
+                                {% elif fuel.percentage < 60 %}
+                                  <span class="text-amber-600">Nivel medio - monitorear</span>
+                                {% else %}
+                                  <span class="text-green-600">Nivel óptimo</span>
+                                {% endif %}
+                              </div>
+                            </div>
+                          </div>
+                        {% endfor %}
+                      </div>
+                    {% else %}
+                      <p class="text-sm text-gray-500 mt-3">Sin inventario de combustible registrado.</p>
+                    {% endif %}
+                  </div>
+                {% endfor %}
+              </div>
+            </div>
           </div>
         </div>
       {% endif %}
