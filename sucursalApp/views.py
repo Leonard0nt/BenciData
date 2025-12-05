@@ -1,4 +1,4 @@
-from decimal import Decimal
+from decimal import Decimal, ROUND_HALF_UP
 import calendar
 import csv
 from io import BytesIO
@@ -2648,7 +2648,8 @@ class ServiceSessionDetailView(OwnerCompanyMixin, DetailView):
             )
             if close_session_formset.is_valid():
                 machine_inventory_lookup = {
-                    (machine.pk, fuel_inventory.pk): (
+
+                    (machine.pk, fuel_inventory.pk, numeral_entry.slot): (
                         machine,
                         fuel_inventory,
                         numeral_entry.numeral,
@@ -2671,16 +2672,18 @@ class ServiceSessionDetailView(OwnerCompanyMixin, DetailView):
                     for form in close_session_formset:
                         machine_id = form.cleaned_data.get("machine_id")
                         fuel_inventory_id = form.cleaned_data.get("fuel_inventory_id")
+                        slot = form.cleaned_data.get("slot")
                         numeral = form.cleaned_data.get("numeral")
                         if (
                             machine_id is None
                             or fuel_inventory_id is None
+                            or slot is None
                             or numeral is None
                         ):
                             continue
 
                         machine_inventory = machine_inventory_lookup.get(
-                            (machine_id, fuel_inventory_id)
+                            (machine_id, fuel_inventory_id, slot)
                         )
                         if machine_inventory is None:
                             continue
@@ -2731,8 +2734,36 @@ class ServiceSessionDetailView(OwnerCompanyMixin, DetailView):
                         or decimal_zero
                     )
                     close_session_flow_gap = (
-                        turn_profit_excluding_product_sales - close_session_flow_total 
+                        turn_profit_excluding_product_sales - close_session_flow_total
                     )
+                    close_session_flow_gap = close_session_flow_gap.quantize(
+                        Decimal("0.01"), rounding=ROUND_HALF_UP
+                    )
+
+                    max_flow_mismatch = Decimal("9999999999.99")
+                    if close_session_flow_gap.copy_abs() > max_flow_mismatch:
+                        messages.error(
+                            request,
+                            (
+                                "El descuadre calculado excede el límite permitido para "
+                                "almacenarlo. Verifica los numerales y montos ingresados."
+                            ),
+                        )
+
+                        flow_mismatch_labels = dict(
+                            ServiceSession.FLOW_MISMATCH_CHOICES
+                        )
+                        context.update(
+                            {
+                                "close_session_flow_gap": close_session_flow_gap,
+                                "close_session_flow_mismatch_type": ServiceSession.FLOW_MISMATCH_NONE,
+                                "close_session_flow_mismatch_label": flow_mismatch_labels[
+                                    ServiceSession.FLOW_MISMATCH_NONE
+                                ],
+                            }
+                        )
+                        return self.render_to_response(context)
+
 
                     if close_session_flow_gap > decimal_zero:
                         flow_mismatch_type = ServiceSession.FLOW_MISMATCH_POSITIVE
@@ -2765,15 +2796,17 @@ class ServiceSessionDetailView(OwnerCompanyMixin, DetailView):
                     for form in close_session_formset:
                         machine_id = form.cleaned_data.get("machine_id")
                         fuel_inventory_id = form.cleaned_data.get("fuel_inventory_id")
-                        numeral = form.cleaned_data.get("numeral")
+                        slot = form.cleaned_data.get("slot")
                         if (
                             machine_id is None
                             or fuel_inventory_id is None
+                            or slot is None
+
                             or numeral is None
                         ):
                             continue
                         machine_inventory = machine_inventory_lookup.get(
-                            (machine_id, fuel_inventory_id)
+                            (machine_id, fuel_inventory_id, slot)
                         )
                         if machine_inventory is None:
                             continue
@@ -2787,6 +2820,7 @@ class ServiceSessionDetailView(OwnerCompanyMixin, DetailView):
                         MachineFuelInventoryNumeral.objects.update_or_create(
                             machine=machine,
                             fuel_inventory=fuel_inventory,
+                            slot=slot,
                             defaults={"numeral": numeral},
                         )
                     ServiceSession.objects.filter(
