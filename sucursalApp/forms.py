@@ -836,6 +836,7 @@ class ServiceSessionForm(forms.ModelForm):
         if not attendants:
             raise forms.ValidationError(
                 "Debes seleccionar al menos un bombero para iniciar el turno."
+            )
 
         manager_id = getattr(self.selected_shift, "manager_id", None)
         if manager_id:
@@ -844,7 +845,6 @@ class ServiceSessionForm(forms.ModelForm):
                     raise forms.ValidationError(
                         "El bombero encargado ya está asignado al turno y no puede agregarse nuevamente."
                     )
-            )
         return attendants
 
     def save(self, commit: bool = True):

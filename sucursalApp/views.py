@@ -2275,6 +2275,23 @@ class ServiceSessionDetailView(OwnerCompanyMixin, DetailView):
         except Exception:
             pass
 
+        # Allow administrators to access the detail view even if the branch is
+        # not part of their managed branch list (e.g., when they just started a
+        # service but their profile is not explicitly attached to the branch),
+        # but only for the branch they currently have selected.
+        try:
+            viewer_profile = getattr(self.request.user, "profile", None)
+            service_pk = self.kwargs.get("pk")
+            if viewer_profile and getattr(viewer_profile, "is_admin", None) and viewer_profile.is_admin():
+                if service_pk and not branch_ids:
+                    current_branch_id = getattr(viewer_profile, "current_branch_id", None)
+                    if current_branch_id and ServiceSession.objects.filter(
+                        pk=service_pk, shift__sucursal_id=current_branch_id
+                    ).exists():
+                        branch_ids = [current_branch_id]
+        except Exception:
+            pass
+
         if branch_ids:
             queryset = queryset.filter(shift__sucursal_id__in=branch_ids)
         else:
