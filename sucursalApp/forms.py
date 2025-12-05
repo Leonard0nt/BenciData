@@ -92,17 +92,32 @@ class SucursalForm(forms.ModelForm):
     def __init__(self, *args, company: Optional["homeApp.models.Company"] = None, **kwargs):
         self.company = company
         super().__init__(*args, **kwargs)
-        queryset = Profile.objects.select_related("position_FK", "user_FK")
+        base_queryset = Profile.objects.select_related("position_FK", "user_FK")
+
+        # Most staff assignments should be limited to the company's profiles, but
+        # administrators must be selectable globally so any system administrator
+        # can be assigned to the branch.
+        company_queryset = base_queryset
         if company is not None:
-            queryset = queryset.filter(company_rut=company.rut)
-            queryset = queryset.exclude(position_FK__permission_code="OWNER")
+            company_queryset = company_queryset.filter(company_rut=company.rut)
+            company_queryset = company_queryset.exclude(
+                position_FK__permission_code="OWNER"
+            )
         for field_name, roles in self.STAFF_ROLE_FIELDS.items():
-            field_queryset = queryset.filter(position_FK__permission_code__in=roles)
-            # If no profiles found for the expected roles (possible data inconsistency
-            # during user creation), fall back to showing all company profiles so
-            # administrators can still assign staff manually.
+            # Administrators are pulled from the full set of profiles to ensure all
+            # system administrators are available, while the rest stay limited to
+            # the company scope.
+            field_queryset = (
+                base_queryset
+                if field_name == "administrators"
+                else company_queryset
+            ).filter(position_FK__permission_code__in=roles)
+
+            # If no profiles found for the expected roles (possible data
+            # inconsistency during user creation), fall back to showing all
+            # company profiles so administrators can still assign staff manually.
             if not field_queryset.exists():
-                field_queryset = queryset
+                field_queryset = company_queryset
 
             if self.instance.pk:
                 initial_ids = self.instance.staff.filter(role__in=roles).values_list(
@@ -195,18 +210,21 @@ class BranchStaffForm(forms.Form):
         self.company = company or getattr(instance, "company", None)
         self.allow_admin_assignment = allow_admin_assignment
 
-        queryset = Profile.objects.select_related("position_FK", "user_FK")
+        base_queryset = Profile.objects.select_related("position_FK", "user_FK")
+        company_queryset = base_queryset
         if self.company is not None:
-            queryset = queryset.filter(company_rut=self.company.rut)
+            company_queryset = company_queryset.filter(company_rut=self.company.rut)
 
         for field_name, roles in self.STAFF_ROLE_FIELDS.items():
             if field_name == "administrators" and not self.allow_admin_assignment:
                 self.fields.pop(field_name, None)
                 continue
 
-            field_queryset = queryset.filter(
-                position_FK__permission_code__in=roles
-            )
+            field_queryset = (
+                base_queryset
+                if field_name == "administrators"
+                else company_queryset
+            ).filter(position_FK__permission_code__in=roles)
             # Fallback: if no users match the role filter, show all company profiles
 
             field = self.fields[field_name]
