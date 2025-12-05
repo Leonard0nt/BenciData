@@ -38,7 +38,9 @@ class HomeView(LoginRequiredMixin, ListView):
         except Profile.DoesNotExist:
             profile = None
 
-        if profile:
+        if profile and (
+            profile.is_owner() or profile.is_admin() or profile.is_accountant()
+        ):
             try:
                 company = profile.company
             except Company.DoesNotExist:
@@ -48,10 +50,17 @@ class HomeView(LoginRequiredMixin, ListView):
                 normalized_rut = Company.normalize_rut(profile.company_rut)
                 company = Company.objects.filter(rut=normalized_rut).first()
 
-fuel_dashboard: list[dict] = []
+        fuel_dashboard: list[dict] = []
         branches: list[Sucursal] | None = None
 
-        if company:
+        is_company_admin = bool(
+            profile and (profile.is_owner() or profile.is_admin())
+        )
+
+        if profile and profile.current_branch and not is_company_admin:
+            branches = [profile.current_branch]
+            company = company or profile.current_branch.company
+        elif company:
             branches = list(
                 company.branches.prefetch_related("fuel_inventories").order_by("name")
             )
