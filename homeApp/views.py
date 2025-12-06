@@ -181,8 +181,37 @@ class HomeView(LoginRequiredMixin, ListView):
                     queryset.annotate(period=trunc_fn("ended_at"))
                     .values("period")
                     .annotate(
-                        total_profit=Sum(
-                            "session_profit",
+                        total_initial_budget=Coalesce(
+                            Sum("initial_budget"), zero_value
+                        ),
+                        total_credit=Coalesce(Sum("credit_total"), zero_value),
+                        total_voucher=Coalesce(Sum("voucher_total"), zero_value),
+                        total_withdrawal=Coalesce(
+                            Sum("withdrawal_total"), zero_value
+                        ),
+                        total_product_sales=Coalesce(
+                            Sum("product_sales_value"), zero_value
+                        ),
+                        total_fuel_payment=Coalesce(
+                            Sum("fuel_load_payment_total"), zero_value
+                        ),
+                        total_firefighter_payment=Coalesce(
+                            Sum("firefighter_payments_total"), zero_value
+                        ),
+                        total_product_load_payment=Coalesce(
+                            Sum("product_load_payment_total"), zero_value
+                        ),
+                    )
+                    .annotate(
+                        total_profit=ExpressionWrapper(
+                            F("total_initial_budget")
+                            + F("total_credit")
+                            + F("total_voucher")
+                            + F("total_withdrawal")
+                            + F("total_product_sales")
+                            - F("total_fuel_payment")
+                            - F("total_firefighter_payment")
+                            - F("total_product_load_payment"),
                             output_field=DecimalField(
                                 max_digits=14, decimal_places=2
                             ),

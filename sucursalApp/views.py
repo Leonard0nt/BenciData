@@ -2677,10 +2677,11 @@ class ServiceSessionDetailView(OwnerCompanyMixin, DetailView):
                     missing_price_types = set()
 
                     for form in close_session_formset:
-                        machine_id = form.cleaned_data.get("machine_id")
-                        fuel_inventory_id = form.cleaned_data.get("fuel_inventory_id")
-                        slot = form.cleaned_data.get("slot")
-                        numeral = form.cleaned_data.get("numeral")
+                        cleaned_data = getattr(form, "cleaned_data", {}) or {}
+                        machine_id = cleaned_data.get("machine_id")
+                        fuel_inventory_id = cleaned_data.get("fuel_inventory_id")
+                        slot = cleaned_data.get("slot")
+                        numeral = cleaned_data.get("numeral")
                         if (
                             machine_id is None
                             or fuel_inventory_id is None
