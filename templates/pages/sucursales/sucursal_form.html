@@ -987,7 +987,7 @@
                             {% with numerals=machine.current_numerals %}
                               {% if numerals %}
                                 {% for numeral in numerals %}
-                                  <span class="block">Estanque {{ numeral.inventory.code }}: {{ numeral.numeral }}</span>
+                                  <span class="block">Estanque {{ numeral.fuel_inventory.code }} #{{ numeral.slot }}: {{ numeral.numeral }}</span>
                                 {% endfor %}
                               {% else %}
                                 <span class="text-gray-500">Sin numerales registrados</span>

@@ -2,8 +2,7 @@ from __future__ import annotations
 
 from django.urls import reverse
 
-from sucursalApp.models import ServiceSession
-
+from sucursalApp.models import ServiceSession, SucursalStaff
 
 def service_session_navigation(request):
     """Expose navigation helpers for the service session entry point."""
@@ -20,6 +19,15 @@ def service_session_navigation(request):
 
     profile = getattr(user, "profile", None)
     branch_id = getattr(profile, "current_branch_id", None)
+
+    # Fallback: if the administrator does not have a current branch set,
+    # try to use the first branch where they are configured as ADMINISTRATOR.
+    if branch_id is None and profile:
+        branch_id = (
+            SucursalStaff.objects.filter(profile=profile, role="ADMINISTRATOR")
+            .values_list("sucursal_id", flat=True)
+            .first()
+        )
 
     if not branch_id:
         return {

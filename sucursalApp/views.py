@@ -685,13 +685,12 @@ class SucursalUpdateView(OwnerCompanyMixin, UpdateView):
                         )
                     machine.nozzles_list = nozzles
                     inventories = machine.get_fuel_inventories()
-                    machine.current_numerals = [
-                        {
-                            "inventory": inventory,
-                            "numeral": machine.get_numeral_for_inventory(inventory),
-                        }
-                        for inventory in inventories
-                    ]
+                    current_numerals = []
+                    for inventory in inventories:
+                        current_numerals.extend(
+                            machine.get_numerals_for_inventory(inventory)
+                        )
+                    machine.current_numerals = current_numerals
                 island.machines_list = machines
         else:
             context.setdefault("islands", [])
@@ -2027,6 +2026,14 @@ class ServiceSessionCreateView(OwnerCompanyMixin, CreateView):
         profile = getattr(request.user, "profile", None)
         branch_id = getattr(profile, "current_branch_id", None)
 
+
+        # If the admin user does not have a current branch selected,
+        # fall back to the first branch they administrate.
+        if branch_id is None and profile:
+            admin_branch_ids = get_admin_branch_ids(profile)
+            if admin_branch_ids:
+                branch_id = admin_branch_ids[0]
+
         if branch_id:
             active_session = (
                 ServiceSession.objects.filter(
@@ -2797,6 +2804,7 @@ class ServiceSessionDetailView(OwnerCompanyMixin, DetailView):
                         machine_id = form.cleaned_data.get("machine_id")
                         fuel_inventory_id = form.cleaned_data.get("fuel_inventory_id")
                         slot = form.cleaned_data.get("slot")
+                        numeral = form.cleaned_data.get("numeral")
                         if (
                             machine_id is None
                             or fuel_inventory_id is None
