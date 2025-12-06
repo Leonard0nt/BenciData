@@ -79,23 +79,45 @@
     {% if is_owner or is_admin %}
     <div class="mt-6">
       <h2 class="text-lg font-semibold mb-2">Cambiar contraseña</h2>
-      <form method="post" class="space-y-4">
-        {% csrf_token %}
-        {% for hidden in password_form.hidden_fields %}{{ hidden }}{% endfor %}
-        <div>
-          <label class="block text-sm font-semibold text-gray-700">Nueva contraseña</label>
-          {{ password_form.new_password1 }}
-          {% if password_form.new_password1.errors %}<p class="text-sm text-red-600">{{ password_form.new_password1.errors|join:', ' }}</p>{% endif %}
+      <button type="button" id="openPasswordModal" class="inline-flex items-center rounded-md bg-gradient-to-br from-red-500 to-pink-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:from-red-600">Cambiar contraseña</button>
+    </div>
+
+    <div id="passwordModal" class="fixed inset-0 z-50 hidden overflow-y-auto" aria-labelledby="passwordModalTitle" aria-modal="true" role="dialog">
+      <div class="flex min-h-screen items-center justify-center px-4 py-8 text-center sm:block sm:p-0">
+        <div class="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" aria-hidden="true"></div>
+        <span class="hidden sm:inline-block sm:h-screen sm:align-middle" aria-hidden="true">&#8203;</span>
+
+        <div class="relative inline-block w-full max-w-md transform overflow-hidden rounded-lg bg-white text-left align-bottom shadow-xl transition-all sm:my-8 sm:align-middle">
+          <div class="flex items-start justify-between border-b px-4 py-3">
+            <h3 id="passwordModalTitle" class="text-lg font-semibold text-gray-900">Cambiar contraseña</h3>
+            <button type="button" id="closePasswordModal" class="text-gray-400 hover:text-gray-600">
+              <span class="sr-only">Cerrar</span>
+              &times;
+            </button>
+          </div>
+
+          <div class="px-6 py-4">
+            <form method="post" class="space-y-4">
+              {% csrf_token %}
+              {% for hidden in password_form.hidden_fields %}{{ hidden }}{% endfor %}
+              <div>
+                <label class="block text-sm font-semibold text-gray-700">Nueva contraseña</label>
+                {{ password_form.new_password1 }}
+                {% if password_form.new_password1.errors %}<p class="text-sm text-red-600">{{ password_form.new_password1.errors|join:', ' }}</p>{% endif %}
+              </div>
+              <div>
+                <label class="block text-sm font-semibold text-gray-700">Confirmar contraseña</label>
+                {{ password_form.new_password2 }}
+                {% if password_form.new_password2.errors %}<p class="text-sm text-red-600">{{ password_form.new_password2.errors|join:', ' }}</p>{% endif %}
+              </div>
+              <div class="flex justify-end space-x-2 pt-2">
+                <button type="button" id="cancelPasswordModal" class="rounded-md border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">Cancelar</button>
+                <button type="submit" name="change_password" class="inline-flex items-center rounded-md bg-gradient-to-br from-red-500 to-pink-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:from-red-600">Cambiar contraseña</button>
+              </div>
+            </form>
+          </div>
         </div>
-        <div>
-          <label class="block text-sm font-semibold text-gray-700">Confirmar contraseña</label>
-          {{ password_form.new_password2 }}
-          {% if password_form.new_password2.errors %}<p class="text-sm text-red-600">{{ password_form.new_password2.errors|join:', ' }}</p>{% endif %}
-        </div>
-        <div>
-          <button type="submit" name="change_password" class="inline-flex items-center rounded-md bg-gradient-to-br from-red-500 to-pink-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:from-red-600">Cambiar contraseña</button>
-        </div>
-      </form>
+      </div>
     </div>
     {% endif %}
   </div>
@@ -103,4 +125,29 @@
 
 {% block javascript %}
   <script defer src="{% static "js/script.js" %}"></script>
+  {% if is_owner or is_admin %}
+  <script>
+    document.addEventListener("DOMContentLoaded", function () {
+      const passwordModal = document.getElementById("passwordModal");
+      const openModalBtn = document.getElementById("openPasswordModal");
+      const closeModalBtn = document.getElementById("closePasswordModal");
+      const cancelModalBtn = document.getElementById("cancelPasswordModal");
+      const modalOverlay = passwordModal.querySelector(".bg-gray-500");
+
+      const closeModal = () => passwordModal.classList.add("hidden");
+      const openModal = () => passwordModal.classList.remove("hidden");
+
+      openModalBtn.addEventListener("click", openModal);
+      closeModalBtn.addEventListener("click", closeModal);
+      cancelModalBtn.addEventListener("click", closeModal);
+      modalOverlay.addEventListener("click", closeModal);
+
+      document.addEventListener("keydown", function (event) {
+        if (!passwordModal.classList.contains("hidden") && event.key === "Escape") {
+          closeModal();
+        }
+      });
+    });
+  </script>
+  {% endif %}
 {% endblock javascript %}
