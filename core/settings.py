@@ -51,6 +51,7 @@ LOCAL_APPS = [
     "homeApp",
     "UsuarioApp",
     "sucursalApp",
+    "iotApp",
 ]
 
 THIRD_APPS = [
