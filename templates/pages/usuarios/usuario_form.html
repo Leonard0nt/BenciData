@@ -110,11 +110,10 @@
       <button type="button" id="openPasswordModal" class="inline-flex items-center rounded-md bg-gradient-to-br from-red-500 to-pink-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:from-red-600">Cambiar contraseña</button>
     </div>
 
-    <div id="passwordModal" class="fixed inset-0 z-50 {% if password_form.errors %}{% else %}hidden{% endif %}" aria-labelledby="passwordModalTitle" aria-modal="true" role="dialog"></div>
-      <div id="passwordModalOverlay" class="fixed inset-0 bg-gray-900/80 backdrop-blur-sm transition-opacity" aria-hidden="true"></div>
-
+    <div id="passwordModal" class="fixed inset-0 z-50 {% if password_form.errors %}{% else %}hidden{% endif %}" aria-labelledby="passwordModalTitle" aria-modal="true" role="dialog">
+      <div id="passwordModalOverlay" class="fixed inset-0 bg-gray-900/80 backdrop-blur-sm transition-opacity z-0" aria-hidden="true"></div>
       <div class="flex min-h-full items-center justify-center px-4 py-6 sm:px-6 lg:px-8">
-        <div class="modal-panel w-full bg-white shadow-2xl flex flex-col" role="document">
+      <div class="relative z-10 flex min-h-full items-center justify-center px-4 py-6 sm:px-6 lg:px-8">
           <div class="flex items-start justify-between border-b border-gray-200 px-6 py-4">
             <div>
               <h3 id="passwordModalTitle" class="text-lg font-semibold text-gray-900">Cambiar contraseña</h3>
