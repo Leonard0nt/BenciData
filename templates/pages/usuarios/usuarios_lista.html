@@ -2,6 +2,53 @@
 {% load static %}
 
 {% block content_main %}
+  <style>
+    [x-cloak]{display:none!important}
+    .modal-panel{
+      width:100%;
+      max-width:42rem;
+      max-height:85vh;
+      overflow-y:auto;
+      overflow-x:hidden;
+      border-radius:0.75rem;
+    }
+    .profile-checkbox-grid{
+      display:grid;
+      gap:0.5rem;
+      max-height:20rem;
+      overflow-y:auto;
+      padding-right:0.25rem;
+      grid-template-columns:repeat(auto-fit,minmax(12rem,1fr));
+    }
+    @media (max-width: 639px){
+      .profile-checkbox-grid{
+        grid-template-columns:1fr;
+        max-height:none;
+      }
+    }
+    .profile-checkbox-grid::-webkit-scrollbar{
+      width:0.5rem;
+    }
+    .profile-checkbox-grid::-webkit-scrollbar-thumb{
+      background-color:rgba(79,70,229,0.35);
+      border-radius:9999px;
+    }
+    .profile-checkbox-option{
+      align-items:flex-start;
+      gap:0.5rem;
+      transition:border-color 0.2s ease, background-color 0.2s ease;
+    }
+    .profile-checkbox-option input[type="checkbox"]{
+      flex-shrink:0;
+      margin-top:0.15rem;
+      accent-color:#4f46e5;
+    }
+    .profile-checkbox-option input[type="checkbox"]:checked + span{
+      font-weight:600;
+      color:#1f2937;
+    }
+  </style>
+
   <div class="space-y-8 pb-10" x-data="{ openModal: null }" @keydown.escape.window="openModal = null">
 
     <template x-if="openModal">
