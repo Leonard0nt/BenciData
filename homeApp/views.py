@@ -164,23 +164,28 @@ class HomeView(LoginRequiredMixin, ListView):
                             max_digits=14, decimal_places=2
                         ),
                     ),
-                    net_turn_profit=ExpressionWrapper(
-                        F("turn_profit")
-                        - F("fuel_load_payment_total")
-                        - F("firefighter_payments_total")
-                        - F("product_load_payment_total"),
-                        output_field=DecimalField(
-                            max_digits=14, decimal_places=2
-                        ),
-                    ),
                 )
             )
 
             def build_series(queryset, trunc_fn, date_format: str):
+                profit_expression = (
+                    F("turn_profit")
+                    - F("fuel_load_payment_total")
+                    - F("firefighter_payments_total")
+                    - F("product_load_payment_total")
+                )
+
                 grouped = (
                     queryset.annotate(period=trunc_fn("ended_at"))
                     .values("period")
-                    .annotate(total_profit=Sum("net_turn_profit"))
+                    .annotate(
+                        total_profit=Sum(
+                            profit_expression,
+                            output_field=DecimalField(
+                                max_digits=14, decimal_places=2
+                            ),
+                        )
+                    )
                     .order_by("period")
                 )
                 return [
