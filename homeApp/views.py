@@ -177,56 +177,74 @@ class HomeView(LoginRequiredMixin, ListView):
             )
 
             def build_series(queryset, trunc_fn, date_format: str):
-                grouped = (
-                    queryset.annotate(period=trunc_fn("ended_at"))
-                    .values("period")
-                    .annotate(
-                        total_initial_budget=Coalesce(
-                            Sum("initial_budget"), zero_value
-                        ),
-                        total_credit=Coalesce(Sum("credit_total"), zero_value),
-                        total_voucher=Coalesce(Sum("voucher_total"), zero_value),
-                        total_withdrawal=Coalesce(
-                            Sum("withdrawal_total"), zero_value
-                        ),
-                        total_product_sales=Coalesce(
-                            Sum("product_sales_value"), zero_value
-                        ),
-                        total_fuel_payment=Coalesce(
-                            Sum("fuel_load_payment_total"), zero_value
-                        ),
-                        total_firefighter_payment=Coalesce(
-                            Sum("firefighter_payments_total"), zero_value
-                        ),
-                        total_product_load_payment=Coalesce(
-                            Sum("product_load_payment_total"), zero_value
-                        ),
-                    )
-                    .annotate(
-                        total_profit=ExpressionWrapper(
-                            F("total_initial_budget")
-                            + F("total_credit")
-                            + F("total_voucher")
-                            + F("total_withdrawal")
-                            + F("total_product_sales")
-                            - F("total_fuel_payment")
-                            - F("total_firefighter_payment")
-                            - F("total_product_load_payment"),
-                            output_field=DecimalField(
-                                max_digits=14, decimal_places=2
-                            ),
-                        )
-                    )
-                    .order_by("period")
+                records = queryset.annotate(period=trunc_fn("ended_at")).values(
+                    "period",
+                    "initial_budget",
+                    "credit_total",
+                    "voucher_total",
+                    "withdrawal_total",
+                    "product_sales_value",
+                    "fuel_load_payment_total",
+                    "firefighter_payments_total",
+                    "product_load_payment_total",
                 )
-                return [
-                    {
-                        "label": record["period"].strftime(date_format),
-                        "value": float(record["total_profit"] or decimal_zero),
-                    }
-                    for record in grouped
-                    if record["period"]
-                ]
+
+                grouped_totals: dict = {}
+                for record in records:
+                    period = record["period"]
+                    if not period:
+                        continue
+
+                    totals = grouped_totals.setdefault(
+                        period,
+                        {
+                            "total_initial_budget": decimal_zero,
+                            "total_credit": decimal_zero,
+                            "total_voucher": decimal_zero,
+                            "total_withdrawal": decimal_zero,
+                            "total_product_sales": decimal_zero,
+                            "total_fuel_payment": decimal_zero,
+                            "total_firefighter_payment": decimal_zero,
+                            "total_product_load_payment": decimal_zero,
+                        },
+                    )
+
+                    totals["total_initial_budget"] += record["initial_budget"] or decimal_zero
+                    totals["total_credit"] += record["credit_total"] or decimal_zero
+                    totals["total_voucher"] += record["voucher_total"] or decimal_zero
+                    totals["total_withdrawal"] += record["withdrawal_total"] or decimal_zero
+                    totals["total_product_sales"] += record["product_sales_value"] or decimal_zero
+                    totals["total_fuel_payment"] += record[
+                        "fuel_load_payment_total"
+                    ] or decimal_zero
+                    totals["total_firefighter_payment"] += record[
+                        "firefighter_payments_total"
+                    ] or decimal_zero
+                    totals["total_product_load_payment"] += record[
+                        "product_load_payment_total"
+                    ] or decimal_zero
+
+                grouped = []
+                for period, totals in grouped_totals.items():
+                    total_profit = (
+                        totals["total_initial_budget"]
+                        + totals["total_credit"]
+                        + totals["total_voucher"]
+                        + totals["total_withdrawal"]
+                        + totals["total_product_sales"]
+                        - totals["total_fuel_payment"]
+                        - totals["total_firefighter_payment"]
+                        - totals["total_product_load_payment"]
+                    )
+
+                    grouped.append(
+                        {
+                            "label": period.strftime(date_format),
+                            "value": float(total_profit or decimal_zero),
+                        }
+                    )
+
+                return sorted(grouped, key=lambda item: item["label"])
 
             for branch in branches:
                 branch_sessions = annotated_sessions.filter(shift__sucursal=branch)
