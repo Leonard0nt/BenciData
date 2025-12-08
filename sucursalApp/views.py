@@ -346,8 +346,7 @@ class SucursalUpdateView(OwnerCompanyMixin, UpdateView):
             profile = getattr(self.request.user, "profile", None)
             # Only owners and administrators can edit the branch
             can_edit_branch = bool(
-                self.request.user.is_superuser
-                or (profile and profile.has_role("ADMINISTRATOR"))
+                (profile and profile.has_role("ADMINISTRATOR"))
                 or (profile and profile.has_role("OWNER"))
             )
             can_manage_shifts = can_edit_branch
@@ -721,8 +720,7 @@ class SucursalUpdateView(OwnerCompanyMixin, UpdateView):
         self.object = self.get_object()
         profile = getattr(request.user, "profile", None)
         can_edit_branch = bool(
-            request.user.is_superuser
-            or (profile and profile.has_role("ADMINISTRATOR"))
+            (profile and profile.has_role("ADMINISTRATOR"))
             or (profile and profile.has_role("OWNER"))
         )
         if request.method == "POST" and not can_edit_branch:
@@ -1127,25 +1125,13 @@ class ServiceSessionSummaryExportView(OwnerCompanyMixin, View):
         response["Content-Disposition"] = f'attachment; filename=\"{filename}\"'
         return response
 
-class ServiceHistoryExportView(LoginRequiredMixin, View):
+class ServiceHistoryExportView(OwnerCompanyMixin, View):
     """
     Exporta un XLSX con todos los servicios cerrados de una sucursal,
     aplicando los mismos filtros del Historial (año, mes, turno).
     """
 
-    def _check_permissions(self, request):
-        profile = getattr(request.user, "profile", None)
-        allowed = bool(
-            request.user.is_superuser
-            or (profile and (
-                profile.has_role("OWNER")
-                or profile.has_role("ADMINISTRATOR")
-                or profile.has_role("ACCOUNTANT")
-                or profile.has_role("HEAD_ATTENDANT")
-            ))
-        )
-        if not allowed:
-            raise PermissionDenied("No tienes permisos para exportar este informe.")
+    allowed_roles = ["OWNER", "ADMINISTRATOR", "ACCOUNTANT", "HEAD_ATTENDANT"]
 
     def get(self, request, branch_pk, *args, **kwargs):
         from sucursalApp.models import Sucursal, ServiceSession
@@ -1160,9 +1146,10 @@ class ServiceHistoryExportView(LoginRequiredMixin, View):
         )
         from django.db.models import Prefetch
 
-        self._check_permissions(request)
-
-        branch = get_object_or_404(Sucursal, pk=branch_pk)
+        branch_ids = self.get_managed_branch_ids()
+        branch = get_object_or_404(
+            Sucursal.objects.filter(pk__in=branch_ids), pk=branch_pk
+        )
 
         # --- filtros desde la URL, mismos nombres que en el Historial ---
         year = request.GET.get("year") or ""

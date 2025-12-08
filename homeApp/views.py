@@ -1,4 +1,6 @@
 from decimal import Decimal, ROUND_HALF_UP
+from functools import reduce
+from operator import or_
 
 from django.views.generic import ListView
 from django.contrib.auth.mixins import LoginRequiredMixin
@@ -19,47 +21,22 @@ class HomeView(LoginRequiredMixin, ListView):
     model = User
     template_name = "pages/index.html"
 
-    def get_queryset(self):
-        last_connected_users = User.objects.filter(
-            Q(last_login__isnull=False)
-        ).order_by("-last_login")[:5]
-        return last_connected_users
-
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        # Agrega los usuarios activos al contexto
-        recent_activity_cutoff = timezone.now() - timezone.timedelta(minutes=2)
-        active_users = Profile.objects.filter(
-            last_activity__gte=recent_activity_cutoff
-        ).values_list("user_FK_id", flat=True)
-        context["active_users"] = active_users
-
+    def _resolve_scope(self):
+        profile = getattr(self.request.user, "profile", None)
         company = None
-        try:
-            profile = self.request.user.profile
-        except Profile.DoesNotExist:
-            profile = None
+        branches: list[Sucursal] = []
 
         if profile and (
             profile.is_owner() or profile.is_admin() or profile.is_accountant()
         ):
-            try:
-                company = profile.company
-            except Company.DoesNotExist:
-                company = None
-
+            company = Company.objects.filter(profile=profile).first()
             if not company and profile.company_rut:
                 normalized_rut = Company.normalize_rut(profile.company_rut)
                 company = Company.objects.filter(rut=normalized_rut).first()
 
-        fuel_dashboard: list[dict] = []
-        branches: list[Sucursal] | None = None
-
-        is_company_admin = bool(
-            profile and (profile.is_owner() or profile.is_admin())
-        )
-
-        if profile and profile.current_branch and not is_company_admin:
+        if profile and profile.current_branch and not (
+            profile.is_owner() or profile.is_admin()
+        ):
             branches = [profile.current_branch]
             company = company or profile.current_branch.company
         elif company:
@@ -83,6 +60,65 @@ class HomeView(LoginRequiredMixin, ListView):
                 branches = list(branches_qs.order_by("name"))
                 if not company and branches:
                     company = branches[0].company
+
+        return profile, company, branches
+
+    def _get_scoped_profiles(self, company: Company | None, branches: list[Sucursal]):
+        branch_ids = [branch.pk for branch in branches if branch and branch.pk]
+        if company:
+            branch_ids.extend(
+                company.branches.values_list("pk", flat=True)
+            )
+        branch_ids = list(dict.fromkeys(branch_ids))
+
+        filters: list[Q] = []
+        if company:
+            filters.append(Q(company_rut=company.rut))
+            if company.profile_id:
+                filters.append(Q(pk=company.profile_id))
+
+        if branch_ids:
+            filters.append(Q(current_branch_id__in=branch_ids))
+            filters.append(Q(sucursal_staff__sucursal_id__in=branch_ids))
+
+        if not filters:
+            return Profile.objects.none()
+
+        combined_filter = filters[0]
+        if len(filters) > 1:
+            combined_filter = reduce(or_, filters)
+
+        return Profile.objects.filter(combined_filter).distinct()
+
+    def get_queryset(self):
+        _, company, branches = self._resolve_scope()
+        scoped_profiles = self._get_scoped_profiles(company, branches)
+        scoped_user_ids = list(scoped_profiles.values_list("user_FK_id", flat=True))
+        if not scoped_user_ids:
+            return User.objects.none()
+
+        return (
+            User.objects.filter(id__in=scoped_user_ids, last_login__isnull=False)
+            .order_by("-last_login")[:5]
+        )
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        profile, company, branches = self._resolve_scope()
+        scoped_profiles = self._get_scoped_profiles(company, branches)
+
+        # Agrega los usuarios activos al contexto, limitados al alcance del usuario
+        recent_activity_cutoff = timezone.now() - timezone.timedelta(minutes=2)
+        active_users = scoped_profiles.filter(
+            last_activity__gte=recent_activity_cutoff
+        ).values_list("user_FK_id", flat=True)
+        context["active_users"] = active_users
+
+        is_company_admin = bool(
+            profile and (profile.is_owner() or profile.is_admin())
+        )
+
+        fuel_dashboard: list[dict] = []
 
         if branches:
             for branch in branches:

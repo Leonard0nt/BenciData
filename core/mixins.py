@@ -12,7 +12,7 @@ class RoleRequiredMixin:
         user = request.user
         profile = getattr(user, "profile", None)
 
-        if user.is_superuser or (profile and profile.has_role(self.allowed_roles)):
+        if profile and profile.has_role(self.allowed_roles):
             return super().dispatch(request, *args, **kwargs)
         return redirect(self.redirect_url)
 
