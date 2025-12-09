@@ -1,3 +1,4 @@
+from collections import defaultdict
 from decimal import Decimal, ROUND_HALF_UP
 import calendar
 import csv
@@ -2303,7 +2304,11 @@ class ServiceSessionDetailView(OwnerCompanyMixin, DetailView):
         machines = list(
             Machine.objects.filter(island__sucursal=branch)
             .select_related("island", "fuel_inventory")
-            .prefetch_related("fuel_inventories", "fuel_numerals__fuel_inventory")
+            .prefetch_related(
+                "fuel_inventories",
+                "fuel_numerals__fuel_inventory",
+                "fuel_numerals__nozzles",
+            )
         )
 
         machine_inventory_pairs = []
@@ -2331,6 +2336,44 @@ class ServiceSessionDetailView(OwnerCompanyMixin, DetailView):
                 current_machine = machine
                 current_items = []
             current_items.append((fuel_inventory, numeral_entry.numeral, form))
+
+        if current_items:
+            grouped_pairs.append((current_machine, current_items))
+
+        return grouped_pairs
+
+    @staticmethod
+    def _group_machine_nozzle_forms(machine_inventory_pairs, formset):
+        grouped_pairs = []
+        combined = list(zip(machine_inventory_pairs, formset.forms))
+
+        nozzle_lookup = defaultdict(list)
+        for machine, fuel_inventory, numeral_entry in machine_inventory_pairs:
+            for nozzle in machine.nozzles.all():
+                fuel_numeral = getattr(nozzle, "fuel_numeral", None)
+                if not fuel_numeral:
+                    continue
+                key = (fuel_numeral.machine_id, fuel_numeral.fuel_inventory_id, fuel_numeral.slot)
+                nozzle_lookup[key].append(nozzle)
+
+        current_machine = None
+        current_items = []
+
+        for (machine, fuel_inventory, numeral_entry), form in combined:
+            if machine != current_machine:
+                if current_items:
+                    grouped_pairs.append((current_machine, current_items))
+                current_machine = machine
+                current_items = []
+            key = (machine.pk, fuel_inventory.pk, numeral_entry.slot)
+            current_items.append(
+                (
+                    fuel_inventory,
+                    numeral_entry.numeral,
+                    form,
+                    nozzle_lookup.get(key, []),
+                )
+            )
 
         if current_items:
             grouped_pairs.append((current_machine, current_items))
@@ -2524,6 +2567,9 @@ class ServiceSessionDetailView(OwnerCompanyMixin, DetailView):
         machine_inventory_close_groups = self._group_machine_inventory_forms(
             machine_inventory_pairs, close_session_formset
         )
+        machine_nozzle_close_groups = self._group_machine_nozzle_forms(
+            machine_inventory_pairs, close_session_formset
+        )
         close_session_flow_details = kwargs.get("close_session_flow_details")
         close_session_flow_total = kwargs.get("close_session_flow_total")
         close_session_flow_missing_prices = kwargs.get(
@@ -2575,6 +2621,7 @@ class ServiceSessionDetailView(OwnerCompanyMixin, DetailView):
                 "firefighter_payments": firefighter_payments,
                 "service_close_formset": close_session_formset,
                 "machine_inventory_close_groups": machine_inventory_close_groups,
+                "machine_nozzle_close_groups": machine_nozzle_close_groups,
                 "branch_machines": branch_machines,
                 "service_session_closed": self.object.ended_at is not None,
                 "turn_profit": turn_profit,

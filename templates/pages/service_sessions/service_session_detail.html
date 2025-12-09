@@ -89,7 +89,7 @@
   <div
     id="tab-caja"
     class="tab-content mt-8 space-y-6"
-    x-data="{ saleModalOpen: false, withdrawModalOpen: false, creditModalOpen: false, firefighterPaymentModalOpen: false, transbankVoucherModalOpen: false, closeSessionModalOpen: false }"
+    x-data="{ saleModalOpen: false, withdrawModalOpen: false, creditModalOpen: false, firefighterPaymentModalOpen: false, transbankVoucherModalOpen: false, closeSessionModalOpen: false, closeSessionMode: 'numeral' }"
     @keydown.escape.window="saleModalOpen = false; withdrawModalOpen = false; creditModalOpen = false; firefighterPaymentModalOpen = false; transbankVoucherModalOpen = false; closeSessionModalOpen = false"
   >
     <section class="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
@@ -1035,6 +1035,27 @@
           </button>
         </div>
 
+        <div class="mt-4 flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <p class="text-sm font-semibold text-gray-800">Modo de registro</p>
+            <p class="text-xs text-gray-500">Alterna entre visualizar numerales por estanque o por pistola.</p>
+          </div>
+          <div class="inline-flex rounded-md border border-gray-200 bg-gray-50 p-1 text-sm font-medium text-gray-700 shadow-sm">
+            <button
+              type="button"
+              class="rounded-md px-3 py-1 transition"
+              :class="closeSessionMode === 'numeral' ? 'bg-white text-indigo-700 shadow-sm' : 'text-gray-600 hover:text-gray-800'"
+              @click="closeSessionMode = 'numeral'"
+            >Modo numeral</button>
+            <button
+              type="button"
+              class="rounded-md px-3 py-1 transition"
+              :class="closeSessionMode === 'pistola' ? 'bg-white text-indigo-700 shadow-sm' : 'text-gray-600 hover:text-gray-800'"
+              @click="closeSessionMode = 'pistola'"
+            >Modo pistola</button>
+          </div>
+        </div>
+
         {% if service_session_closed %}
           <div class="mt-4 rounded-md border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">
             Este servicio ya se encuentra cerrado. No es posible registrar nuevos numerales.
@@ -1054,109 +1075,158 @@
             {% endif %}
 
             <div class="space-y-4">
-              {% if machine_inventory_close_groups %}
-                {% for machine, inventories in machine_inventory_close_groups %}
-                  <div class="rounded-lg border border-gray-200 p-4 shadow-sm">
-                    <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-                      <div>
-                        <p class="text-sm font-semibold text-gray-900">Máquina {{ machine.number }} · Isla {{ machine.island.number }}</p>
-                        <p class="mt-1 text-xs text-gray-500">
-                          Estanques asociados:
-                          {% for inventory, current_numeral, inventory_form in inventories %}
-                            {{ inventory.code }}{% if not forloop.last %}, {% endif %}
-                          {% endfor %}
-                        </p>
-                      </div>
-                    </div>
-
-                    <div class="mt-4 space-y-4">
-                      {% for inventory, current_numeral, form in inventories %}
-                        {{ form.machine_id }}
-                        {{ form.fuel_inventory_id }}
-                        {{ form.slot }}
+              <template x-if="closeSessionMode === 'numeral'">
+                <div class="space-y-4" x-cloak>
+                  {% if machine_inventory_close_groups %}
+                    {% for machine, inventories in machine_inventory_close_groups %}
+                      <div class="rounded-lg border border-gray-200 p-4 shadow-sm">
                         <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                           <div>
-                            <p class="text-sm font-semibold text-gray-900">Estanque {{ inventory.code }} · {{ inventory.fuel_type }}</p>
-                            <p class="mt-1 text-xs text-gray-500">Numeral actual: {{ current_numeral }}</p>
-                          </div>
-                          <div class="sm:w-64">
-                            <label for="{{ form.numeral.id_for_label }}" class="block text-sm font-medium text-gray-700">Numeral</label>
-                            {{ form.numeral }}
-                            {% if form.numeral.errors %}
-                              <p class="mt-1 text-sm text-red-600">{{ form.numeral.errors|striptags }}</p>
-                            {% endif %}
+                            <p class="text-sm font-semibold text-gray-900">Máquina {{ machine.number }} · Isla {{ machine.island.number }}</p>
+                            <p class="mt-1 text-xs text-gray-500">
+                              Estanques asociados:
+                              {% for inventory, current_numeral, inventory_form in inventories %}
+                                {{ inventory.code }}{% if not forloop.last %}, {% endif %}
+                              {% endfor %}
+                            </p>
                           </div>
                         </div>
-                      {% endfor %}
-                    </div>
-                  </div>
-                {% endfor %}
-                {% if close_session_flow_details %}
-                  <div class="rounded-lg border border-emerald-200 bg-emerald-50 p-4">
-                    <div class="flex items-center justify-between gap-3">
-                      <div>
-                        <p class="text-sm font-semibold text-emerald-900">Flujo real estimado</p>
-                        <p class="text-xs text-emerald-800">Calculado con los numerales ingresados para este turno.</p>
-                      </div>
-                      <div class="rounded-full bg-white px-3 py-1 text-xs font-semibold text-emerald-800">
-                        $ {{ close_session_flow_total|default:0|floatformat:0 }}
-                      </div>
-                    </div>
 
-                    <div class="mt-4 divide-y divide-emerald-100 border-t border-emerald-100 text-sm text-emerald-900">
-                      {% for flow in close_session_flow_details %}
-                        <div class="flex flex-col gap-2 py-3 sm:flex-row sm:items-center sm:justify-between">
-                          <div>
-                            <p class="font-semibold">Máquina {{ flow.machine.number }} · Isla {{ flow.machine.island.number }}</p>
-                            <p class="text-xs text-emerald-700">Estanque {{ flow.fuel_inventory.code }} · {{ flow.fuel_type|default:"Combustible sin definir" }}</p>
-                          </div>
-                          <div class="grid grid-cols-2 gap-3 text-right sm:w-auto sm:grid-cols-3 sm:text-left">
-                            <div>
-                              <p class="text-xs text-emerald-700">Litros vendidos</p>
-                              <p class="font-semibold">{{ flow.liters_sold|floatformat:2 }} L</p>
-                            </div>
-                            <div>
-                              <p class="text-xs text-emerald-700">Precio por litro</p>
-                              <p class="font-semibold">
-                                {% if flow.price %}
-                                  $ {{ flow.price|floatformat:0 }}
-                                {% else %}
-                                  No definido
+                        <div class="mt-4 space-y-4">
+                          {% for inventory, current_numeral, form in inventories %}
+                            {{ form.machine_id }}
+                            {{ form.fuel_inventory_id }}
+                            {{ form.slot }}
+                            <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                              <div>
+                                <p class="text-sm font-semibold text-gray-900">Estanque {{ inventory.code }} · {{ inventory.fuel_type }}</p>
+                                <p class="mt-1 text-xs text-gray-500">Numeral actual: {{ current_numeral }}</p>
+                              </div>
+                              <div class="sm:w-64">
+                                <label for="{{ form.numeral.id_for_label }}" class="block text-sm font-medium text-gray-700">Numeral</label>
+                                {{ form.numeral }}
+                                {% if form.numeral.errors %}
+                                  <p class="mt-1 text-sm text-red-600">{{ form.numeral.errors|striptags }}</p>
                                 {% endif %}
-                              </p>
+                              </div>
                             </div>
-                            <div>
-                              <p class="text-xs text-emerald-700">Subtotal</p>
-                              <p class="font-semibold">$ {{ flow.flow_amount|floatformat:0 }}</p>
-                            </div>
-                          </div>
+                          {% endfor %}
                         </div>
-                      {% endfor %}
-                    </div>
-
-                    {% if close_session_flow_gap is not None %}
-                      <div class="mt-4 rounded-md border border-indigo-100 bg-indigo-50 p-4 text-sm text-indigo-900">
-                        <div class="flex items-center justify-between gap-3">
-                          <div>
-                            <p class="font-semibold">Resultado de descuadre</p>
-                            <p class="text-xs text-indigo-700">Flujo estimado menos ingresos del turno.</p>
-                          </div>
-                          <span class="rounded-full bg-white px-3 py-1 text-xs font-semibold text-indigo-800">
-                            {{ close_session_flow_mismatch_label }}
-                          </span>
-                        </div>
-                        <p class="mt-3 text-right text-lg font-semibold">$ {{ close_session_flow_gap|floatformat:0 }}</p>
                       </div>
-                    {% endif %}
+                    {% endfor %}
+                  {% else %}
+                    <div class="rounded-md border border-dashed border-gray-300 bg-gray-50 p-4 text-sm text-gray-600">
+                      No hay máquinas registradas en la sucursal para cerrar el servicio.
+                    </div>
+                  {% endif %}
+                </div>
+              </template>
 
-                    {% if close_session_flow_missing_prices %}
-                      <p class="mt-3 text-xs text-amber-700">Faltan precios para: {{ close_session_flow_missing_prices|join:', ' }}.</p>
-                    {% endif %}
+              <template x-if="closeSessionMode === 'pistola'">
+                <div class="space-y-4" x-cloak>
+                  {% if machine_nozzle_close_groups %}
+                    {% for machine, inventories in machine_nozzle_close_groups %}
+                      <div class="rounded-lg border border-gray-200 p-4 shadow-sm">
+                        <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                          <div>
+                            <p class="text-sm font-semibold text-gray-900">Máquina {{ machine.number }} · Isla {{ machine.island.number }}</p>
+                            <p class="mt-1 text-xs text-gray-500">Pistolas registradas: {{ machine.nozzles.all|length }}</p>
+                          </div>
+                        </div>
+
+                        <div class="mt-4 space-y-4">
+                          {% for inventory, current_numeral, form, nozzles in inventories %}
+                            {{ form.machine_id }}
+                            {{ form.fuel_inventory_id }}
+                            {{ form.slot }}
+                            <div class="flex flex-col gap-3 rounded-md border border-gray-100 bg-gray-50 p-4 sm:flex-row sm:items-center sm:justify-between">
+                              <div class="space-y-1">
+                                <p class="text-sm font-semibold text-gray-900">Pistola{{ nozzles|length|pluralize }}: {% if nozzles %}{% for nozzle in nozzles %}#{{ nozzle.number }}{% if not forloop.last %}, {% endif %}{% endfor %}{% else %}Sin pistolas asociadas{% endif %}</p>
+                                <p class="text-xs text-gray-600">Estanque {{ inventory.code }} · {{ inventory.fuel_type }}</p>
+                                <p class="text-xs text-gray-500">Numeral actual: {{ current_numeral }}</p>
+                              </div>
+                              <div class="sm:w-64">
+                                <label for="{{ form.numeral.id_for_label }}" class="block text-sm font-medium text-gray-700">Numeral</label>
+                                {{ form.numeral }}
+                                {% if form.numeral.errors %}
+                                  <p class="mt-1 text-sm text-red-600">{{ form.numeral.errors|striptags }}</p>
+                                {% endif %}
+                              </div>
+                            </div>
+                          {% endfor %}
+                        </div>
+                      </div>
+                    {% endfor %}
+                  {% else %}
+                    <div class="rounded-md border border-dashed border-gray-300 bg-gray-50 p-4 text-sm text-gray-600">
+                      No hay pistolas registradas para las máquinas de esta sucursal.
+                    </div>
+                  {% endif %}
+                </div>
+              </template>
+
+              {% if close_session_flow_details %}
+                <div class="rounded-lg border border-emerald-200 bg-emerald-50 p-4">
+                  <div class="flex items-center justify-between gap-3">
+                    <div>
+                      <p class="text-sm font-semibold text-emerald-900">Flujo real estimado</p>
+                      <p class="text-xs text-emerald-800">Calculado con los numerales ingresados para este turno.</p>
+                    </div>
+                    <div class="rounded-full bg-white px-3 py-1 text-xs font-semibold text-emerald-800">
+                      $ {{ close_session_flow_total|default:0|floatformat:0 }}
+                    </div>
                   </div>
-                {% endif %}
-              {% else %}
-                <div class="rounded-md border border-dashed border-gray-300 bg-gray-50 p-4 text-sm text-gray-600">
-                  No hay máquinas registradas en la sucursal para cerrar el servicio.
+
+                  <div class="mt-4 divide-y divide-emerald-100 border-t border-emerald-100 text-sm text-emerald-900">
+                    {% for flow in close_session_flow_details %}
+                      <div class="flex flex-col gap-2 py-3 sm:flex-row sm:items-center sm:justify-between">
+                        <div>
+                          <p class="font-semibold">Máquina {{ flow.machine.number }} · Isla {{ flow.machine.island.number }}</p>
+                          <p class="text-xs text-emerald-700">Estanque {{ flow.fuel_inventory.code }} · {{ flow.fuel_type|default:"Combustible sin definir" }}</p>
+                        </div>
+                        <div class="grid grid-cols-2 gap-3 text-right sm:w-auto sm:grid-cols-3 sm:text-left">
+                          <div>
+                            <p class="text-xs text-emerald-700">Litros vendidos</p>
+                            <p class="font-semibold">{{ flow.liters_sold|floatformat:2 }} L</p>
+                          </div>                          <div>
+                            <p class="text-xs text-emerald-700">Precio por litro</p>
+                            <p class="font-semibold">
+                              {% if flow.price %}
+                                $ {{ flow.price|floatformat:0 }}
+                              {% else %}
+                                No definido
+                              {% endif %}
+                            </p>
+                          </div>
+                          <div>
+                            <p class="text-xs text-emerald-700">Subtotal</p>
+                            <p class="font-semibold">$ {{ flow.flow_amount|floatformat:0 }}</p>
+                          </div>
+
+                        </div>
+
+                      </div>
+                    {% endfor %}
+                  </div>
+
+                  {% if close_session_flow_gap is not None %}
+                    <div class="mt-4 rounded-md border border-indigo-100 bg-indigo-50 p-4 text-sm text-indigo-900">
+                      <div class="flex items-center justify-between gap-3">
+                        <div>
+                          <p class="font-semibold">Resultado de descuadre</p>
+                          <p class="text-xs text-indigo-700">Flujo estimado menos ingresos del turno.</p>
+                        </div>
+                        <span class="rounded-full bg-white px-3 py-1 text-xs font-semibold text-indigo-800">
+                          {{ close_session_flow_mismatch_label }}
+                        </span>
+                      </div>
+                      <p class="mt-3 text-right text-lg font-semibold">$ {{ close_session_flow_gap|floatformat:0 }}</p>
+                    </div>
+                  {% endif %}
+
+                  {% if close_session_flow_missing_prices %}
+                    <p class="mt-3 text-xs text-amber-700">Faltan precios para: {{ close_session_flow_missing_prices|join:', ' }}.</p>
+                  {% endif %}
                 </div>
               {% endif %}
             </div>

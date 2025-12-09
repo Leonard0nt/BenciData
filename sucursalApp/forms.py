@@ -1698,10 +1698,22 @@ class MachineInventoryClosingForm(forms.Form):
             self.fields["machine_id"].initial = machine.pk
         if fuel_inventory:
             self.fields["fuel_inventory_id"].initial = fuel_inventory.pk
+            nozzle_codes: list[str] = []
+            if numeral_entry:
+                nozzle_codes = [
+                    str(code)
+                    for code in numeral_entry.nozzles.order_by("number").values_list(
+                        "number", flat=True
+                    )
+                ]
+
             slot_label = numeral_entry.slot if numeral_entry else 1
+            label_suffix = (
+                f"Pistola(s) {', '.join(nozzle_codes)}" if nozzle_codes else f"Numeral #{slot_label}"
+            )
             self.fields["numeral"].label = (
                 f"Máquina {machine.number} · Estanque {fuel_inventory.code}"
-                f" · Numeral #{slot_label}"
+                f" · {label_suffix}"
             )
         if numeral_entry:
             self.fields["slot"].initial = numeral_entry.slot
