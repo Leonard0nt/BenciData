@@ -318,7 +318,11 @@ class MachineFuelInventoryNumeral(models.Model):
         unique_together = (("machine", "fuel_inventory", "slot"),)
 
     def __str__(self) -> str:
-        return f"Máquina {self.machine.number} · Estanque {self.fuel_inventory.code}"
+        return (
+            f"Máquina {self.machine.number} · "
+            f"Estanque {self.fuel_inventory.code} · "
+            f"Numeral {self.numeral} · Slot #{self.slot}"
+        )
 
 
 class Nozzle(models.Model):

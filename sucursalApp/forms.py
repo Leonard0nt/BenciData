@@ -560,7 +560,7 @@ class NozzleForm(forms.ModelForm):
             numeral_queryset = MachineFuelInventoryNumeral.objects.none()
             if self._form_machine:
                 numeral_queryset = MachineFuelInventoryNumeral.objects.filter(
-                    machine=self._form_machine
+                    machine=self._form_machine, numeral__gt=0
                 )
             fuel_field.queryset = numeral_queryset.select_related("fuel_inventory").order_by(
                 "fuel_inventory__code", "slot", "pk"
