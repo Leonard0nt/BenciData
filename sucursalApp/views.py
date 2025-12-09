@@ -52,6 +52,7 @@ from .forms import (
     ServiceSessionForm,
     SucursalForm,
 )
+from iotApp.models import DispenseEvent
 from .models import (
     BranchProduct,
     FuelInventory,
@@ -2348,6 +2349,8 @@ class ServiceSessionDetailView(OwnerCompanyMixin, DetailView):
         combined = list(zip(machine_inventory_pairs, formset.forms))
 
         nozzle_lookup = defaultdict(list)
+        nozzle_lookup_ids = defaultdict(set)
+
         for machine, fuel_inventory, numeral_entry in machine_inventory_pairs:
             for nozzle in machine.nozzles.all():
                 fuel_numeral = getattr(nozzle, "fuel_numeral", None)
@@ -2355,6 +2358,10 @@ class ServiceSessionDetailView(OwnerCompanyMixin, DetailView):
                     continue
                 fuel_numeral_id = fuel_numeral.pk
                 key = (fuel_numeral.machine_id, fuel_numeral.fuel_inventory_id, fuel_numeral_id)
+
+                if nozzle.pk in nozzle_lookup_ids[key]:
+                    continue
+                nozzle_lookup_ids[key].add(nozzle.pk)
                 nozzle_lookup[key].append(nozzle)
 
         current_machine = None
@@ -2475,6 +2482,16 @@ class ServiceSessionDetailView(OwnerCompanyMixin, DetailView):
             .values("product_id")
             .annotate(total_sold=Coalesce(Sum("quantity"), 0))
         }
+        iot_dispense_events = (
+            DispenseEvent.objects.filter(service_session=self.object)
+            .select_related(
+                "nozzle__machine__island",
+                "nozzle__fuel_numeral__fuel_inventory",
+                "fuel_numeral__fuel_inventory",
+                "firefighter__user_FK",
+            )
+            .order_by("-created_at")
+        )
         branch_products = list(branch.products.all())
         for product in branch_products:
             product.session_added_quantity = product_additions.get(product.pk, 0)
@@ -2598,6 +2615,7 @@ class ServiceSessionDetailView(OwnerCompanyMixin, DetailView):
                 "credit_sale_responsible": current_profile,
                 "credit_sales": credit_sales,
                 "service_date": self.object.started_at.date(),
+                "iot_dispense_events": iot_dispense_events,
                 "withdrawals": withdrawals,
                 "withdraw_form": withdraw_form,
                 "withdraw_responsible": current_profile,

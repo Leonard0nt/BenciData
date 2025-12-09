@@ -261,6 +261,68 @@
         {% endif %}
       </div>
 
+      <div class="mt-10 rounded-xl border border-sky-100 bg-sky-50/50 p-4 sm:p-6">
+        <div class="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <h3 class="text-base font-semibold text-gray-900">Informe de lecturas IoT</h3>
+            <p class="mt-1 text-sm text-gray-600">Registros recibidos desde las pistolas conectadas a la sucursal.</p>
+          </div>
+          <span class="inline-flex items-center rounded-full bg-white px-3 py-1 text-sm font-medium text-sky-700">
+            {{ iot_dispense_events|length }} lectura{{ iot_dispense_events|length|pluralize:"s" }}
+          </span>
+        </div>
+
+        {% if iot_dispense_events %}
+          <div class="mt-4 overflow-hidden rounded-lg border border-gray-200 bg-white">
+            <table class="min-w-full w-full divide-y divide-gray-200">
+              <thead class="bg-gray-50">
+                <tr class="text-left text-xs font-semibold uppercase tracking-wide text-gray-500">
+                  <th scope="col" class="px-4 py-3">Fecha</th>
+                  <th scope="col" class="px-4 py-3">Hora</th>
+                  <th scope="col" class="px-4 py-3">Pistola</th>
+                  <th scope="col" class="px-4 py-3">Numeral</th>
+                  <th scope="col" class="px-4 py-3">Bombero</th>
+                  <th scope="col" class="px-4 py-3 text-right">Litros</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-gray-200 bg-white text-sm">
+                {% for event in iot_dispense_events %}
+                  <tr>
+                    <td class="px-4 py-3 text-gray-700">{{ event.created_at|date:"d/m/Y" }}</td>
+                    <td class="px-4 py-3 text-gray-700">{{ event.created_at|date:"H:i" }}</td>
+                    <td class="px-4 py-3">
+                      <p class="font-medium text-gray-900">Pistola #{{ event.nozzle.number|default:event.pistola|default:"-" }}</p>
+                      <p class="text-xs text-gray-500">Código {{ event.nozzle.code|default:event.pistola|default:"N/D" }}</p>
+                    </td>
+                    <td class="px-4 py-3 text-gray-700">
+                      {% if event.fuel_numeral %}
+                        Estanque {{ event.fuel_numeral.fuel_inventory.code }} · {{ event.fuel_numeral.slot|default:"-" }}
+                      {% elif event.nozzle and event.nozzle.fuel_numeral %}
+                        Estanque {{ event.nozzle.fuel_numeral.fuel_inventory.code }} · {{ event.nozzle.fuel_numeral.slot|default:"-" }}
+                      {% else %}
+                        Sin numeral asociado
+                      {% endif %}
+                    </td>
+                    <td class="px-4 py-3 text-gray-700">
+                      {% if event.firefighter %}
+                        {{ event.firefighter.user_FK.get_full_name|default:event.firefighter.user_FK.username }}
+                      {% else %}
+                        UID {{ event.uid }}
+                      {% endif %}
+                    </td>
+                    <td class="px-4 py-3 text-right font-semibold text-gray-900">{{ event.litros|floatformat:2 }} L</td>
+                  </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        {% else %}
+          <div class="mt-4 rounded-lg border border-dashed border-gray-300 bg-white/80 p-4 text-sm text-gray-600">
+            Aún no se reciben lecturas IoT para este servicio. Cuando las pistolas envíen datos, aparecerán aquí con su código y bombero asociado.
+          </div>
+        {% endif %}
+      </div>
+
       <div class="mt-10 rounded-xl border border-emerald-100 bg-emerald-50/40 p-4 sm:p-6">
         <div class="flex flex-wrap items-center justify-between gap-3">
           <div>

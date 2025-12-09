@@ -335,7 +335,15 @@ class Nozzle(models.Model):
         verbose_name="Máquina",
     )
     number = models.PositiveIntegerField("Número")
-
+    code = models.CharField(
+        "Código IoT",
+        max_length=50,
+        unique=True,
+        blank=True,
+        null=True,
+        help_text="Código enviado por la pistola para vincular lecturas IoT.",
+    )
+    
     fuel_type = models.CharField(
         "Tipo de combustible",
         max_length=50,

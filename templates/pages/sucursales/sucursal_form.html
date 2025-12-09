@@ -1021,6 +1021,7 @@
                                 <div>
                                   <span class="text-sm font-medium text-gray-800">Pistola {{ nozzle.number }}</span>
                                   <span class="block text-xs text-gray-500">{{ nozzle.fuel_type }}</span>
+                                  <span class="block text-xs text-gray-500">Código IoT: {{ nozzle.code|default:"Sin asignar" }}</span>
                                   {% if nozzle.fuel_numeral %}
                                     <span class="block text-xs text-gray-500">Numeral: Estanque {{ nozzle.fuel_numeral.fuel_inventory.code }} #{{ nozzle.fuel_numeral.slot }}</span>
                                     <span class="block text-xs text-gray-500">Valor numeral: {{ nozzle.fuel_numeral.numeral }}</span>

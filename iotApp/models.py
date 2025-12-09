@@ -6,6 +6,34 @@ class DispenseEvent(models.Model):
     uid = models.CharField(max_length=100)          # UID NFC del bombero
     litros = models.FloatField()                    # Litros despachados
     pistola = models.IntegerField(null=True, blank=True)  # ID de la pistola
+        nozzle = models.ForeignKey(
+        "sucursalApp.Nozzle",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="dispense_events",
+    )
+    fuel_numeral = models.ForeignKey(
+        "sucursalApp.MachineFuelInventoryNumeral",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="dispense_events",
+    )
+    firefighter = models.ForeignKey(
+        "UsuarioApp.Profile",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="dispense_events",
+    )
+    service_session = models.ForeignKey(
+        "sucursalApp.ServiceSession",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="dispense_events",
+    )
     timestamp_arduino = models.CharField(
         max_length=100, null=True, blank=True
     )  # lo que te mande el Arduino (epoch, ISO, etc.)

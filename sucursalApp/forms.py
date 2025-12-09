@@ -591,12 +591,19 @@ class NozzleForm(forms.ModelForm):
         fields = [
             "machine",
             "number",
+            "code",
             "fuel_numeral",
             "description",
         ]
         widgets = {
             "machine": forms.HiddenInput(),
             "number": forms.NumberInput(attrs={"class": "w-full border rounded p-2"}),
+            "code": forms.TextInput(
+                attrs={
+                    "class": "w-full border rounded p-2",
+                    "placeholder": "Código enviado por la pistola",
+                }
+            ),
             "fuel_numeral": forms.Select(
                 attrs={"class": "w-full border rounded p-2"}
             ),
