@@ -6,7 +6,7 @@ class DispenseEvent(models.Model):
     uid = models.CharField(max_length=100)          # UID NFC del bombero
     litros = models.FloatField()                    # Litros despachados
     pistola = models.IntegerField(null=True, blank=True)  # ID de la pistola
-        nozzle = models.ForeignKey(
+    nozzle = models.ForeignKey(
         "sucursalApp.Nozzle",
         on_delete=models.SET_NULL,
         null=True,
