@@ -1160,12 +1160,12 @@
                             {{ form.machine_id }}
                             {{ form.fuel_inventory_id }}
                             {{ form.slot }}
-                            <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                            <div class="grid gap-4 sm:grid-cols-[minmax(0,1fr)_18rem] sm:items-start sm:gap-6">
                               <div>
                                 <p class="text-sm font-semibold text-gray-900">Estanque {{ inventory.code }} · {{ inventory.fuel_type }}</p>
                                 <p class="mt-1 text-xs text-gray-500">Numeral actual: {{ current_numeral }}</p>
                               </div>
-                              <div class="sm:w-64">
+                              <div class="sm:w-full sm:max-w-xs">
                                 <label for="{{ form.numeral.id_for_label }}" class="block text-sm font-medium text-gray-700">Numeral</label>
                                 {{ form.numeral }}
                                 {% if form.numeral.errors %}
@@ -1202,7 +1202,7 @@
                             {{ form.machine_id }}
                             {{ form.fuel_inventory_id }}
                             {{ form.slot }}
-                            <div class="flex flex-col gap-3 rounded-md border border-gray-100 bg-gray-50 p-4 sm:flex-row sm:items-center sm:justify-between">
+                            <div class="grid gap-3 rounded-md border border-gray-100 bg-gray-50 p-4 sm:grid-cols-[minmax(0,1fr)_18rem] sm:items-start sm:gap-6">
                               <div class="space-y-1">
                                 <p class="text-sm font-semibold text-gray-900">
                                   Pistola{{ nozzles|length|pluralize }}:
@@ -1217,9 +1217,9 @@
                                 <p class="text-xs text-gray-600">Estanque {{ inventory.code }} · {{ inventory.fuel_type }}</p>
                                 <p class="text-xs text-gray-500">Numeral actual: {{ current_numeral }}</p>
                               </div>
-                              <div class="sm:w-64">
+                              <div class="sm:w-full sm:max-w-xs">
                                 <label for="{{ form.numeral.id_for_label }}" class="block text-sm font-medium text-gray-700">Numeral</label>
-                                {{ form.numeral|attr:"disabled:disabled" }}
+                                {{ form.numeral }}
                                 {% if form.numeral.errors %}
                                   <p class="mt-1 text-sm text-red-600">{{ form.numeral.errors|striptags }}</p>
                                 {% endif %}

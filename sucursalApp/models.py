@@ -483,10 +483,15 @@ class Shift(models.Model):
         try:
             from UsuarioApp.models import Position
 
-            head_attendant_position = Position.objects.get(
-                permission_code="HEAD_ATTENDANT"
+            head_attendant_position = (
+                Position.objects.filter(permission_code="HEAD_ATTENDANT")
+                .order_by("id")
+                .first()
             )
-        except (ImportError, Position.DoesNotExist):
+        except ImportError:
+            return
+
+        if not head_attendant_position:
             return
 
         if manager_profile.position_FK_id != head_attendant_position.id:

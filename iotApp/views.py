@@ -32,7 +32,7 @@ def recibir_datos_proxy(request):
     # 2) Leer campos enviados por el Arduino
     uid = data.get("uid")              # Ej: "4 8C 8D B2 2B 64 81"
     litros = data.get("litros")        # Ej: 12.34
-    pistola = data.get("pistola")      # Ej: 1
+    pistola = data.get("pistola")      # Ej: 1 o "N1"
     timestamp = data.get("timestamp")  # Ej: millis, epoch, ISO, etc.
 
     # 3) Validar mínimos
@@ -47,13 +47,21 @@ def recibir_datos_proxy(request):
     fuel_numeral = None
     firefighter = None
     service_session = None
+    pistola_number = None
+    pistola_str = None
 
+    if pistola is not None:
+        pistola_str = str(pistola)
+        try:
+            pistola_number = int(pistola_str)
+        except (TypeError, ValueError):
+            pistola_number = None
     try:
         nozzle = (
             Nozzle.objects.select_related(
                 "machine__island__sucursal", "fuel_numeral__fuel_inventory"
             )
-            .filter(Q(code=str(pistola)) | Q(number=pistola))
+            .filter(Q(code=pistola_str) | Q(number=pistola_number))
             .first()
         )
         fuel_numeral = getattr(nozzle, "fuel_numeral", None)
@@ -90,7 +98,7 @@ def recibir_datos_proxy(request):
         fuel_numeral=fuel_numeral,
         firefighter=firefighter,
         service_session=service_session,
-        pistola=pistola,
+        pistola=pistola_str,
         timestamp_arduino=str(timestamp) if timestamp is not None else None,
     )
 

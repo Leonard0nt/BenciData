@@ -3,9 +3,11 @@ from django.db import models
 # Create your models here.
 
 class DispenseEvent(models.Model):
-    uid = models.CharField(max_length=100)          # UID NFC del bombero
-    litros = models.FloatField()                    # Litros despachados
-    pistola = models.IntegerField(null=True, blank=True)  # ID de la pistola
+    uid = models.CharField(max_length=100)  # UID NFC del bombero
+    litros = models.FloatField()  # Litros despachados
+    pistola = models.CharField(
+        max_length=50, null=True, blank=True
+    )  # ID o código enviado por la pistola
     nozzle = models.ForeignKey(
         "sucursalApp.Nozzle",
         on_delete=models.SET_NULL,
