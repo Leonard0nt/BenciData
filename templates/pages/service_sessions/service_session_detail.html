@@ -1166,7 +1166,12 @@
                               </div>
                               <div class="sm:w-64">
                                 <label for="{{ form.numeral.id_for_label }}" class="block text-sm font-medium text-gray-700">Numeral</label>
-                                {{ form.numeral }}
+                                {% if nozzles %}
+                                  {{ form.numeral }}
+                                {% else %}
+                                  {{ form.numeral.as_widget(attrs={"disabled": "disabled", "class": "cursor-not-allowed bg-gray-100 text-gray-500"}) }}
+                                  <input type="hidden" name="{{ form.numeral.html_name }}" value="{{ form.numeral.value|default_if_none:'' }}" />
+                                {% endif %}
                                 {% if form.numeral.errors %}
                                   <p class="mt-1 text-sm text-red-600">{{ form.numeral.errors|striptags }}</p>
                                 {% endif %}

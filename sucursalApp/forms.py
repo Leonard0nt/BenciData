@@ -1725,7 +1725,12 @@ class MachineInventoryClosingForm(forms.Form):
         if numeral_entry:
             self.fields["slot"].initial = numeral_entry.slot
         self.fields["numeral"].initial = self.current_numeral
-        self.fields["numeral"].min_value = self.current_numeral
+        self.fields["numeral"].widget.attrs.update(
+            {
+                "class": "mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-right",
+                "inputmode": "decimal",
+            }
+        )
         
     def clean_numeral(self):
         value = self.cleaned_data.get("numeral")
