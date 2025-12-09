@@ -1141,7 +1141,16 @@
                             {{ form.slot }}
                             <div class="flex flex-col gap-3 rounded-md border border-gray-100 bg-gray-50 p-4 sm:flex-row sm:items-center sm:justify-between">
                               <div class="space-y-1">
-                                <p class="text-sm font-semibold text-gray-900">Pistola{{ nozzles|length|pluralize }}: {% if nozzles %}{% for nozzle in nozzles %}#{{ nozzle.number }}{% if not forloop.last %}, {% endif %}{% endfor %}{% else %}Sin pistolas asociadas{% endif %}</p>
+                                <p class="text-sm font-semibold text-gray-900">
+                                  Pistola{{ nozzles|length|pluralize }}:
+                                  {% if nozzles %}
+                                    {% for nozzle in nozzles %}
+                                      {{ nozzle.number|default:nozzle.fuel_numeral.slot }}{% if not forloop.last %}, {% endif %}
+                                    {% endfor %}
+                                  {% else %}
+                                    Sin pistolas asociadas
+                                  {% endif %}
+                                </p>
                                 <p class="text-xs text-gray-600">Estanque {{ inventory.code }} · {{ inventory.fuel_type }}</p>
                                 <p class="text-xs text-gray-500">Numeral actual: {{ current_numeral }}</p>
                               </div>
