@@ -337,11 +337,11 @@ class Nozzle(models.Model):
         max_length=50,
         blank=True,
     )
-    fuel_inventory = models.ForeignKey(
-        "FuelInventory",
+    fuel_numeral = models.ForeignKey(
+        MachineFuelInventoryNumeral,
         on_delete=models.PROTECT,
         related_name="nozzles",
-        verbose_name="Estanque",
+        verbose_name="Numeral",
         blank=True,
         null=True,
     )
@@ -359,15 +359,32 @@ class Nozzle(models.Model):
         return f"Pistola {self.number} - {self.machine}"
 
     def save(self, *args, **kwargs):
-        if self.fuel_inventory:
-            self.fuel_type = self.fuel_inventory.fuel_type
+        if self.fuel_numeral:
+            self.fuel_type = self.fuel_numeral.fuel_inventory.fuel_type
         elif self.machine:
             primary_inventory = getattr(self.machine, "primary_fuel_inventory", None)
-            self.fuel_type = getattr(primary_inventory, "fuel_type", "")
+            if primary_inventory:
+                primary_numeral = (
+                    MachineFuelInventoryNumeral.objects.filter(
+                        machine=self.machine, fuel_inventory=primary_inventory
+                    )
+                    .order_by("slot", "pk")
+                    .first()
+                )
+                self.fuel_numeral = primary_numeral
+                self.fuel_type = getattr(primary_inventory, "fuel_type", "")
+            else:
+                self.fuel_type = ""
         else:
             self.fuel_type = ""
 
         super().save(*args, **kwargs)
+
+    @property
+    def fuel_inventory(self):
+        if self.fuel_numeral:
+            return self.fuel_numeral.fuel_inventory
+        return None
 
 class Shift(models.Model):
     """Gestiona los turnos configurados para una sucursal."""

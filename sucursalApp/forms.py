@@ -555,34 +555,33 @@ class NozzleForm(forms.ModelForm):
     def __init__(self, *args, machine: Optional[Machine] = None, **kwargs):
         self._form_machine = machine or kwargs.get("initial", {}).get("machine")
         super().__init__(*args, **kwargs)
-        fuel_field = self.fields.get("fuel_inventory")
+        fuel_field = self.fields.get("fuel_numeral")
         if fuel_field:
-            queryset = FuelInventory.objects.all()
+            numeral_queryset = MachineFuelInventoryNumeral.objects.none()
             if self._form_machine:
-                queryset = queryset.filter(
-                    associated_machines=self._form_machine
-                ) | queryset.filter(machines=self._form_machine)
-            fuel_field.queryset = queryset.distinct().order_by("code")
-            fuel_field.empty_label = "Selecciona un estanque"
-            fuel_field.required = True
-
-    def clean_fuel_inventory(self):
-        fuel_inventory = self.cleaned_data.get("fuel_inventory")
-        machine = self.cleaned_data.get("machine") or self._form_machine
-        if fuel_inventory and machine:
-            if not machine.fuel_inventories.filter(pk=fuel_inventory.pk).exists() and (
-                machine.fuel_inventory_id != fuel_inventory.pk
-            ):
-                raise ValidationError(
-                    "El estanque seleccionado debe estar asociado a la máquina."
+                numeral_queryset = MachineFuelInventoryNumeral.objects.filter(
+                    machine=self._form_machine
                 )
-        return fuel_inventory
+            fuel_field.queryset = numeral_queryset.select_related("fuel_inventory").order_by(
+                "fuel_inventory__code", "slot", "pk"
+            )
+            fuel_field.empty_label = "Selecciona un numeral"
+            fuel_field.required = fuel_field.queryset.exists()
+
+    def clean_fuel_numeral(self):
+        fuel_numeral = self.cleaned_data.get("fuel_numeral")
+        machine = self.cleaned_data.get("machine") or self._form_machine
+        if fuel_numeral and machine and fuel_numeral.machine_id != machine.pk:
+            raise ValidationError(
+                "El numeral seleccionado debe pertenecer a la máquina."
+            )
+        return fuel_numeral
 
     def save(self, commit=True):
         nozzle: Nozzle = super().save(commit=False)
-        fuel_inventory = self.cleaned_data.get("fuel_inventory")
-        if fuel_inventory:
-            nozzle.fuel_type = fuel_inventory.fuel_type
+        fuel_numeral = self.cleaned_data.get("fuel_numeral")
+        if fuel_numeral:
+            nozzle.fuel_type = fuel_numeral.fuel_inventory.fuel_type
         if commit:
             nozzle.save()
         return nozzle
@@ -592,13 +591,13 @@ class NozzleForm(forms.ModelForm):
         fields = [
             "machine",
             "number",
-            "fuel_inventory",
+            "fuel_numeral",
             "description",
         ]
         widgets = {
             "machine": forms.HiddenInput(),
             "number": forms.NumberInput(attrs={"class": "w-full border rounded p-2"}),
-            "fuel_inventory": forms.Select(
+            "fuel_numeral": forms.Select(
                 attrs={"class": "w-full border rounded p-2"}
             ),
             "description": forms.TextInput(attrs={"class": "w-full border rounded p-2"}),

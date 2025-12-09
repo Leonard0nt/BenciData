@@ -671,11 +671,16 @@ class SucursalUpdateView(OwnerCompanyMixin, UpdateView):
                     machine.update_form = MachineForm(
                         instance=machine, auto_id=f"edit-machine-{machine.pk}_%s"
                     )
-                    machine.nozzle_create_form = NozzleForm(
-                        auto_id=f"new-nozzle-{machine.pk}_%s",
-                        initial={"machine": machine},
-                        machine=machine,
-                    )
+                    if MachineFuelInventoryNumeral.objects.filter(
+                        machine=machine
+                    ).exists():
+                        machine.nozzle_create_form = NozzleForm(
+                            auto_id=f"new-nozzle-{machine.pk}_%s",
+                            initial={"machine": machine},
+                            machine=machine,
+                        )
+                    else:
+                        machine.nozzle_create_form = None
                     nozzles = list(machine.nozzles.all())
                     for nozzle in nozzles:
                         nozzle.update_form = NozzleForm(
