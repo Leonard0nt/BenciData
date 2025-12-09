@@ -1219,14 +1219,7 @@
                               </div>
                               <div class="sm:w-64">
                                 <label for="{{ form.numeral.id_for_label }}" class="block text-sm font-medium text-gray-700">Numeral</label>
-                                {{
-                                  form.numeral.as_widget(
-                                    attrs={
-                                      "readonly": "readonly",
-                                      "class": "mt-1 block w-full rounded-md border-gray-300 bg-gray-100 text-gray-500 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-right cursor-not-allowed",
-                                    }
-                                  )
-                                }}
+                                {{ form.numeral|attr:"disabled:disabled" }}
                                 {% if form.numeral.errors %}
                                   <p class="mt-1 text-sm text-red-600">{{ form.numeral.errors|striptags }}</p>
                                 {% endif %}
