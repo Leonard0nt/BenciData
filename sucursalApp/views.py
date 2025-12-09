@@ -936,6 +936,7 @@ class SucursalUpdateView(OwnerCompanyMixin, UpdateView):
         form = NozzleForm(
             request.POST,
             instance=nozzle,
+            machine=nozzle.machine,
             auto_id=f"edit-nozzle-{nozzle.pk}_%s",
         )
         if form.is_valid():
