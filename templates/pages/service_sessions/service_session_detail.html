@@ -1145,10 +1145,10 @@
                                   Pistola{{ nozzles|length|pluralize }}:
                                   {% if nozzles %}
                                     {% for nozzle in nozzles %}
-                                      {{ nozzle.number|default:nozzle.fuel_numeral.slot }}{% if not forloop.last %}, {% endif %}
+                                      #{{ nozzle.number|default:nozzle.fuel_numeral.slot }}{% if not forloop.last %}, {% endif %}
                                     {% endfor %}
                                   {% else %}
-                                    Sin pistolas asociadas
+                                    Sin pistolas asociadas&nbsp;
                                   {% endif %}
                                 </p>
                                 <p class="text-xs text-gray-600">Estanque {{ inventory.code }} · {{ inventory.fuel_type }}</p>

@@ -2353,7 +2353,8 @@ class ServiceSessionDetailView(OwnerCompanyMixin, DetailView):
                 fuel_numeral = getattr(nozzle, "fuel_numeral", None)
                 if not fuel_numeral:
                     continue
-                key = (fuel_numeral.machine_id, fuel_numeral.fuel_inventory_id, fuel_numeral.slot)
+                fuel_numeral_id = fuel_numeral.pk
+                key = (fuel_numeral.machine_id, fuel_numeral.fuel_inventory_id, fuel_numeral_id)
                 nozzle_lookup[key].append(nozzle)
 
         current_machine = None
@@ -2365,7 +2366,7 @@ class ServiceSessionDetailView(OwnerCompanyMixin, DetailView):
                     grouped_pairs.append((current_machine, current_items))
                 current_machine = machine
                 current_items = []
-            key = (machine.pk, fuel_inventory.pk, numeral_entry.slot)
+            key = (machine.pk, fuel_inventory.pk, numeral_entry.pk)
             current_items.append(
                 (
                     fuel_inventory,
