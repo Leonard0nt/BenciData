@@ -2012,7 +2012,7 @@ class ServiceSessionCreateView(OwnerCompanyMixin, CreateView):
     form_class = ServiceSessionForm
     template_name = "pages/service_sessions/service_session_start.html"
     # Allow HEAD_ATTENDANT (bombero encargado) to start services
-    allowed_roles = ["OWNER", "ADMINISTRATOR", "HEAD_ATTENDANT"]
+    allowed_roles = ["ADMINISTRATOR", "HEAD_ATTENDANT"]
 
     def dispatch(self, request, *args, **kwargs):
         """Redirect to the running service if the current branch already has one."""

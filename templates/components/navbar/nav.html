@@ -33,19 +33,21 @@
           {% endif %}
         {% endif %}
 
-        {% if user.profile.is_owner or user.profile.is_admin or user.profile.is_head_ATTENDANT or user.profile.position_FK.permission_code == 'HEAD_ATTENDANT' or has_active_service_assigned %}
-          <li>
-            {% url 'service_session_start' as service_session_start_url %}
-            {% with service_session_target=service_session_link|default:service_session_start_url %}
-            <a href="{{ service_session_target }}" class=" menu-item {% if '/servicios/' in request.path %} text-white bg-current {% else %} text-gray-400 hover:text-white hover:bg-gray-800 {% endif %}">
-              <svg class="h-6 w-6 shrink-0" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" aria-hidden="true">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h6" />
-                <path stroke-linecap="round" stroke-linejoin="round" d="M21 12a9 9 0 11-9-9" />
-              </svg>
-              Inicio de servicio
-            </a>
-            {% endwith %}
-          </li>
+        {% if not user.profile.is_owner %}
+          {% if user.profile.is_admin or user.profile.is_head_ATTENDANT or user.profile.position_FK.permission_code == 'HEAD_ATTENDANT' or has_active_service_assigned %}
+            <li>
+              {% url 'service_session_start' as service_session_start_url %}
+              {% with service_session_target=service_session_link|default:service_session_start_url %}
+              <a href="{{ service_session_target }}" class=" menu-item {% if '/servicios/' in request.path %} text-white bg-current {% else %} text-gray-400 hover:text-white hover:bg-gray-800 {% endif %}">
+                <svg class="h-6 w-6 shrink-0" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" aria-hidden="true">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h6" />
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M21 12a9 9 0 11-9-9" />
+                </svg>
+                Inicio de servicio
+              </a>
+              {% endwith %}
+            </li>
+          {% endif %}
         {% endif %}
         {% if user.profile.is_owner or user.profile.is_admin or user.profile.is_accountant or user.profile.is_ATTENDANT or user.profile.is_head_ATTENDANT %}
           <li>
