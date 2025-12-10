@@ -1103,22 +1103,18 @@
         <div class="mt-4 flex flex-wrap items-center justify-between gap-3">
           <div>
             <p class="text-sm font-semibold text-gray-800">Modo de registro</p>
-            <p class="text-xs text-gray-500">Alterna entre visualizar numerales por estanque o por pistola.</p>
+            <p class="text-xs text-gray-500">El cierre seguirá el modo elegido al iniciar el turno y no puede modificarse.</p>
             <p class="mt-1 text-xs text-indigo-700">Modo definido al iniciar el servicio: <span class="font-semibold">{{ service_session.get_close_mode_display|default:"Modo numeral" }}</span>.</p>
           </div>
           <div class="inline-flex rounded-md border border-gray-200 bg-gray-50 p-1 text-sm font-medium text-gray-700 shadow-sm">
-            <button
-              type="button"
+            <span
               class="rounded-md px-3 py-1 transition"
-              :class="closeSessionMode === 'numeral' ? 'bg-white text-indigo-700 shadow-sm' : 'text-gray-600 hover:text-gray-800'"
-              @click="closeSessionMode = 'numeral'"
-            >Modo numeral</button>
-            <button
-              type="button"
+              :class="closeSessionMode === 'numeral' ? 'bg-white text-indigo-700 shadow-sm' : 'text-gray-500'"
+            >Modo numeral</span>
+            <span
               class="rounded-md px-3 py-1 transition"
-              :class="closeSessionMode === 'pistola' ? 'bg-white text-indigo-700 shadow-sm' : 'text-gray-600 hover:text-gray-800'"
-              @click="closeSessionMode = 'pistola'"
-            >Modo pistola</button>
+              :class="closeSessionMode === 'pistola' ? 'bg-white text-indigo-700 shadow-sm' : 'text-gray-500'"
+            >Modo pistola</span>
           </div>
         </div>
 

@@ -590,8 +590,7 @@ class SucursalUpdateView(OwnerCompanyMixin, UpdateView):
                 )
 
                 turn_profit = (
-                    (session.initial_budget or decimal_zero)
-                    + credit_total
+                    credit_total
                     + voucher_total
                     + withdrawal_total
                     + product_sale_value_total
@@ -1050,8 +1049,7 @@ class ServiceSessionSummaryExportView(OwnerCompanyMixin, View):
         )
 
         turn_profit = (
-            (session.initial_budget or decimal_zero)
-            + credit_total
+            credit_total
             + voucher_total
             + withdrawal_total
             + product_sale_value_total
