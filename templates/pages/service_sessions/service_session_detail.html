@@ -305,10 +305,12 @@
                       {% endif %}
                     </td>
                     <td class="px-4 py-3 text-gray-700">
-                      {% if event.firefighter %}
-                        {{ event.firefighter.user_FK.get_full_name|default:event.firefighter.user_FK.username }}
-                      {% else %}
+                      {% if event.resolved_firefighter %}
+                        {{ event.resolved_firefighter.user_FK.get_full_name|default:event.resolved_firefighter.user_FK.username }}
+                      {% elif event.uid %}
                         UID {{ event.uid }}
+                      {% else %}
+                        Sin información de bombero
                       {% endif %}
                     </td>
                     <td class="px-4 py-3 text-right font-semibold text-gray-900">{{ event.litros|floatformat:2 }} L</td>

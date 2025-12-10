@@ -30,6 +30,7 @@ from django.views.generic.detail import SingleObjectMixin
 from django.views.generic.edit import FormView
 from core.mixins import RoleRequiredMixin
 from homeApp.models import Company
+from UsuarioApp.models import Profile
 from .forms import (
     BranchProductForm,
     FuelInventoryForm,
@@ -2482,7 +2483,7 @@ class ServiceSessionDetailView(OwnerCompanyMixin, DetailView):
             .values("product_id")
             .annotate(total_sold=Coalesce(Sum("quantity"), 0))
         }
-        iot_dispense_events = (
+        iot_dispense_events = list(
             DispenseEvent.objects.filter(service_session=self.object)
             .select_related(
                 "nozzle__machine__island",
@@ -2492,6 +2493,25 @@ class ServiceSessionDetailView(OwnerCompanyMixin, DetailView):
             )
             .order_by("-created_at")
         )
+
+        missing_uids = {
+            event.uid for event in iot_dispense_events if not event.firefighter and event.uid
+        }
+        if missing_uids:
+            firefighters_by_uid = {
+                profile.codigo_identificador: profile
+                for profile in Profile.objects.filter(
+                    codigo_identificador__in=missing_uids
+                ).select_related("user_FK")
+            }
+            for event in iot_dispense_events:
+                if not event.firefighter:
+                    event.resolved_firefighter = firefighters_by_uid.get(event.uid)
+                else:
+                    event.resolved_firefighter = event.firefighter
+        else:
+            for event in iot_dispense_events:
+                event.resolved_firefighter = event.firefighter
         branch_products = list(branch.products.all())
         for product in branch_products:
             product.session_added_quantity = product_additions.get(product.pk, 0)
