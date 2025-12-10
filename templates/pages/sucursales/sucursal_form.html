@@ -2048,6 +2048,51 @@
         });
       };
 
+      const updateNumeralIndices = (group) => {
+        const inventoryId = group.dataset.inventoryId;
+        const labelBase = group.dataset.labelBase || "Numeral";
+        const countInput = group.querySelector(".numeral-count-input");
+        const instances = Array.from(group.querySelectorAll(".numeral-field-instance"));
+
+        instances.forEach((instance, index) => {
+          const slot = index + 1;
+          const label = instance.querySelector("label");
+          const input = instance.querySelector("input[type='number']");
+
+          if (label) {
+            label.textContent = `${labelBase} #${slot}`;
+            label.setAttribute("for", `id_numeral_${inventoryId}_${slot}`);
+          }
+
+          if (input) {
+            input.name = `numeral_${inventoryId}_${slot}`;
+            input.id = `id_numeral_${inventoryId}_${slot}`;
+          }
+        });
+
+        if (countInput) {
+          countInput.value = String(instances.length);
+        }
+      };
+
+      const createRemoveButton = (group, wrapper) => {
+        if (wrapper.querySelector(".remove-numeral-btn")) return;
+
+        const button = document.createElement("button");
+        button.type = "button";
+        button.className = "remove-numeral-btn inline-flex items-center text-sm font-medium text-red-600 hover:text-red-800";
+        button.textContent = "Quitar numeral";
+        button.addEventListener("click", () => {
+          wrapper.remove();
+          updateNumeralIndices(group);
+        });
+
+        const actions = document.createElement("div");
+        actions.className = "flex justify-end";
+        actions.appendChild(button);
+        wrapper.appendChild(actions);
+      };
+
       const createNumeralField = (group, slot) => {
         const inventoryId = group.dataset.inventoryId;
         const labelBase = group.dataset.labelBase || "Numeral";
@@ -2086,6 +2131,8 @@
           wrapper.appendChild(help);
         }
 
+        createRemoveButton(group, wrapper);
+
         return wrapper;
       };
 
@@ -2093,15 +2140,17 @@
         form.querySelectorAll(".numeral-group").forEach((group) => {
           const countInput = group.querySelector(".numeral-count-input");
           const fieldsContainer = group.querySelector(".numeral-fields");
+          fieldsContainer.querySelectorAll(".numeral-field-instance").forEach((instance) => {
+            createRemoveButton(group, instance);
+          });
+
           group.querySelectorAll(".add-numeral-btn").forEach((button) => {
             button.addEventListener("click", () => {
               const currentCount = Number(countInput?.value || fieldsContainer.children.length || 0);
               const nextSlot = currentCount + 1;
               const newField = createNumeralField(group, nextSlot);
               fieldsContainer.appendChild(newField);
-              if (countInput) {
-                countInput.value = String(nextSlot);
-              }
+              updateNumeralIndices(group);
             });
           });
         });
