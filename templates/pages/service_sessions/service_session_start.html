@@ -181,6 +181,24 @@
             {% endif %}
           </div>
 
+          <div class="rounded-lg border border-gray-200 bg-white px-4 py-3 shadow-sm">
+            <h2 class="text-base font-semibold text-gray-900">Modo de cierre de caja</h2>
+            <p class="mt-1 text-sm text-gray-600">Define si registrarás los numerales por estanque o por pistola al momento de cerrar el servicio.</p>
+            <div class="mt-3 space-y-2">
+              {{ form.close_mode }}
+            </div>
+            {% if form.close_mode.help_text %}
+              <p class="mt-2 text-xs text-gray-500">{{ form.close_mode.help_text }}</p>
+            {% endif %}
+            {% if form.close_mode.errors %}
+              <ul class="mt-2 space-y-1 text-sm text-red-600">
+                {% for error in form.close_mode.errors %}
+                  <li>{{ error }}</li>
+                {% endfor %}
+              </ul>
+            {% endif %}
+          </div>
+
           <div class="rounded-lg border border-gray-200 bg-white px-4 py-2 shadow-sm">
             <h2 class="text-lg font-semibold text-gray-900">Presupuesto inicial</h2>
             <p class="mt-1 text-sm text-gray-600">Registra el dinero disponible al inicio del turno. El total se calcula automáticamente.</p>

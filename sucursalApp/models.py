@@ -648,6 +648,13 @@ def ensure_attendants_are_branch_staff(
 class ServiceSession(models.Model):
     """Representa el inicio de un servicio para un turno específico."""
 
+    CLOSE_MODE_NUMERAL = "numeral"
+    CLOSE_MODE_PISTOL = "pistola"
+    CLOSE_MODE_CHOICES = (
+        (CLOSE_MODE_NUMERAL, "Modo numeral"),
+        (CLOSE_MODE_PISTOL, "Modo pistola"),
+    )
+
     shift = models.ForeignKey(
         Shift,
         on_delete=models.PROTECT,
@@ -707,6 +714,13 @@ class ServiceSession(models.Model):
     started_at = models.DateTimeField(
         "Fecha de inicio",
         auto_now_add=True,
+    )
+
+    close_mode = models.CharField(
+        "Modo de cierre",
+        max_length=20,
+        choices=CLOSE_MODE_CHOICES,
+        default=CLOSE_MODE_NUMERAL,
     )
 
     class Meta:

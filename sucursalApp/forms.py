@@ -709,10 +709,17 @@ class ServiceSessionForm(forms.ModelForm):
         label="Bomberos asignados",
         help_text="Selecciona los bomberos que trabajarán en este turno.",
     )
+    close_mode = forms.ChoiceField(
+        choices=ServiceSession.CLOSE_MODE_CHOICES,
+        initial=ServiceSession.CLOSE_MODE_NUMERAL,
+        widget=forms.RadioSelect(attrs={"class": "space-y-2"}),
+        label="Modo de cierre de caja",
+        help_text="Elige si el cierre se hará por numerales o por pistolas.",
+    )
 
     class Meta:
         model = ServiceSession
-        fields = ["shift", "coins_amount", "cash_amount", "attendants"]
+        fields = ["shift", "coins_amount", "cash_amount", "close_mode", "attendants"]
         widgets = {
             "shift": forms.Select(attrs={"class": "w-full border rounded p-2"}),
             "coins_amount": forms.NumberInput(

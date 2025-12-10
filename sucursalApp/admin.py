@@ -160,8 +160,8 @@ class ShiftAdmin(admin.ModelAdmin):
 
 @admin.register(ServiceSession)
 class ServiceSessionAdmin(admin.ModelAdmin):
-    list_display = ("shift", "started_at", "initial_budget")
-    list_filter = ("shift__sucursal", "started_at")
+    list_display = ("shift", "started_at", "initial_budget", "close_mode")
+    list_filter = ("shift__sucursal", "started_at", "close_mode")
     search_fields = ("shift__code", "shift__sucursal__name")
     date_hierarchy = "started_at"
     filter_horizontal = ("attendants",)

@@ -90,7 +90,7 @@
   <div
     id="tab-caja"
     class="tab-content mt-8 space-y-6"
-    x-data="{ saleModalOpen: false, withdrawModalOpen: false, creditModalOpen: false, firefighterPaymentModalOpen: false, transbankVoucherModalOpen: false, closeSessionModalOpen: false, closeSessionMode: 'numeral' }"
+    x-data="{ saleModalOpen: false, withdrawModalOpen: false, creditModalOpen: false, firefighterPaymentModalOpen: false, transbankVoucherModalOpen: false, closeSessionModalOpen: false, closeSessionMode: '{{ service_session.close_mode|default:'numeral' }}' }"
     @keydown.escape.window="saleModalOpen = false; withdrawModalOpen = false; creditModalOpen = false; firefighterPaymentModalOpen = false; transbankVoucherModalOpen = false; closeSessionModalOpen = false"
   >
     <section class="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
@@ -1104,6 +1104,7 @@
           <div>
             <p class="text-sm font-semibold text-gray-800">Modo de registro</p>
             <p class="text-xs text-gray-500">Alterna entre visualizar numerales por estanque o por pistola.</p>
+            <p class="mt-1 text-xs text-indigo-700">Modo definido al iniciar el servicio: <span class="font-semibold">{{ service_session.get_close_mode_display|default:"Modo numeral" }}</span>.</p>
           </div>
           <div class="inline-flex rounded-md border border-gray-200 bg-gray-50 p-1 text-sm font-medium text-gray-700 shadow-sm">
             <button
