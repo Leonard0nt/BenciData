@@ -1694,12 +1694,14 @@ class MachineInventoryClosingForm(forms.Form):
         fuel_inventory: FuelInventory | None = None,
         current_numeral: Decimal | None = None,
         numeral_entry: MachineFuelInventoryNumeral | None = None,
+        pistol_dispensed_total: Decimal | None = None,
         **kwargs,
     ):
         self.machine = machine
         self.fuel_inventory = fuel_inventory
         self.current_numeral = current_numeral or Decimal("0")
         self.numeral_entry = numeral_entry
+        self.pistol_dispensed_total = pistol_dispensed_total or Decimal("0")
         super().__init__(*args, **kwargs)
         if machine:
             self.fields["machine_id"].initial = machine.pk
@@ -1725,10 +1727,21 @@ class MachineInventoryClosingForm(forms.Form):
         if numeral_entry:
             self.fields["slot"].initial = numeral_entry.slot
         self.fields["numeral"].initial = self.current_numeral
+        default_numeral = self.current_numeral or Decimal("0")
+        pistol_numeral = default_numeral + self.pistol_dispensed_total
         self.fields["numeral"].widget.attrs.update(
             {
                 "class": "mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-right",
                 "inputmode": "decimal",
+                "data-default-numeral": f"{default_numeral}",
+                "data-pistol-dispensed": f"{self.pistol_dispensed_total}",
+                "data-pistol-numeral": f"{pistol_numeral}",
+                "x-bind:readonly": "closeSessionMode === 'pistola'",
+                "x-on:input": "if (closeSessionMode === 'numeral') { $el.dataset.defaultNumeral = $el.value }",
+                "x-effect": (
+                    "if (closeSessionMode === 'pistola') { $el.value = $el.dataset.pistolNumeral || '' } "
+                    "else { $el.value = $el.dataset.defaultNumeral || '' }"
+                ),
             }
         )
         
@@ -1753,9 +1766,11 @@ class MachineInventoryClosingFormSet(BaseFormSet):
             tuple[Machine, FuelInventory, MachineFuelInventoryNumeral]
         ]
         | None = None,
+        pistol_dispense_totals: dict[int, Decimal] | None = None,
         **kwargs,
     ):
         self.machine_inventory_pairs = machine_inventory_pairs or []
+        self.pistol_dispense_totals = pistol_dispense_totals or {}
         kwargs.setdefault("initial", [{} for _ in self.machine_inventory_pairs])
         super().__init__(*args, **kwargs)
 
@@ -1768,11 +1783,15 @@ class MachineInventoryClosingFormSet(BaseFormSet):
             machine, fuel_inventory, numeral_entry = self.machine_inventory_pairs[i]
             current_numeral = numeral_entry.numeral if numeral_entry else None
         kwargs.update(
+            pistol_total = self.pistol_dispense_totals.get(
+                numeral_entry.pk if numeral_entry else None, Decimal("0")
+            )
             {
                 "machine": machine,
                 "fuel_inventory": fuel_inventory,
                 "current_numeral": current_numeral,
                 "numeral_entry": numeral_entry,
+                "pistol_dispensed_total": pistol_total,
             }
         )
         return super()._construct_form(i, **kwargs)

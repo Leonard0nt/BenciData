@@ -2323,6 +2323,25 @@ class ServiceSessionDetailView(OwnerCompanyMixin, DetailView):
                     )
         return machines, machine_inventory_pairs
 
+    def _get_dispense_totals_by_numeral(self) -> dict[int, Decimal]:
+        decimal_zero = Decimal("0")
+        totals = (
+            DispenseEvent.objects.filter(
+                service_session=self.object, fuel_numeral_id__isnull=False
+            )
+            .values("fuel_numeral_id")
+            .annotate(
+                total_liters=Coalesce(
+                    Sum("litros"),
+                    Value(0, output_field=DecimalField(max_digits=12, decimal_places=2)),
+                )
+            )
+        )
+        return {
+            entry["fuel_numeral_id"]: Decimal(str(entry.get("total_liters") or decimal_zero))
+            for entry in totals
+        }
+
     @staticmethod
     def _group_machine_inventory_forms(machine_inventory_pairs, formset):
         grouped_pairs = []
@@ -2345,12 +2364,17 @@ class ServiceSessionDetailView(OwnerCompanyMixin, DetailView):
         return grouped_pairs
 
     @staticmethod
-    def _group_machine_nozzle_forms(machine_inventory_pairs, formset):
+    def _group_machine_nozzle_forms(
+        machine_inventory_pairs, formset, dispense_totals_by_numeral=None
+    ):
         grouped_pairs = []
         combined = list(zip(machine_inventory_pairs, formset.forms))
 
         nozzle_lookup = defaultdict(list)
         nozzle_lookup_ids = defaultdict(set)
+
+        dispense_totals_by_numeral = dispense_totals_by_numeral or {}
+        decimal_zero = Decimal("0")
 
         for machine, fuel_inventory, numeral_entry in machine_inventory_pairs:
             for nozzle in machine.nozzles.all():
@@ -2375,12 +2399,16 @@ class ServiceSessionDetailView(OwnerCompanyMixin, DetailView):
                 current_machine = machine
                 current_items = []
             key = (machine.pk, fuel_inventory.pk, numeral_entry.pk)
+            pistol_total = dispense_totals_by_numeral.get(
+                numeral_entry.pk, decimal_zero
+            )
             current_items.append(
                 (
                     fuel_inventory,
                     numeral_entry.numeral,
                     form,
                     nozzle_lookup.get(key, []),
+                    pistol_total,
                 )
             )
 
@@ -2596,17 +2624,21 @@ class ServiceSessionDetailView(OwnerCompanyMixin, DetailView):
                 firefighters=part_time_attendants,
                 prefix=self.firefighter_payment_form_prefix,
             )
+        dispense_totals_by_numeral = self._get_dispense_totals_by_numeral()
         close_session_formset = kwargs.get("service_close_formset")
         if close_session_formset is None:
             close_session_formset = ServiceSessionMachineInventoryClosingFormSet(
                 prefix=self.close_session_form_prefix,
                 machine_inventory_pairs=machine_inventory_pairs,
+                pistol_dispense_totals=dispense_totals_by_numeral,
             )
         machine_inventory_close_groups = self._group_machine_inventory_forms(
             machine_inventory_pairs, close_session_formset
         )
         machine_nozzle_close_groups = self._group_machine_nozzle_forms(
-            machine_inventory_pairs, close_session_formset
+            machine_inventory_pairs,
+            close_session_formset,
+            dispense_totals_by_numeral,
         )
         close_session_flow_details = kwargs.get("close_session_flow_details")
         close_session_flow_total = kwargs.get("close_session_flow_total")
@@ -2727,10 +2759,12 @@ class ServiceSessionDetailView(OwnerCompanyMixin, DetailView):
             branch_machines, machine_inventory_pairs = self._get_machine_inventory_pairs(
                 branch
             )
+            dispense_totals_by_numeral = self._get_dispense_totals_by_numeral()
             close_session_formset = ServiceSessionMachineInventoryClosingFormSet(
                 data=request.POST,
                 prefix=self.close_session_form_prefix,
                 machine_inventory_pairs=machine_inventory_pairs,
+                pistol_dispense_totals=dispense_totals_by_numeral,
             )
             if close_session_formset.is_valid():
                 machine_inventory_lookup = {
