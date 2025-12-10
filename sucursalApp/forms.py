@@ -443,7 +443,7 @@ class MachineForm(forms.ModelForm):
                         ),
                         required=False,
                         max_digits=12,
-                        decimal_places=2,
+                        decimal_places=3,
                         min_value=Decimal("0"),
                         initial=initial_numeral,
                         help_text=(
@@ -452,7 +452,7 @@ class MachineForm(forms.ModelForm):
                         widget=forms.NumberInput(
                             attrs={
                                 "class": "w-full border rounded p-2",
-                                "step": "0.01",
+                                "step": "0.001",
                             }
                         ),
                     )
