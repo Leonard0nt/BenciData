@@ -2332,7 +2332,10 @@ class ServiceSessionDetailView(OwnerCompanyMixin, DetailView):
             .values("fuel_numeral_id")
             .annotate(
                 total_liters=Coalesce(
-                    Sum("litros"),
+                    Sum(
+                        "litros",
+                        output_field=DecimalField(max_digits=12, decimal_places=2),
+                    ),
                     Value(0, output_field=DecimalField(max_digits=12, decimal_places=2)),
                 )
             )
