@@ -158,22 +158,35 @@
           </div>
         </button>
 
-        <button
-          type="button"
-          class="flex h-full flex-col justify-between rounded-lg border border-gray-100 bg-gray-50 p-5 text-left transition hover:border-indigo-200 hover:bg-white {% if service_session_closed %}cursor-not-allowed opacity-60{% endif %}"
-          {% if not service_session_closed %}@click="closeSessionModalOpen = true"{% else %}disabled{% endif %}
-        >
-          <div>
-            <p class="text-sm font-semibold uppercase tracking-wide text-indigo-600">Caja</p>
-            <h3 class="mt-2 text-lg font-semibold text-gray-900">Cierre de caja</h3>
-            <p class="mt-2 text-sm text-gray-600">Finaliza el turno registrando el arqueo y cierre del dinero disponible.</p>
-            {% if service_session_closed %}
-              <span class="mt-2 inline-flex items-center rounded-full bg-indigo-100 px-2 py-1 text-xs font-semibold text-indigo-700">
-                Servicio cerrado
-              </span>
-            {% endif %}          
+        {% if is_common_attendant %}
+          <div
+            class="flex h-full flex-col justify-between rounded-lg border border-gray-100 bg-gray-50 p-5 text-left opacity-70"
+            aria-disabled="true"
+          >
+            <div>
+              <p class="text-sm font-semibold uppercase tracking-wide text-indigo-300">Caja</p>
+              <h3 class="mt-2 text-lg font-semibold text-gray-400">Cierre de caja</h3>
+              <p class="mt-2 text-sm text-gray-500">Solo el administrador o bombero encargado pueden cerrar el turno.</p>
+            </div>          
           </div>
-        </button>
+        {% else %}
+          <button
+            type="button"
+            class="flex h-full flex-col justify-between rounded-lg border border-gray-100 bg-gray-50 p-5 text-left transition hover:border-indigo-200 hover:bg-white {% if service_session_closed %}cursor-not-allowed opacity-60{% endif %}"
+            {% if not service_session_closed %}@click="closeSessionModalOpen = true"{% else %}disabled{% endif %}
+          >
+            <div>
+              <p class="text-sm font-semibold uppercase tracking-wide text-indigo-600">Caja</p>
+              <h3 class="mt-2 text-lg font-semibold text-gray-900">Cierre de caja</h3>
+              <p class="mt-2 text-sm text-gray-600">Finaliza el turno registrando el arqueo y cierre del dinero disponible.</p>
+              {% if service_session_closed %}
+                <span class="mt-2 inline-flex items-center rounded-full bg-indigo-100 px-2 py-1 text-xs font-semibold text-indigo-700">
+                  Servicio cerrado
+                </span>
+              {% endif %}
+            </div>
+          </button>
+        {% endif %}
       </div>
 
       <div class="mt-10 rounded-xl border border-indigo-100 bg-indigo-50/40 p-4 sm:p-6">
@@ -1069,54 +1082,55 @@
       </div>
     </div>
     
-    <div
-      x-cloak
-      x-show="closeSessionModalOpen"
-      x-transition.opacity
-      class="fixed inset-0 z-50 flex justify-center bg-gray-900/80 p-4 sm:items-center"
-      @click.self="closeSessionModalOpen = false"
-      style="margin-top: 0%;"
-    >
+    {% if not is_common_attendant %}
       <div
-        class="w-full max-w-4xl overflow-y-auto rounded-none bg-white p-6 shadow-2xl sm:max-h-[calc(100vh-3rem)] sm:rounded-xl"
-        @click.away="closeSessionModalOpen = false"
+        x-cloak
+        x-show="closeSessionModalOpen"
+        x-transition.opacity
+        class="fixed inset-0 z-50 flex justify-center bg-gray-900/80 p-4 sm:items-center"
+        @click.self="closeSessionModalOpen = false"
+        style="margin-top: 0%;"
       >
-        <div class="flex items-center justify-between">
-          <div>
-            <h3 class="text-lg font-semibold text-gray-900">Cierre de caja y servicio</h3>
-            <p class="mt-1 text-sm text-gray-500">
-              Ingresa el numeral de cada estanque asociado a las máquinas registradas. El valor ingresado se guardará como numeral actualizado del estanque en esa máquina.
-            </p>
+        <div
+          class="w-full max-w-4xl overflow-y-auto rounded-none bg-white p-6 shadow-2xl sm:max-h-[calc(100vh-3rem)] sm:rounded-xl"
+          @click.away="closeSessionModalOpen = false"
+        >
+          <div class="flex items-center justify-between">
+            <div>
+              <h3 class="text-lg font-semibold text-gray-900">Cierre de caja y servicio</h3>
+              <p class="mt-1 text-sm text-gray-500">
+                Ingresa el numeral de cada estanque asociado a las máquinas registradas. El valor ingresado se guardará como numeral actualizado del estanque en esa máquina.
+              </p>
+            </div>
+            <button type="button" class="rounded-md p-1 text-gray-400 hover:text-gray-600" @click="closeSessionModalOpen = false">
+              <span class="sr-only">Cerrar</span>
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="h-5 w-5">
+                <path
+                  fill-rule="evenodd"
+                  d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"
+                  clip-rule="evenodd"
+                />
+              </svg>
+            </button>
           </div>
-          <button type="button" class="rounded-md p-1 text-gray-400 hover:text-gray-600" @click="closeSessionModalOpen = false">
-            <span class="sr-only">Cerrar</span>
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="h-5 w-5">
-              <path
-                fill-rule="evenodd"
-                d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"
-                clip-rule="evenodd"
-              />
-            </svg>
-          </button>
-        </div>
 
-        <div class="mt-4 flex flex-wrap items-center justify-between gap-3">
-          <div>
-            <p class="text-sm font-semibold text-gray-800">Modo de registro</p>
-            <p class="text-xs text-gray-500">El cierre seguirá el modo elegido al iniciar el turno y no puede modificarse.</p>
-            <p class="mt-1 text-xs text-indigo-700">Modo definido al iniciar el servicio: <span class="font-semibold">{{ service_session.get_close_mode_display|default:"Modo numeral" }}</span>.</p>
+          <div class="mt-4 flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <p class="text-sm font-semibold text-gray-800">Modo de registro</p>
+              <p class="text-xs text-gray-500">El cierre seguirá el modo elegido al iniciar el turno y no puede modificarse.</p>
+              <p class="mt-1 text-xs text-indigo-700">Modo definido al iniciar el servicio: <span class="font-semibold">{{ service_session.get_close_mode_display|default:"Modo numeral" }}</span>.</p>
+            </div>
+            <div class="inline-flex rounded-md border border-gray-200 bg-gray-50 p-1 text-sm font-medium text-gray-700 shadow-sm">
+              <span
+                class="rounded-md px-3 py-1 transition"
+                :class="closeSessionMode === 'numeral' ? 'bg-white text-indigo-700 shadow-sm' : 'text-gray-500'"
+              >Modo numeral</span>
+              <span
+                class="rounded-md px-3 py-1 transition"
+                :class="closeSessionMode === 'pistola' ? 'bg-white text-indigo-700 shadow-sm' : 'text-gray-500'"
+              >Modo pistola</span>
+            </div>
           </div>
-          <div class="inline-flex rounded-md border border-gray-200 bg-gray-50 p-1 text-sm font-medium text-gray-700 shadow-sm">
-            <span
-              class="rounded-md px-3 py-1 transition"
-              :class="closeSessionMode === 'numeral' ? 'bg-white text-indigo-700 shadow-sm' : 'text-gray-500'"
-            >Modo numeral</span>
-            <span
-              class="rounded-md px-3 py-1 transition"
-              :class="closeSessionMode === 'pistola' ? 'bg-white text-indigo-700 shadow-sm' : 'text-gray-500'"
-            >Modo pistola</span>
-          </div>
-        </div>
 
         {% if service_session_closed %}
           <div class="mt-4 rounded-md border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">
