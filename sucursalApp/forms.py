@@ -1782,10 +1782,10 @@ class MachineInventoryClosingFormSet(BaseFormSet):
         if self.machine_inventory_pairs and i < len(self.machine_inventory_pairs):
             machine, fuel_inventory, numeral_entry = self.machine_inventory_pairs[i]
             current_numeral = numeral_entry.numeral if numeral_entry else None
-        kwargs.update(
             pistol_total = self.pistol_dispense_totals.get(
                 numeral_entry.pk if numeral_entry else None, Decimal("0")
             )
+        kwargs.update(
             {
                 "machine": machine,
                 "fuel_inventory": fuel_inventory,
