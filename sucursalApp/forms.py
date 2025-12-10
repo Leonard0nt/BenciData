@@ -1684,7 +1684,7 @@ class MachineInventoryClosingForm(forms.Form):
     numeral = NormalizedDecimalField(
         label="Numeral",
         max_digits=12,
-        decimal_places=2,
+        decimal_places=3,
     )
 
     def __init__(
@@ -1726,15 +1726,23 @@ class MachineInventoryClosingForm(forms.Form):
             )
         if numeral_entry:
             self.fields["slot"].initial = numeral_entry.slot
+        three_decimals = Decimal("0.001")
         self.fields["numeral"].initial = self.current_numeral
-        default_numeral = self.current_numeral or Decimal("0")
-        pistol_numeral = default_numeral + self.pistol_dispensed_total
+        default_numeral = (self.current_numeral or Decimal("0")).quantize(
+            three_decimals
+        )
+        pistol_dispensed = (self.pistol_dispensed_total or Decimal("0")).quantize(
+            three_decimals
+        )
+        pistol_numeral = (default_numeral + pistol_dispensed).quantize(
+            three_decimals
+        )
         self.fields["numeral"].widget.attrs.update(
             {
                 "class": "mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-right",
                 "inputmode": "decimal",
                 "data-default-numeral": f"{default_numeral}",
-                "data-pistol-dispensed": f"{self.pistol_dispensed_total}",
+                "data-pistol-dispensed": f"{pistol_dispensed}",
                 "data-pistol-numeral": f"{pistol_numeral}",
                 "x-bind:readonly": "closeSessionMode === 'pistola'",
                 "x-on:input": "if (closeSessionMode === 'numeral') { $el.dataset.defaultNumeral = $el.value }",

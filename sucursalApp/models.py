@@ -307,7 +307,7 @@ class MachineFuelInventoryNumeral(models.Model):
         verbose_name="Estanque",
     )
     slot = models.PositiveIntegerField("Posición", default=1)
-    numeral = models.DecimalField("Numeral", max_digits=12, decimal_places=2, default=0)
+    numeral = models.DecimalField("Numeral", max_digits=12, decimal_places=3, default=0)
     created_at = models.DateTimeField("Fecha de creación", auto_now_add=True)
     updated_at = models.DateTimeField("Fecha de actualización", auto_now=True)
 

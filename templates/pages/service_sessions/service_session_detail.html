@@ -1218,7 +1218,7 @@
                                 </p>
                                 <p class="text-xs text-gray-600">Estanque {{ inventory.code }} · {{ inventory.fuel_type }}</p>
                                 <p class="text-xs text-gray-500">Numeral actual: {{ current_numeral }}</p>
-                                <p class="text-xs text-gray-500">Lectura pistolas acumulada: {{ pistol_dispensed|default:0 }}</p>
+                                <p class="text-xs text-gray-500">Lectura pistolas acumulada: {{ pistol_dispensed|default:0|floatformat:2 }}</p>
                               </div>
                               <div class="sm:w-full sm:max-w-xs">
                                 <label for="{{ form.numeral.id_for_label }}" class="block text-sm font-medium text-gray-700">Numeral</label>
