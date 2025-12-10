@@ -2141,7 +2141,7 @@ class ServiceSessionDetailView(OwnerCompanyMixin, DetailView):
     template_name = "pages/service_sessions/service_session_detail.html"
     context_object_name = "service_session"
     # Allow HEAD_ATTENDANT to view/manage the running service details
-    allowed_roles = ["OWNER", "ADMINISTRATOR", "HEAD_ATTENDANT"]
+    allowed_roles = ["ADMINISTRATOR", "HEAD_ATTENDANT", "ATTENDANT"]
     fuel_load_form_prefix = "fuel_load"
     product_load_form_prefix = "product_load"
     product_sale_form_prefix = "product_sale"

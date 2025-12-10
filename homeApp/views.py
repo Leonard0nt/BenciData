@@ -25,21 +25,19 @@ class HomeView(LoginRequiredMixin, ListView):
         profile = getattr(self.request.user, "profile", None)
         company = None
         branches: list[Sucursal] = []
+        has_company_scope = False
 
-        if profile and (
-            profile.is_owner() or profile.is_admin() or profile.is_accountant()
-        ):
+        if profile and profile.is_owner():
+            has_company_scope = True
             company = Company.objects.filter(profile=profile).first()
             if not company and profile.company_rut:
                 normalized_rut = Company.normalize_rut(profile.company_rut)
                 company = Company.objects.filter(rut=normalized_rut).first()
 
-        if profile and profile.current_branch and not (
-            profile.is_owner() or profile.is_admin()
-        ):
+        if profile and profile.current_branch and not has_company_scope:
             branches = [profile.current_branch]
             company = company or profile.current_branch.company
-        elif company:
+        elif has_company_scope and company:
             branches = list(
                 company.branches.prefetch_related("fuel_inventories").order_by("name")
             )
@@ -61,18 +59,23 @@ class HomeView(LoginRequiredMixin, ListView):
                 if not company and branches:
                     company = branches[0].company
 
-        return profile, company, branches
+        return profile, company, branches, has_company_scope
 
-    def _get_scoped_profiles(self, company: Company | None, branches: list[Sucursal]):
+    def _get_scoped_profiles(
+        self,
+        company: Company | None,
+        branches: list[Sucursal],
+        has_company_scope: bool,
+    ):
         branch_ids = [branch.pk for branch in branches if branch and branch.pk]
-        if company:
+        if has_company_scope and company:
             branch_ids.extend(
                 company.branches.values_list("pk", flat=True)
             )
         branch_ids = list(dict.fromkeys(branch_ids))
 
         filters: list[Q] = []
-        if company:
+        if has_company_scope and company:
             filters.append(Q(company_rut=company.rut))
             if company.profile_id:
                 filters.append(Q(pk=company.profile_id))
@@ -91,8 +94,8 @@ class HomeView(LoginRequiredMixin, ListView):
         return Profile.objects.filter(combined_filter).distinct()
 
     def get_queryset(self):
-        _, company, branches = self._resolve_scope()
-        scoped_profiles = self._get_scoped_profiles(company, branches)
+        _, company, branches, has_company_scope  = self._resolve_scope()
+        scoped_profiles = self._get_scoped_profiles(company, branches, has_company_scope )
         scoped_user_ids = list(scoped_profiles.values_list("user_FK_id", flat=True))
         if not scoped_user_ids:
             return User.objects.none()
@@ -104,8 +107,10 @@ class HomeView(LoginRequiredMixin, ListView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        profile, company, branches = self._resolve_scope()
-        scoped_profiles = self._get_scoped_profiles(company, branches)
+        profile, company, branches, has_company_scope = self._resolve_scope()
+        scoped_profiles = self._get_scoped_profiles(
+            company, branches, has_company_scope
+        )
 
         # Agrega los usuarios activos al contexto, limitados al alcance del usuario
         recent_activity_cutoff = timezone.now() - timezone.timedelta(minutes=2)
