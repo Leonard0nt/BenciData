@@ -1348,12 +1348,19 @@
     </div>
   </div>
 
+{% endif %}
+
   <div
     id="tab-inventario"
     class="tab-content mt-8 space-y-6 hidden"
     x-data="{ openModal: null }"
     @keydown.escape.window="openModal = null"
   >
+    {% if is_common_attendant %}
+      <div class="rounded-md border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">
+        Solo el administrador y el bombero encargado pueden gestionar el inventario de la sucursal.
+      </div>
+    {% else %}
     <section class="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
       <div class="flex flex-wrap items-center justify-between gap-3">
         <div>
