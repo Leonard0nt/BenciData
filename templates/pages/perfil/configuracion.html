@@ -59,13 +59,6 @@ Configuración
                                 class="block text-gray-700 text-sm font-bold mb-2">Email</label>
                             {{ user_form.email|add_class:"py-3 px-4 text-base w-full"}}
                         </div>
-                        <div>
-                            <label for="{{ profile_form.examen_medico.id_for_label }}" class="block text-gray-700 text-sm font-bold mb-2 mt-6">Examen Médico</label>
-                            {{ profile_form.examen_medico|add_class:"py-3 px-4 text-base w-full" }}
-                            {% if request.user.profile.examen_medico %}
-                            <a href="{{ request.user.profile.examen_medico.url }}" class="text-indigo-600 text-sm" download>Descargar examen médico</a>
-                            {% endif %}
-                        </div>
                         <div class="mt-6">
                             <label for="{{ profile_form.contrato.id_for_label }}" class="block text-gray-700 text-sm font-bold mb-2">Contrato</label>
                             {{ profile_form.contrato|add_class:"py-3 px-4 text-base w-full" }}
@@ -75,7 +68,7 @@ Configuración
                         </div>
                         <div class="mt-6">
                             <label for="{{ profile_form.is_partime.id_for_label }}" class="block text-gray-700 text-sm font-bold mb-2">Tipo de jornada</label>
-                            {{ profile_form.is_partime|add_class:"py-3 px-4 text-base w-full" }}
+                            {{ profile_form.is_partime|add_class:"py-3 px-4 text-base w-full bg-gray-100"|attr:"disabled:disabled" }}
                         </div>
                         <div class="mt-6">
                             <button type="submit"
