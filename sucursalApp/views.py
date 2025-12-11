@@ -2556,14 +2556,11 @@ class ServiceSessionDetailView(OwnerCompanyMixin, DetailView):
 
         # Determine if the current viewer is a common attendant (ATTENDANT role)
         viewer_profile = getattr(self.request.user, "profile", None)
-        is_common_attendant = False
-        try:
-            if viewer_profile and viewer_profile.is_ATTENDANT() and not viewer_profile.is_head_ATTENDANT():
-                # viewer must be one of the attendants in this service
-                if any(a.pk == viewer_profile.pk for a in attendants):
-                    is_common_attendant = True
-        except Exception:
-            is_common_attendant = False
+        is_common_attendant = bool(
+            viewer_profile
+            and viewer_profile.is_ATTENDANT()
+            and not viewer_profile.is_head_ATTENDANT()
+        )
 
 
         decimal_zero = Decimal("0")
