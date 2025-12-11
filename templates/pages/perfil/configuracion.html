@@ -61,7 +61,7 @@ Configuración
                         </div>
                         <div class="mt-6">
                             <label for="{{ profile_form.contrato.id_for_label }}" class="block text-gray-700 text-sm font-bold mb-2">Contrato</label>
-                            {{ profile_form.contrato|add_class:"py-3 px-4 text-base w-full" }}
+                            {{ profile_form.contrato|add_class:"py-3 px-4 text-base w-full bg-gray-100"|attr:"disabled:disabled" }}
                             {% if request.user.profile.contrato %}
                             <a href="{{ request.user.profile.contrato.url }}" class="text-indigo-600 text-sm" download>Descargar contrato</a>
                             {% endif %}
