@@ -179,9 +179,15 @@ class SucursalListView(OwnerCompanyMixin, FormMixin, ListView):
         profile = getattr(request.user, "profile", None)
 
         # Si el usuario **NO** es dueño, mantenemos el redirect a una sucursal
+        # excepto cuando es administrador y tiene más de una sucursal asignada
         if profile and not profile.has_role("OWNER"):
             branch_ids = self.get_managed_branch_ids()
             if branch_ids:
+                is_admin = profile.has_role("ADMINISTRATOR")
+                if is_admin and len(branch_ids) > 1:
+                    # Mostrar la lista para que el administrador elija cuál editar
+                    return super().dispatch(request, *args, **kwargs)
+                # Redirigir a la sucursal asignada
                 current_branch_id = getattr(profile, "current_branch_id", None)
                 if current_branch_id in branch_ids:
                     branch_id = current_branch_id
@@ -191,7 +197,13 @@ class SucursalListView(OwnerCompanyMixin, FormMixin, ListView):
 
         # Si es OWNER, se queda en la lista, donde puede crear más sucursales
         return super().dispatch(request, *args, **kwargs)
-        
+
+    def get_context_data(self, **kwargs: Any) -> Dict[str, Any]:
+        context = super().get_context_data(**kwargs)
+        profile = getattr(self.request.user, "profile", None)
+        context["can_delete_branch"] = bool(profile and profile.has_role("OWNER"))
+        return context
+  
     def get_queryset(self) -> QuerySet[Sucursal]:
         branch_ids = self.get_managed_branch_ids()
         if not branch_ids:
@@ -250,6 +262,8 @@ class SucursalCreateView(OwnerCompanyMixin, CreateView):
             # Para la vista de creación, usamos la instancia del form
             context["object"] = form.instance
         context["can_edit_branch"] = True
+        profile = getattr(self.request.user, "profile", None)
+        context["can_assign_admin"] = bool(profile and profile.has_role("OWNER"))
         context.setdefault("islands", [])
         context.setdefault("fuel_inventories", [])
         return context
@@ -352,6 +366,7 @@ class SucursalUpdateView(OwnerCompanyMixin, UpdateView):
                 (profile and profile.has_role("ADMINISTRATOR"))
                 or (profile and profile.has_role("OWNER"))
             )
+            can_assign_admin = bool(profile and profile.has_role("OWNER"))
             can_manage_shifts = can_edit_branch
             context["can_manage_shifts"] = can_manage_shifts
             if can_manage_shifts:
@@ -363,7 +378,7 @@ class SucursalUpdateView(OwnerCompanyMixin, UpdateView):
                 context["shift_create_url"] = reverse(
                     "sucursal_shift_create", args=[self.object.pk]
                 )
-            if can_edit_branch:
+            if can_assign_admin:
                 context["user_link_form"] = kwargs.get(
                     "user_link_form",
                     BranchUserLinkForm(
@@ -711,6 +726,7 @@ class SucursalUpdateView(OwnerCompanyMixin, UpdateView):
             context.setdefault("can_manage_shifts", False)
         # Expose read/edit capability flag to template
         context["can_edit_branch"] = locals().get("can_edit_branch", False)
+        context["can_assign_admin"] = locals().get("can_assign_admin", False)
         if not context.get("active_modal"):
             requested_modal = self.request.GET.get("modal")
             if requested_modal:
@@ -767,6 +783,14 @@ class SucursalUpdateView(OwnerCompanyMixin, UpdateView):
         return self.render_to_response(context)
 
     def _handle_branch_user_link(self, request) -> Any:
+        profile = getattr(request.user, "profile", None)
+        if not profile or not profile.has_role("OWNER"):
+            messages.error(
+                request,
+                "No tienes permisos para asignar administradores a esta sucursal.",
+            )
+            return redirect("sucursal_update", pk=self.object.pk)
+
         form = BranchUserLinkForm(
             request.POST,
             branch=self.object,

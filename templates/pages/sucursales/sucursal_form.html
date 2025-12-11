@@ -207,11 +207,13 @@
             class="inline-flex items-center rounded-md bg-gradient-to-br from-indigo-500 to-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:from-indigo-600 hover:to-blue-700"
             @click="openModal = 'general'"
           >Editar información</button>
+          {% if can_assign_admin %}
           <button
             type="button"
             class="inline-flex items-center rounded-md border border-indigo-200 bg-indigo-50 px-4 py-2 text-sm font-semibold text-indigo-700 shadow-sm hover:bg-white"
             @click="openModal = 'assign-admin'"
           >Asignar administrador</button>
+          {% endif %}
         </div>
         {% endif %}
 
