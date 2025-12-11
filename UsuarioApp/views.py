@@ -24,7 +24,7 @@ from django.urls import reverse_lazy
 from core.mixins import PermitsPositionMixin, RoleRequiredMixin
 from .models import Profile
 from sucursalApp.forms import BranchStaffForm
-from sucursalApp.models import Sucursal, SucursalStaff
+from sucursalApp.models import Sucursal, SucursalStaff, ServiceSession, Shift
 from homeApp.models import Company
 from django.contrib.auth.forms import SetPasswordForm
 
@@ -859,5 +859,23 @@ class UserDeactivateView(
 
         target_user.is_active = False
         target_user.save(update_fields=["is_active"])
+
+        profile = getattr(target_user, "profile", None)
+        if profile:
+            self._detach_firefighter_assignments(profile)
+
         messages.success(request, f"El usuario {target_user.get_full_name() or target_user.username} ha sido desactivado.")
         return redirect("User")
+
+    @staticmethod
+    def _detach_firefighter_assignments(profile: Profile) -> None:
+        """Remove an inactive firefighter from active assignments."""
+
+        for shift in Shift.objects.filter(attendants=profile).distinct():
+            shift.attendants.remove(profile)
+
+        active_sessions = ServiceSession.objects.filter(
+            attendants=profile, ended_at__isnull=True
+        ).distinct()
+        for session in active_sessions:
+            session.attendants.remove(profile)

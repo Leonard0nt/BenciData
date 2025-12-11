@@ -630,9 +630,18 @@ class ShiftForm(forms.ModelForm):
         )
         attendants_field = self.fields.get("attendants")
         if attendants_field is not None:
+            selected_manager_id: int | None = None
+            manager_from_data = self.data.get(self.add_prefix("manager"))
+            try:
+                selected_manager_id = int(manager_from_data)
+            except (TypeError, ValueError):
+                selected_manager_id = current_manager
+
             attendants_queryset = queryset.filter(
                 position_FK__permission_code__in=["ATTENDANT", "HEAD_ATTENDANT"]
             )
+            if selected_manager_id:
+                attendants_queryset = attendants_queryset.exclude(pk=selected_manager_id)
             attendants_field.required = False
             attendants_field.queryset = attendants_queryset.order_by(
                 "user_FK__first_name", "user_FK__last_name", "user_FK__username"
@@ -685,6 +694,16 @@ class ShiftForm(forms.ModelForm):
                 attrs={"class": "profile-checkbox-grid"}
             )
         }
+        
+    def clean_attendants(self):
+        attendants = self.cleaned_data.get("attendants")
+        manager = self.cleaned_data.get("manager") or getattr(self.instance, "manager", None)
+        if manager and attendants and manager in attendants:
+            raise forms.ValidationError(
+                "El encargado de turno no puede asignarse como bombero del mismo turno."
+            )
+        return attendants
+
     def clean(self):
         cleaned_data = super().clean()
         start = cleaned_data.get("start_time")

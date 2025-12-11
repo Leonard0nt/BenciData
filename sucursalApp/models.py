@@ -510,7 +510,14 @@ class Shift(models.Model):
 def _cleanup_branch_attendants(
     branch: Sucursal, profile_ids: Iterable[int] | None = None
 ) -> None:
-    """Remove attendant assignments no longer linked to branch shifts."""
+    """Adjust attendants roles without removing them from the branch.
+
+    Previously this helper deleted attendants that were no longer linked to any
+    shift. That behaviour caused branch staff to lose their assignment when
+    they were removed from a shift. Now we only downgrade head attendants that
+    are no longer managing a shift, keeping every firefighter tied to the
+    branch even if they don't have a current shift assignment.
+    """
 
     staff_queryset = SucursalStaff.objects.filter(
         sucursal=branch, role__in=("ATTENDANT", "HEAD_ATTENDANT")
@@ -529,16 +536,14 @@ def _cleanup_branch_attendants(
         .exclude(manager_id__isnull=True)
         .values_list("manager_id", flat=True)
     )
-    active_attendant_ids = set(
-        Shift.objects.filter(sucursal=branch, attendants__isnull=False)
-        .values_list("attendants__id", flat=True)
-        .distinct()
-    )
-    active_profile_ids = active_manager_ids | active_attendant_ids
 
     for assignment in staff_queryset:
-        if assignment.profile_id not in active_profile_ids:
-            assignment.delete()
+        if (
+            assignment.role == "HEAD_ATTENDANT"
+            and assignment.profile_id not in active_manager_ids
+        ):
+            assignment.role = "ATTENDANT"
+            assignment.save(update_fields=["role"])
 
 
 def _revoke_head_attendant_status(profile_id: int) -> None:
