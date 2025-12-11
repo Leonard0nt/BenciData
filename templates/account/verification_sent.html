@@ -26,13 +26,8 @@
             <path d="M4 4h16c1.1 0 2 .9 2 2v12a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V6c0-1.1.9-2 2-2z" />
             <polyline points="22,6 12,13 2,6" />
           </svg>
-          <span class="font-semibold">
-            {% if user.email %}
-              {{ user.email }}
-            {% else %}
-              <a class="text-indigo-600" href="mailto:{{ email }}">{{ email }}</a>
-            {% endif %}
-          </span>
+          {% firstof email confirmation.email_address.email user.email as display_email %}
+          <span class="font-semibold">{{ display_email }}</span>
         </span>
       </div>
 
