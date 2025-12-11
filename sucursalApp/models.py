@@ -193,7 +193,7 @@ class Machine(models.Model):
         related_name="machines",
         verbose_name="Isla",
     )
-    number = models.PositiveIntegerField("Número")
+    number = models.PositiveIntegerField("Identificador de máquina")
     fuel_inventory = models.ForeignKey(
         "FuelInventory",
         on_delete=models.PROTECT,
