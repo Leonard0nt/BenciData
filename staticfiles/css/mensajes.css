@@ -17,9 +17,10 @@ button{
   grid-template-columns: 70px 1fr 70px;
   border-radius: 5px;
   --color: #0abf30;
+  background-color: #f9fafb;
   background-image:
     linear-gradient(
-        to right, #0abf3055, #f3f4f6 30%
+        to right, #0abf301f, #e5e7eb 35%, #f9fafb 100%
     );
   animation: show 0.3s ease 1 forwards
 }
@@ -73,21 +74,21 @@ button{
   --color: #f24d4c;
   background-image:
     linear-gradient(
-        to right, #f24d4c55, #f3f4f6 30%
+        to right, #f24d4c1f, #fde2e1 35%, #fff7f6 100%
     );
 }
 .toast.warning{
   --color: #e9bd0c;
   background-image:
     linear-gradient(
-        to right, #e9bd0c55, #f3f4f6 30%
+        to right, #e9bd0c1f, #f8f3e0 35%, #fffbf2 100%
     );
 }
 .toast.info{
   --color: #3498db;
   background-image:
     linear-gradient(
-        to right, #3498db55, #f3f4f6 30%
+        to right, #3498db1f, #e0e7ff 35%, #f5f7ff 100%
     );
 }
 @media (max-width: 450px) {
