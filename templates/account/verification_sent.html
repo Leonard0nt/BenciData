@@ -6,15 +6,40 @@
 {% endblock head_title %}
 
 {% block content_account %}
+  <div class="flex flex-col items-center text-center gap-6">
+    <div class="w-14 h-14 rounded-full bg-emerald-100 flex items-center justify-center shadow-sm">
+      <svg xmlns="http://www.w3.org/2000/svg" class="h-7 w-7 text-emerald-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="m4 8 8 5 8-5" />
+        <rect width="16" height="12" x="4" y="6" rx="2" />
+      </svg>
+    </div>
 
-  <h1 class="max-w-2xl font-bold tracking-tight text-gray-900 text-2xl mb-4">
-      Verifique su dirección de correo electrónico
-  </h1>
+    <div class="w-full bg-emerald-50 border border-emerald-100 rounded-3xl p-8 shadow-sm space-y-6">
+      <div class="space-y-2">
+        <h1 class="text-2xl font-bold text-emerald-900">Verifique su correo electrónico</h1>
+        <p class="text-gray-700">Hemos enviado un correo de verificación a:</p>
+      </div>
 
-  <div class="space-y-6">
-      <p class="max-w-2xl text-gray-900 pt-6 z-[60]">
-        Le hemos enviado un correo electrónico para su verificación. Siga el enlace proporcionado para finalizar el proceso de registro. Por favor contáctenos si no lo recibe en unos minutos
+      <div class="flex flex-col items-center gap-3">
+        <span class="inline-flex items-center gap-2 bg-white shadow px-4 py-2 rounded-full text-sm text-emerald-900 font-medium">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-emerald-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M4 4h16c1.1 0 2 .9 2 2v12a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V6c0-1.1.9-2 2-2z" />
+            <polyline points="22,6 12,13 2,6" />
+          </svg>
+          <span class="font-semibold">
+            {% if user.email %}
+              {{ user.email }}
+            {% else %}
+              <a class="text-indigo-600" href="mailto:{{ email }}">{{ email }}</a>
+            {% endif %}
+          </span>
+        </span>
+      </div>
+
+      <p class="text-gray-700 leading-relaxed">
+        Para completar su registro, abra el enlace enviado a su correo. Si no recibe el mensaje en unos minutos, revise su carpeta de spam o contáctenos.
       </p>
+    </div>
   </div>
 
 {% endblock content_account %}
