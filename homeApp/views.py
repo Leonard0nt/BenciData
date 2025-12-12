@@ -1,3 +1,4 @@
+from datetime import date
 from decimal import Decimal, ROUND_HALF_UP
 from functools import reduce
 from operator import or_
@@ -7,7 +8,12 @@ from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.auth.models import User
 from django.db.models import Q
 from django.db.models import DecimalField, ExpressionWrapper, F, Sum, Value
-from django.db.models.functions import Coalesce, TruncDay, TruncMonth, TruncYear
+from django.db.models.functions import (
+    Coalesce,
+    TruncDay,
+    TruncWeek,
+    TruncYear,
+)
 from django.utils import timezone
 from UsuarioApp.models import Profile
 from homeApp.models import Company
@@ -217,8 +223,17 @@ class HomeView(LoginRequiredMixin, ListView):
                 )
             )
 
-            def build_series(queryset, trunc_fn, date_format: str):
-                records = queryset.annotate(period=trunc_fn("ended_at")).values(
+            def build_series(queryset, trunc_fn, date_format: str, start_date=None, end_date=None):
+                filtered_queryset = queryset
+                if start_date:
+                    filtered_queryset = filtered_queryset.filter(
+                        ended_at__date__gte=start_date
+                    )
+
+                if end_date:
+                    filtered_queryset = filtered_queryset.filter(ended_at__date__lt=end_date)
+
+                records = filtered_queryset.annotate(period=trunc_fn("ended_at")).values(
                     "period",
                     "initial_budget",
                     "credit_total",
@@ -239,7 +254,6 @@ class HomeView(LoginRequiredMixin, ListView):
                     totals = grouped_totals.setdefault(
                         period,
                         {
-                            "total_initial_budget": decimal_zero,
                             "total_credit": decimal_zero,
                             "total_voucher": decimal_zero,
                             "total_withdrawal": decimal_zero,
@@ -249,8 +263,6 @@ class HomeView(LoginRequiredMixin, ListView):
                             "total_product_load_payment": decimal_zero,
                         },
                     )
-
-                    totals["total_initial_budget"] += record["initial_budget"] or decimal_zero
                     totals["total_credit"] += record["credit_total"] or decimal_zero
                     totals["total_voucher"] += record["voucher_total"] or decimal_zero
                     totals["total_withdrawal"] += record["withdrawal_total"] or decimal_zero
@@ -266,9 +278,10 @@ class HomeView(LoginRequiredMixin, ListView):
                     ] or decimal_zero
 
                 grouped = []
-                for period, totals in grouped_totals.items():
+                for period, totals in sorted(
+                    grouped_totals.items(), key=lambda item: item[0]
+                ):
                     total_profit = (
-                        totals["total_initial_budget"]
                         + totals["total_credit"]
                         + totals["total_voucher"]
                         + totals["total_withdrawal"]
@@ -292,18 +305,39 @@ class HomeView(LoginRequiredMixin, ListView):
                 if not branch_sessions.exists():
                     continue
 
+                today = timezone.localdate()
+                start_of_week = today - timezone.timedelta(days=today.weekday())
+                start_of_month = today.replace(day=1)
+                start_of_next_month = (start_of_month + timezone.timedelta(days=32)).replace(
+                    day=1
+                )
+                start_of_year_range = date(today.year - 4, 1, 1)
+
                 profit_dashboard.append(
                     {
                         "branch_name": branch.name,
                         "city": branch.city,
                         "series": {
                             "day": build_series(
-                                branch_sessions, TruncDay, "%d %b"
+                                branch_sessions,
+                                TruncDay,
+                                "%d %b",
+                                start_of_week,
+                                start_of_week + timezone.timedelta(days=7),
                             ),
-                            "month": build_series(
-                                branch_sessions, TruncMonth, "%b %Y"
+                            "week": build_series(
+                                branch_sessions,
+                                TruncWeek,
+                                "%d %b",
+                                start_of_month,
+                                start_of_next_month,
                             ),
-                            "year": build_series(branch_sessions, TruncYear, "%Y"),
+                            "year": build_series(
+                                branch_sessions,
+                                TruncYear,
+                                "%Y",
+                                start_of_year_range,
+                            ),
                         },
                     }
                 )

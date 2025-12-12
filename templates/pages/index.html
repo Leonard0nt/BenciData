@@ -80,7 +80,7 @@
         <div>
           <p class="text-xs font-semibold uppercase tracking-wide text-gray-500">Ganancias</p>
           <h3 class="text-lg font-semibold text-gray-900">Evolución por sucursal</h3>
-          <p class="text-sm text-gray-600">Ganancias calculadas desde los servicios, agrupadas por día, mes o año.</p>
+          <p class="text-sm text-gray-600">Ganancias calculadas desde los servicios, agrupadas por día, semana o año.</p>
         </div>
         <span class="text-xs font-medium text-gray-500">{{ profit_dashboard|length }} sucursales</span>
       </div>
@@ -98,7 +98,7 @@
                 Intervalo
                 <select id="profit-range-{{ forloop.counter0 }}" data-branch-index="{{ forloop.counter0 }}" class="rounded-md border border-gray-200 bg-white px-2 py-1 text-xs font-medium text-gray-700 shadow-sm focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500">
                   <option value="day">Días</option>
-                  <option value="month">Meses</option>
+                  <option value="week">Semanas</option>
                   <option value="year">Años</option>
                 </select>
               </label>
