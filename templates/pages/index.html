@@ -94,14 +94,24 @@
                 <p class="text-xs text-gray-500">{{ branch.city }}</p>
               </div>
 
-              <label class="flex items-center gap-2 text-xs text-gray-600" for="profit-range-{{ forloop.counter0 }}">
-                Intervalo
-                <select id="profit-range-{{ forloop.counter0 }}" data-branch-index="{{ forloop.counter0 }}" class="rounded-md border border-gray-200 bg-white px-2 py-1 text-xs font-medium text-gray-700 shadow-sm focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500">
-                  <option value="day">Días</option>
-                  <option value="week">Semanas</option>
-                  <option value="year">Años</option>
-                </select>
-              </label>
+              <div class="flex flex-wrap items-center gap-3 justify-end">
+                <label class="flex items-center gap-2 text-xs text-gray-600" for="profit-range-{{ forloop.counter0 }}">
+                  Intervalo
+                  <select id="profit-range-{{ forloop.counter0 }}" data-branch-index="{{ forloop.counter0 }}" class="rounded-md border border-gray-200 bg-white px-2 py-1 text-xs font-medium text-gray-700 shadow-sm focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500">
+                    <option value="day">Días</option>
+                    <option value="week">Semanas</option>
+                    <option value="year">Años</option>
+                  </select>
+                </label>
+                <label class="flex items-center gap-2 text-xs text-gray-600" for="profit-view-{{ forloop.counter0 }}">
+                  Detalle
+                  <select id="profit-view-{{ forloop.counter0 }}" data-branch-view-index="{{ forloop.counter0 }}" class="rounded-md border border-gray-200 bg-white px-2 py-1 text-xs font-medium text-gray-700 shadow-sm focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500">
+                    <option value="total">Total</option>
+                    <option value="fuels">Combustibles</option>
+                    <option value="products">Productos</option>
+                  </select>
+                </label>
+              </div>
             </div>
 
             <div class="mt-4 h-64">

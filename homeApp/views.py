@@ -1,3 +1,4 @@
+from collections import defaultdict
 from datetime import date
 from decimal import Decimal, ROUND_HALF_UP
 from functools import reduce
@@ -17,7 +18,13 @@ from django.db.models.functions import (
 from django.utils import timezone
 from UsuarioApp.models import Profile
 from homeApp.models import Company
-from sucursalApp.models import Sucursal, SucursalStaff, ServiceSession
+from sucursalApp.models import (
+    ServiceSession,
+    ServiceSessionCreditSale,
+    ServiceSessionProductSaleItem,
+    Sucursal,
+    SucursalStaff,
+)
 
 
 # Create your views here.
@@ -246,11 +253,18 @@ class HomeView(LoginRequiredMixin, ListView):
                 )
 
                 grouped_totals: dict = {}
+                period_labels: dict = {}
+                fuel_totals: dict[str, dict] = defaultdict(lambda: defaultdict(lambda: decimal_zero))
+                product_totals: dict[str, dict] = defaultdict(
+                    lambda: defaultdict(lambda: decimal_zero)
+                )
+
                 for record in records:
                     period = record["period"]
                     if not period:
                         continue
 
+                    period_labels.setdefault(period, period.strftime(date_format))
                     totals = grouped_totals.setdefault(
                         period,
                         {
@@ -277,10 +291,61 @@ class HomeView(LoginRequiredMixin, ListView):
                         "product_load_payment_total"
                     ] or decimal_zero
 
-                grouped = []
-                for period, totals in sorted(
-                    grouped_totals.items(), key=lambda item: item[0]
-                ):
+                fuel_records = (
+                    ServiceSessionCreditSale.objects.filter(
+                        service_session__in=filtered_queryset
+                    )
+                    .annotate(period=trunc_fn("service_session__ended_at"))
+                    .values("period", "fuel_inventory__fuel_type")
+                    .annotate(total=Sum("amount"))
+                )
+
+                for record in fuel_records:
+                    period = record["period"]
+                    fuel_type = record["fuel_inventory__fuel_type"] or "Combustible"
+                    if not period:
+                        continue
+
+                    period_labels.setdefault(period, period.strftime(date_format))
+                    fuel_totals[fuel_type][period] += record["total"] or decimal_zero
+
+                product_records = (
+                    ServiceSessionProductSaleItem.objects.filter(
+                        sale__service_session__in=filtered_queryset
+                    )
+                    .annotate(period=trunc_fn("sale__service_session__ended_at"))
+                    .values("period", "product__product_type")
+                    .annotate(
+                        total=Sum(
+                            F("quantity") * F("product__value"),
+                            output_field=DecimalField(
+                                max_digits=14,
+                                decimal_places=2,
+                            ),
+                        )
+                    )
+                )
+
+                for record in product_records:
+                    period = record["period"]
+                    product_type = record["product__product_type"] or "Producto"
+                    if not period:
+                        continue
+
+                    period_labels.setdefault(period, period.strftime(date_format))
+                    product_totals[product_type][period] += record["total"] or decimal_zero
+
+                ordered_periods = [
+                    item[0] for item in sorted(period_labels.items(), key=lambda item: item[0])
+                ]
+                labels = [period_labels[period] for period in ordered_periods]
+
+                total_series = []
+                for period in ordered_periods:
+                    totals = grouped_totals.get(period)
+                    if not totals:
+                        continue
+
                     total_profit = (
                         + totals["total_credit"]
                         + totals["total_voucher"]
@@ -291,14 +356,32 @@ class HomeView(LoginRequiredMixin, ListView):
                         - totals["total_product_load_payment"]
                     )
 
-                    grouped.append(
+                    total_series.append(
                         {
-                            "label": period.strftime(date_format),
+                            "label": period_labels[period],
                             "value": float(total_profit or decimal_zero),
                         }
                     )
 
-                return sorted(grouped, key=lambda item: item["label"])
+                def build_grouped_series(grouped: dict[str, dict]):
+                    grouped_series: dict[str, list[dict]] = {}
+                    for entry, period_totals in grouped.items():
+                        grouped_series[entry] = [
+                            {
+                                "label": period_labels[period],
+                                "value": float(period_totals.get(period) or decimal_zero),
+                            }
+                            for period in ordered_periods
+                            if period in period_totals
+                        ]
+                    return grouped_series
+
+                return {
+                    "labels": labels,
+                    "total": total_series,
+                    "fuels": build_grouped_series(fuel_totals),
+                    "products": build_grouped_series(product_totals),
+                }
 
             for branch in branches:
                 branch_sessions = annotated_sessions.filter(shift__sucursal=branch)
