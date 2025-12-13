@@ -288,6 +288,8 @@ class UserListView(LoginRequiredMixin, ListView):
         context["is_owner"] = access.get("is_owner", False)
         context["is_admin"] = access.get("is_admin", False)
         context["is_accountant"] = access.get("is_accountant", False)
+        context["is_head_attendant"] = access.get("is_head_attendant", False)
+        context["is_attendant"] = access.get("is_attendant", False)
         context["can_manage_users"] = access.get("is_owner", False) or access.get(
             "is_admin", False
         )
@@ -295,6 +297,11 @@ class UserListView(LoginRequiredMixin, ListView):
         context["can_deactivate_users"] = (
             access.get("is_owner", False)
             or access.get("is_admin", False)
+            or access.get("is_accountant", False)
+        )
+        context["show_actions_column"] = not (
+            access.get("is_attendant", False)
+            or access.get("is_head_attendant", False)
             or access.get("is_accountant", False)
         )
         context["request_user_id"] = getattr(self.request.user, "id", None)
