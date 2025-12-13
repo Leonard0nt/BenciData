@@ -21,6 +21,7 @@ from django.templatetags.static import static
 from allauth.account.models import EmailAddress
 from django.contrib import messages
 from django.urls import reverse_lazy
+from django.core.paginator import EmptyPage, Page, PageNotAnInteger, Paginator
 from core.mixins import PermitsPositionMixin, RoleRequiredMixin
 from .models import Profile
 from sucursalApp.forms import BranchStaffForm
@@ -248,12 +249,22 @@ class UserListView(LoginRequiredMixin, ListView):
             branch_obj = branch_lookup.get(branch_id)
             branch_name = branch_obj.name if branch_obj else "Sin sucursal"
             row_entries = sorted(
-                (
-                    {**row, "branch": branch_name}
-                    for row in rows
-                ),
+                ({**row, "branch": branch_name} for row in rows),
                 key=lambda item: item["full_name"].lower(),
             )
+            page_param = (
+                f"page_branch_{branch_id}"
+                if branch_id is not None
+                else "page_branch_general"
+            )
+            paginator = Paginator(row_entries, self.paginate_by)
+            try:
+                page_obj: Page = paginator.page(self.request.GET.get(page_param))
+            except (PageNotAnInteger, EmptyPage):
+                page_obj = paginator.page(1)
+
+            paginated_entries = list(page_obj.object_list)
+
             total_users = len(row_entries)
             active_users = sum(1 for item in row_entries if item["is_active"])
             inactive_users = total_users - active_users
@@ -269,7 +280,13 @@ class UserListView(LoginRequiredMixin, ListView):
                         "id": getattr(branch_obj, "id", None),
                         "name": branch_name,
                     },
-                    "users": row_entries,
+                    "users": paginated_entries,
+                    "paginator": paginator,
+                    "page_obj": page_obj,
+                    "page_param": page_param,
+                    "anchor_id": (
+                        f"pagtable-{branch_id}" if branch_id is not None else "pagtable"
+                    ),
                     "summary": {
                         "total_users": total_users,
                         "active_users": active_users,

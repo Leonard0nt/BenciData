@@ -100,7 +100,7 @@
 
           <div class="px-6 py-6 sm:px-8">
             {% if group.users %}
-              <div class="-mx-6 -my-2 overflow-x-auto sm:-mx-8">
+              <div id="{{ group.anchor_id }}" class="-mx-6 -my-2 overflow-x-auto sm:-mx-8">
                 <div class="block w-full py-2 align-middle">
                   <table class="min-w-full w-full table-auto divide-y divide-gray-200">
                     <thead class="bg-gray-50">
@@ -202,8 +202,8 @@
                 </div>
               </div>
 
-              {% if forloop.first %}
-                {% include 'components/paginador.html' %}
+              {% if group.paginator.num_pages > 1 %}
+                {% include 'components/paginador.html' with paginator=group.paginator page_obj=group.page_obj search_query=search_query page_param=group.page_param anchor_id=group.anchor_id %}
               {% endif %}
             {% else %}
               <div class="rounded-lg border border-dashed border-gray-300 p-8 text-center">
