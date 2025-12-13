@@ -1620,14 +1620,16 @@
         <span class="inline-flex items-center rounded-full bg-indigo-50 px-3 py-1 text-sm font-medium text-indigo-700">
           {{ service_history|length|default:0 }} servicio{{ service_history|length|pluralize:"s" }}
         </span>
-        {% with branch_id=form.instance.pk|default:object.pk %}
-          <a
-            href="{% url 'service_history_export' branch_id %}?year={{ history_filters.year }}&month={{ history_filters.month }}&shift={{ history_filters.shift }}"
-            class="inline-flex items-center rounded-md bg-gradient-to-br from-indigo-500 to-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:from-indigo-600 hover:to-blue-700"
-          >
-            Descargar Informe 
-          </a>
-        {% endwith %}
+        {% if request.user.profile and not request.user.profile.is_ATTENDANT and not request.user.profile.is_head_ATTENDANT %}
+          {% with branch_id=form.instance.pk|default:object.pk %}
+            <a
+              href="{% url 'service_history_export' branch_id %}?year={{ history_filters.year }}&month={{ history_filters.month }}&shift={{ history_filters.shift }}"
+              class="inline-flex items-center rounded-md bg-gradient-to-br from-indigo-500 to-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:from-indigo-600 hover:to-blue-700"
+            >
+              Descargar Informe
+            </a>
+          {% endwith %}
+        {% endif %}
       </div>
 
       {% if service_history %}
