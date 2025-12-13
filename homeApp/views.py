@@ -311,7 +311,7 @@ class HomeView(LoginRequiredMixin, ListView):
 
                 product_records = (
                     ServiceSessionProductSaleItem.objects.filter(
-                        sale__service_session_id__in=session_ids=filtered_queryset
+                        sale__service_session_id__in=session_ids
                     )
                     .annotate(period=trunc_fn("sale__service_session__ended_at"))
                     .values("period", "product__product_type")
