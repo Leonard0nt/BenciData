@@ -8,7 +8,15 @@ from django.views.generic import ListView
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.auth.models import User
 from django.db.models import Q
-from django.db.models import DecimalField, ExpressionWrapper, F, Sum, Value
+from django.db.models import (
+    DecimalField,
+    ExpressionWrapper,
+    F,
+    OuterRef,
+    Subquery,
+    Sum,
+    Value,
+)
 from django.db.models.functions import (
     Coalesce,
     TruncDay,
@@ -21,8 +29,13 @@ from homeApp.models import Company
 from sucursalApp.models import (
     ServiceSession,
     ServiceSessionCreditSale,
+    ServiceSessionFirefighterPayment,
+    ServiceSessionFuelLoad,
     ServiceSessionFuelSale,
+    ServiceSessionProductLoad,
     ServiceSessionProductSaleItem,
+    ServiceSessionTransbankVoucher,
+    ServiceSessionWithdrawal,
     Sucursal,
     SucursalStaff,
 )
@@ -177,58 +190,65 @@ class HomeView(LoginRequiredMixin, ListView):
                 output_field=DecimalField(max_digits=14, decimal_places=2),
             )
 
-            annotated_sessions = (
-                ServiceSession.objects.filter(
-                    shift__sucursal__in=branches, ended_at__isnull=False
-                )
-                .annotate(
-                    credit_total=Coalesce(Sum("credit_sales__amount"), zero_value),
-                    withdrawal_total=Coalesce(Sum("withdrawals__amount"), zero_value),
-                    voucher_total=Coalesce(
-                        Sum("transbank_vouchers__total_amount"), zero_value
-                    ),
-                    fuel_load_payment_total=Coalesce(
-                        Sum("fuel_loads__payment_amount"), zero_value
-                    ),
-                    product_load_payment_total=Coalesce(
-                        Sum("product_loads__payment_amount"), zero_value
-                    ),
-                    firefighter_payments_total=Coalesce(
-                        Sum("firefighter_payments__amount"), zero_value
-                    ),
-                    product_sales_value=Coalesce(
-                        Sum(
-                            F("product_sales__items__quantity")
-                            * F("product_sales__items__product__value"),
-                            output_field=DecimalField(
-                                max_digits=14,
-                                decimal_places=2,
-                            ),
-                        ),
-                        zero_value,
-                    ),
-                )
-                .annotate(
-                    turn_profit=ExpressionWrapper(
-                        F("initial_budget")
-                        + F("credit_total")
-                        + F("voucher_total")
-                        + F("withdrawal_total")
-                        + F("product_sales_value"),
+            def sum_subquery(model, value_field: str, filter_field: str = "service_session"):
+                return Coalesce(
+                    Subquery(
+                        model.objects.filter(**{f"{filter_field}": OuterRef("pk")})
+                        .values(filter_field)
+                        .annotate(total=Sum(value_field))
+                        .values("total"),
                         output_field=DecimalField(
-                            max_digits=14, decimal_places=2
+                            max_digits=14,
+                            decimal_places=2,
                         ),
                     ),
-                    session_profit=ExpressionWrapper(
-                        F("turn_profit")
-                        - F("fuel_load_payment_total")
-                        - F("firefighter_payments_total")
-                        - F("product_load_payment_total"),
-                        output_field=DecimalField(
-                            max_digits=14, decimal_places=2
-                        ),
-                    ),
+                    zero_value,
                 )
+
+            annotated_sessions = ServiceSession.objects.filter(
+                shift__sucursal__in=branches, ended_at__isnull=False
+            ).annotate(
+                credit_total=sum_subquery(
+                    ServiceSessionCreditSale, "amount", "service_session"
+                ),
+                withdrawal_total=sum_subquery(
+                    ServiceSessionWithdrawal, "amount", "service_session"
+                ),
+                voucher_total=sum_subquery(
+                    ServiceSessionTransbankVoucher, "total_amount", "service_session"
+                ),
+                fuel_load_payment_total=sum_subquery(
+                    ServiceSessionFuelLoad, "payment_amount", "service_session"
+                ),
+                product_load_payment_total=sum_subquery(
+                    ServiceSessionProductLoad, "payment_amount", "service_session"
+                ),
+                firefighter_payments_total=sum_subquery(
+                    ServiceSessionFirefighterPayment, "amount", "service_session"
+                ),
+                product_sales_value=Coalesce(
+                    Subquery(
+                        ServiceSessionProductSaleItem.objects.filter(
+                            sale__service_session=OuterRef("pk")
+                        )
+                        .values("sale__service_session")
+                        .annotate(
+                            total=Sum(
+                                F("quantity") * F("product__value"),
+                                output_field=DecimalField(
+                                    max_digits=14,
+                                    decimal_places=2,
+                                ),
+                            )
+                        )
+                        .values("total"),
+                        output_field=DecimalField(
+                            max_digits=14,
+                            decimal_places=2,
+                        ),
+                    ),
+                    zero_value,
+                ),
             )
 
             def build_series(queryset, trunc_fn, date_format: str, start_date=None, end_date=None):
