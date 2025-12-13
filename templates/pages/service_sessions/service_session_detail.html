@@ -90,7 +90,7 @@
   <div
     id="tab-caja"
     class="tab-content mt-8 space-y-6"
-    x-data="{ saleModalOpen: false, withdrawModalOpen: false, creditModalOpen: false, firefighterPaymentModalOpen: false, transbankVoucherModalOpen: false, closeSessionModalOpen: false, closeSessionMode: '{{ service_session.close_mode|default:'numeral' }}' }"
+    x-data="{ saleModalOpen: false, withdrawModalOpen: false, creditModalOpen: false, firefighterPaymentModalOpen: false, transbankVoucherModalOpen: false, closeSessionModalOpen: {{ closeSessionModalOpen|yesno:'true,false' }}, closeSessionMode: '{{ service_session.close_mode|default:'numeral' }}' }"
     @keydown.escape.window="saleModalOpen = false; withdrawModalOpen = false; creditModalOpen = false; firefighterPaymentModalOpen = false; transbankVoucherModalOpen = false; closeSessionModalOpen = false"
   >
     <section class="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">

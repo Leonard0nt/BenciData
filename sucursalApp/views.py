@@ -2683,6 +2683,7 @@ class ServiceSessionDetailView(OwnerCompanyMixin, DetailView):
         close_session_flow_missing_prices = kwargs.get(
             "close_session_flow_missing_prices", set()
         )
+        close_session_modal_open = kwargs.get("closeSessionModalOpen", False)
         context.update(
             {
                 "shift": self.object.shift,
@@ -2745,6 +2746,7 @@ class ServiceSessionDetailView(OwnerCompanyMixin, DetailView):
                     flow_mismatch_labels[ServiceSession.FLOW_MISMATCH_NONE],
                 ),
                 "close_session_flow_missing_prices": close_session_flow_missing_prices,
+                "closeSessionModalOpen": close_session_modal_open,
                 "turn_profit_components": {
                     "initial_budget": initial_budget,
                     "credit_sales": credit_sales_total,
