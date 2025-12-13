@@ -97,6 +97,7 @@
       firefighterPaymentModalOpen: false,
       transbankVoucherModalOpen: false,
       closeSessionModalOpen: {{ closeSessionModalOpen|yesno:'true,false' }},
+      closeSessionCheckVisible: {% if close_session_flow_gap is not None %}true{% else %}false{% endif %},
       closeSessionMode: '{{ service_session.close_mode|default:'numeral' }}',
       resetCloseSessionNumerals() {
         const modal = this.$refs.closeSessionModal;
@@ -121,7 +122,8 @@
       },
       cancelCloseSession() {
         this.resetCloseSessionNumerals();
-        window.location.reload();
+        this.closeSessionCheckVisible = false;
+        this.closeSessionModalOpen = false;
       },
     }"
     @keydown.escape.window="saleModalOpen = false; withdrawModalOpen = false; creditModalOpen = false; firefighterPaymentModalOpen = false; transbankVoucherModalOpen = false; closeSessionModalOpen = false"
@@ -1330,7 +1332,11 @@
                   </div>
 
                   {% if close_session_flow_gap is not None %}
-                    <div class="mt-4 rounded-md border border-indigo-100 bg-indigo-50 p-4 text-sm text-indigo-900">
+                    <div
+                      class="mt-4 rounded-md border border-indigo-100 bg-indigo-50 p-4 text-sm text-indigo-900"
+                      x-show="closeSessionCheckVisible"
+                      x-cloak
+                    >
                       <div class="flex items-center justify-between gap-3">
                         <div>
                           <p class="font-semibold">Resultado de descuadre</p>
