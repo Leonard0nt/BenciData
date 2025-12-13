@@ -13,6 +13,7 @@ from urllib.parse import urlencode
 from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin
+from django.core.paginator import Paginator
 from django.db import transaction
 from django.db.models import DecimalField, F, Prefetch, QuerySet, Sum, Value
 from django.db.models.functions import Coalesce
@@ -657,7 +658,17 @@ class SucursalUpdateView(OwnerCompanyMixin, UpdateView):
                     }
                 )
 
-            context["service_history"] = history_records
+            paginator = Paginator(history_records, 5)
+            page_number = self.request.GET.get("history_page") or 1
+            service_history_page = paginator.get_page(page_number)
+
+            query_params = self.request.GET.copy()
+            query_params.pop("history_page", None)
+
+            context["service_history_page"] = service_history_page
+            context["service_history"] = service_history_page.object_list
+            context["service_history_total"] = paginator.count
+            context["history_querystring"] = query_params.urlencode()
 
             # --- datos auxiliares para los selects del filtro ---
             years_qs = closed_service_sessions_qs.datetimes(
@@ -723,6 +734,9 @@ class SucursalUpdateView(OwnerCompanyMixin, UpdateView):
             context.setdefault("branch_credit_sales_count", 0)
             context.setdefault("branch_credit_sales_total", 0)
             context.setdefault("service_history", [])
+            context.setdefault("service_history_page", None)
+            context.setdefault("service_history_total", 0)
+            context.setdefault("history_querystring", "")
             context.setdefault("can_manage_shifts", False)
         # Expose read/edit capability flag to template
         context["can_edit_branch"] = locals().get("can_edit_branch", False)
