@@ -1767,7 +1767,9 @@ class MachineInventoryClosingForm(forms.Form):
             {
                 "class": "mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-right",
                 "inputmode": "decimal",
-                "data-default-numeral": f"{default_numeral}",
+                "data-default-numeral": str(
+                    self.data.get(self.add_prefix("numeral"), default_numeral)
+                ),
                 "data-pistol-dispensed": f"{pistol_dispensed}",
                 "data-pistol-numeral": f"{pistol_numeral}",
                 "x-bind:readonly": "closeSessionMode === 'pistola'",
