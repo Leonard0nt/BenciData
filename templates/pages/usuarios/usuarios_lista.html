@@ -101,16 +101,8 @@
           <div class="px-6 py-6 sm:px-8">
             {% if group.users %}
               <div class="-mx-6 -my-2 overflow-x-auto sm:-mx-8">
-                {% if is_accountant %}
                 <div class="block w-full py-2 align-middle">
-                {% else %}
-                <div class="inline-block min-w-full py-2 align-middle">
-                {% endif %}
-                  {% if is_accountant %}
-                  <table class="w-full divide-y divide-gray-200">
-                  {% else %}
-                  <table class="min-w-full divide-y divide-gray-200">
-                  {% endif %}
+                  <table class="min-w-full w-full table-auto divide-y divide-gray-200">
                     <thead class="bg-gray-50">
                       <tr>
                         <th scope="col" class="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Usuario</th>
