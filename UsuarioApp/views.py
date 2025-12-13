@@ -218,24 +218,31 @@ class UserListView(LoginRequiredMixin, ListView):
             if not branch_ids_for_user:
                 branch_ids_for_user.add(None)
 
-            row_entry = {
-                "id": user.id,
-                "username": user.username,
-                "full_name": user.get_full_name() or user.username,
-                "email": user.email,
-                "profile_id": getattr(user_profile, "id", None),
-                "role": (
-                    user_profile.position_FK.user_position
-                    if user_profile and user_profile.position_FK
-                    else "Sin cargo"
-                ),
-                "is_active": user.is_active,
-                "is_verified": user.id in verified_user_ids,
-                "profile_image": avatar_url,
-                "last_login": user.last_login,
-                "last_activity": getattr(user_profile, "last_activity", None),
-                "date_joined": user.date_joined,
-            }
+        role_code = (
+            user_profile.position_FK.permission_code
+            if user_profile and user_profile.position_FK
+            else None
+        )
+
+        row_entry = {
+            "id": user.id,
+            "username": user.username,
+            "full_name": user.get_full_name() or user.username,
+            "email": user.email,
+            "profile_id": getattr(user_profile, "id", None),
+            "role": (
+                user_profile.position_FK.user_position
+                if user_profile and user_profile.position_FK
+                else "Sin cargo"
+            ),
+            "role_code": role_code,
+            "is_active": user.is_active,
+            "is_verified": user.id in verified_user_ids,
+            "profile_image": avatar_url,
+            "last_login": user.last_login,
+            "last_activity": getattr(user_profile, "last_activity", None),
+            "date_joined": user.date_joined,
+        }
 
             for branch_id in branch_ids_for_user:
                 branch_groups_map.setdefault(branch_id, []).append(row_entry)
@@ -571,7 +578,24 @@ class UserManagementScopeMixin:
                 and viewer_company_rut == target_company_rut
             )
 
-        if viewer_profile.is_admin() or viewer_profile.is_accountant():
+        if viewer_profile.is_admin():
+            accessible_branch_ids = set(self._get_branch_ids(viewer_profile))
+            if not accessible_branch_ids:
+                return False
+            target_branch_ids = set()
+            if target_profile.current_branch_id:
+                target_branch_ids.add(target_profile.current_branch_id)
+            target_branch_ids.update(
+                SucursalStaff.objects.filter(profile=target_profile).values_list(
+                    "sucursal_id", flat=True
+                )
+            )
+            return bool(accessible_branch_ids & target_branch_ids)
+
+        if viewer_profile.is_accountant():
+            if getattr(target_profile, "position_FK", None) and target_profile.is_admin():
+                return False
+
             accessible_branch_ids = set(self._get_branch_ids(viewer_profile))
             if not accessible_branch_ids:
                 return False
@@ -636,7 +660,7 @@ class CompanyUpdateView(LoginRequiredMixin, RoleRequiredMixin, View):
 class UserUpdateView(
     LoginRequiredMixin, RoleRequiredMixin, UserManagementScopeMixin, View
 ):
-    allowed_roles = ["OWNER", "ADMINISTRATOR"]
+    allowed_roles = ["OWNER", "ADMINISTRATOR", "ACCOUNTANT"]
     template_name = "pages/usuarios/usuario_form.html"
 
     def _get_target_user(self, pk: int) -> User:
@@ -770,7 +794,7 @@ class UserUpdateView(
 class UserDeleteView(
     LoginRequiredMixin, RoleRequiredMixin, UserManagementScopeMixin, View
 ):
-    allowed_roles = ["OWNER", "ADMINISTRATOR"]
+    allowed_roles = ["OWNER", "ADMINISTRATOR", "ACCOUNTANT"]
 
     def post(self, request, *args, **kwargs):
         target_user = get_object_or_404(
