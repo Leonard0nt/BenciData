@@ -21,6 +21,7 @@ from homeApp.models import Company
 from sucursalApp.models import (
     ServiceSession,
     ServiceSessionCreditSale,
+    ServiceSessionFuelSale,
     ServiceSessionProductSaleItem,
     Sucursal,
     SucursalStaff,
@@ -294,15 +295,17 @@ class HomeView(LoginRequiredMixin, ListView):
                     ] or decimal_zero
 
                 fuel_records = (
-                    ServiceSessionCreditSale.objects.filter(service_session_id__in=session_ids)
+                    ServiceSessionFuelSale.objects.filter(
+                        service_session_id__in=session_ids
+                    )
                     .annotate(period=trunc_fn("service_session__ended_at"))
-                    .values("period", "fuel_inventory__fuel_type")
-                    .annotate(total=Sum("amount"))
+                    .values("period", "fuel_type")
+                    .annotate(total=Sum("liters_sold"))
                 )
 
                 for record in fuel_records:
                     period = record["period"]
-                    fuel_type = record["fuel_inventory__fuel_type"] or "Combustible"
+                    fuel_type = record["fuel_type"] or "Combustible"
                     if not period:
                         continue
 

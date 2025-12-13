@@ -2845,7 +2845,7 @@ class ServiceSessionDetailView(OwnerCompanyMixin, DetailView):
                         if machine_inventory is None:
                             continue
 
-                        _, _, current_numeral = machine_inventory
+                        machine, fuel_inventory, current_numeral = machine_inventory
                         liters_sold = numeral - current_numeral
                         if liters_sold > decimal_zero:
                             fuel_sales_total += liters_sold

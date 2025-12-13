@@ -4,6 +4,9 @@
 
   const profitData = JSON.parse(profitDataElement.textContent);
 
+  const formatCurrency = (value) => `$${Number(value).toLocaleString("es-CL")}`;
+  const formatLiters = (value) => `${Number(value).toLocaleString("es-CL")} L`;
+
   const palette = [
     "#0ea5e9",
     "#22c55e",
@@ -79,7 +82,7 @@
           y: {
             beginAtZero: true,
             ticks: {
-              callback: (value) => `$${value.toLocaleString("es-CL")}`,
+              callback: (value) => formatCurrency(value),
             },
           },
         },
@@ -110,6 +113,9 @@
           },
         ];
       }
+
+      chart.options.scales.y.ticks.callback =
+        view === "fuels" ? formatLiters : formatCurrency;
 
       chart.data.labels = labels;
       chart.data.datasets = datasets;
