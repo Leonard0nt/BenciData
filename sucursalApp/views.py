@@ -3074,6 +3074,7 @@ class ServiceSessionDetailView(OwnerCompanyMixin, DetailView):
                 branch_machines=branch_machines,
                 machine_inventory_pairs=machine_inventory_pairs,
             )
+            context["closeSessionModalOpen"] = True
             return self.render_to_response(context)
 
         if form_type == "product-load":
