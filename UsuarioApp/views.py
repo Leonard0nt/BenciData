@@ -218,34 +218,34 @@ class UserListView(LoginRequiredMixin, ListView):
             if not branch_ids_for_user:
                 branch_ids_for_user.add(None)
 
-        role_code = (
-            user_profile.position_FK.permission_code
-            if user_profile and user_profile.position_FK
-            else None
-        )
-
-        row_entry = {
-            "id": user.id,
-            "username": user.username,
-            "full_name": user.get_full_name() or user.username,
-            "email": user.email,
-            "profile_id": getattr(user_profile, "id", None),
-            "role": (
-                user_profile.position_FK.user_position
+            role_code = (
+                user_profile.position_FK.permission_code
                 if user_profile and user_profile.position_FK
-                else "Sin cargo"
-            ),
-            "role_code": role_code,
-            "is_active": user.is_active,
-            "is_verified": user.id in verified_user_ids,
-            "profile_image": avatar_url,
-            "last_login": user.last_login,
-            "last_activity": getattr(user_profile, "last_activity", None),
-            "date_joined": user.date_joined,
-        }
+                else None
+            )
 
-        for branch_id in branch_ids_for_user:
-            branch_groups_map.setdefault(branch_id, []).append(row_entry)
+            row_entry = {
+                "id": user.id,
+                "username": user.username,
+                "full_name": user.get_full_name() or user.username,
+                "email": user.email,
+                "profile_id": getattr(user_profile, "id", None),
+                "role": (
+                    user_profile.position_FK.user_position
+                    if user_profile and user_profile.position_FK
+                    else "Sin cargo"
+                ),
+                "role_code": role_code,
+                "is_active": user.is_active,
+                "is_verified": user.id in verified_user_ids,
+                "profile_image": avatar_url,
+                "last_login": user.last_login,
+                "last_activity": getattr(user_profile, "last_activity", None),
+                "date_joined": user.date_joined,
+            }
+
+            for branch_id in branch_ids_for_user:
+                branch_groups_map.setdefault(branch_id, []).append(row_entry)
 
         if missing_branch_ids:
             for branch in Sucursal.objects.filter(id__in=missing_branch_ids):
