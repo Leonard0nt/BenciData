@@ -90,7 +90,40 @@
   <div
     id="tab-caja"
     class="tab-content mt-8 space-y-6"
-    x-data="{ saleModalOpen: false, withdrawModalOpen: false, creditModalOpen: false, firefighterPaymentModalOpen: false, transbankVoucherModalOpen: false, closeSessionModalOpen: {{ closeSessionModalOpen|yesno:'true,false' }}, closeSessionMode: '{{ service_session.close_mode|default:'numeral' }}' }"
+    x-data="{
+      saleModalOpen: false,
+      withdrawModalOpen: false,
+      creditModalOpen: false,
+      firefighterPaymentModalOpen: false,
+      transbankVoucherModalOpen: false,
+      closeSessionModalOpen: {{ closeSessionModalOpen|yesno:'true,false' }},
+      closeSessionMode: '{{ service_session.close_mode|default:'numeral' }}',
+      resetCloseSessionNumerals() {
+        const modal = this.$refs.closeSessionModal;
+        if (!modal) return;
+        const inputs = modal.querySelectorAll('[data-original-numeral]');
+        inputs.forEach((input) => {
+          const original = input.dataset.originalNumeral ?? '';
+          const pistolDispensed = parseFloat(input.dataset.pistolDispensed || '0');
+          const hasOriginal = original !== '';
+          const pistolNumeral = hasOriginal && !Number.isNaN(pistolDispensed)
+            ? (parseFloat(original || '0') + pistolDispensed).toFixed(3)
+            : input.dataset.pistolNumeral || '';
+
+          input.dataset.defaultNumeral = original;
+          if (hasOriginal && !Number.isNaN(pistolDispensed)) {
+            input.dataset.pistolNumeral = pistolNumeral;
+          }
+          input.value = this.closeSessionMode === 'pistola'
+            ? input.dataset.pistolNumeral || ''
+            : original;
+        });
+      },
+      cancelCloseSession() {
+        this.resetCloseSessionNumerals();
+        window.location.reload();
+      },
+    }"
     @keydown.escape.window="saleModalOpen = false; withdrawModalOpen = false; creditModalOpen = false; firefighterPaymentModalOpen = false; transbankVoucherModalOpen = false; closeSessionModalOpen = false"
   >
     <section class="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
@@ -1089,6 +1122,7 @@
         x-transition.opacity
         class="fixed inset-0 z-50 flex justify-center bg-gray-900/80 p-4 sm:items-center"
         @click.self="closeSessionModalOpen = false"
+        x-ref="closeSessionModal"
         style="margin-top: 0%;"
       >
         <div
@@ -1321,7 +1355,7 @@
               <button
                 type="button"
                 class="inline-flex items-center rounded-md border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
-                @click="closeSessionModalOpen = false"
+                @click="cancelCloseSession()"
               >
                 Cancelar
               </button>

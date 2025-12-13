@@ -1757,6 +1757,9 @@ class MachineInventoryClosingForm(forms.Form):
         default_numeral = (self.current_numeral or Decimal("0")).quantize(
             three_decimals
         )
+        original_numeral = (self.current_numeral or Decimal("0")).quantize(
+            three_decimals
+        )
         pistol_dispensed = (self.pistol_dispensed_total or Decimal("0")).quantize(
             three_decimals
         )
