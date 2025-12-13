@@ -20,7 +20,6 @@ from UsuarioApp.models import Profile
 from homeApp.models import Company
 from sucursalApp.models import (
     ServiceSession,
-    ServiceSessionFuelLoad,
     ServiceSessionCreditSale,
     ServiceSessionProductSaleItem,
     Sucursal,
@@ -241,6 +240,8 @@ class HomeView(LoginRequiredMixin, ListView):
                 if end_date:
                     filtered_queryset = filtered_queryset.filter(ended_at__date__lt=end_date)
 
+                session_ids = list(filtered_queryset.values_list("id", flat=True))
+
                 records = filtered_queryset.annotate(period=trunc_fn("ended_at")).values(
                     "period",
                     "initial_budget",
@@ -293,17 +294,15 @@ class HomeView(LoginRequiredMixin, ListView):
                     ] or decimal_zero
 
                 fuel_records = (
-                    ServiceSessionFuelLoad.objects.filter(
-                        service_session__in=filtered_queryset
-                    )
+                    ServiceSessionCreditSale.objects.filter(service_session_id__in=session_ids)
                     .annotate(period=trunc_fn("service_session__ended_at"))
-                    .values("period", "inventory__fuel_type")
-                    .annotate(total=Sum("payment_amount"))
+                    .values("period", "fuel_inventory__fuel_type")
+                    .annotate(total=Sum("amount"))
                 )
 
                 for record in fuel_records:
                     period = record["period"]
-                    fuel_type = record["inventory__fuel_type"] or "Combustible"
+                    fuel_type = record["fuel_inventory__fuel_type"] or "Combustible"
                     if not period:
                         continue
 
@@ -312,7 +311,7 @@ class HomeView(LoginRequiredMixin, ListView):
 
                 product_records = (
                     ServiceSessionProductSaleItem.objects.filter(
-                        sale__service_session__in=filtered_queryset
+                        sale__service_session_id__in=session_ids=filtered_queryset
                     )
                     .annotate(period=trunc_fn("sale__service_session__ended_at"))
                     .values("period", "product__product_type")
