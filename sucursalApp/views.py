@@ -653,6 +653,7 @@ class SucursalUpdateView(OwnerCompanyMixin, UpdateView):
                             session.flow_mismatch_type,
                             flow_mismatch_labels[ServiceSession.FLOW_MISMATCH_NONE],
                         ),
+                        "fuel_sales": session.fuel_sales,
                         "turn_profit": turn_profit,
                         "net_turn_profit": net_turn_profit,
                     }
@@ -2814,6 +2815,39 @@ class ServiceSessionDetailView(OwnerCompanyMixin, DetailView):
                 }
                 decimal_zero = Decimal("0")
 
+                fuel_sales_total = decimal_zero
+                if self.object.close_mode == ServiceSession.CLOSE_MODE_NUMERAL:
+                    for form in close_session_formset:
+                        cleaned_data = getattr(form, "cleaned_data", {}) or {}
+                        machine_id = cleaned_data.get("machine_id")
+                        fuel_inventory_id = cleaned_data.get("fuel_inventory_id")
+                        slot = cleaned_data.get("slot")
+                        numeral = cleaned_data.get("numeral")
+
+                        if (
+                            machine_id is None
+                            or fuel_inventory_id is None
+                            or slot is None
+                            or numeral is None
+                        ):
+                            continue
+
+                        machine_inventory = machine_inventory_lookup.get(
+                            (machine_id, fuel_inventory_id, slot)
+                        )
+                        if machine_inventory is None:
+                            continue
+
+                        _, _, current_numeral = machine_inventory
+                        liters_sold = numeral - current_numeral
+                        if liters_sold > decimal_zero:
+                            fuel_sales_total += liters_sold
+                elif self.object.close_mode == ServiceSession.CLOSE_MODE_PISTOL:
+                    fuel_sales_total = sum(
+                        dispense_totals_by_numeral.values(), decimal_zero
+                    )
+                fuel_sales_total = fuel_sales_total.quantize(Decimal("0.001"))
+
                 if close_action == "check":
                     fuel_prices = {}
                     for price in FuelPrice.objects.filter(sucursal=branch).order_by(
@@ -2986,7 +3020,8 @@ class ServiceSessionDetailView(OwnerCompanyMixin, DetailView):
                         ended_at__isnull=True,
                     ).exclude(pk=self.object.pk).update(ended_at=closure_time)
                     self.object.ended_at = closure_time
-                    self.object.save(update_fields=["ended_at"])
+                    self.object.fuel_sales = fuel_sales_total
+                    self.object.save(update_fields=["ended_at", "fuel_sales"])
                 messages.success(
                     request,
                     "Caja cerrada y servicio finalizado correctamente.",

@@ -727,7 +727,12 @@ class ServiceSession(models.Model):
         choices=CLOSE_MODE_CHOICES,
         default=CLOSE_MODE_NUMERAL,
     )
-
+    fuel_sales = models.DecimalField(
+        "Ventas de combustible (L)",
+        max_digits=12,
+        decimal_places=3,
+        default=0,
+    )
     class Meta:
         verbose_name = "Inicio de servicio"
         verbose_name_plural = "Inicios de servicio"
