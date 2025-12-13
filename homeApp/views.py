@@ -20,6 +20,7 @@ from UsuarioApp.models import Profile
 from homeApp.models import Company
 from sucursalApp.models import (
     ServiceSession,
+    ServiceSessionFuelLoad,
     ServiceSessionCreditSale,
     ServiceSessionProductSaleItem,
     Sucursal,
@@ -292,17 +293,17 @@ class HomeView(LoginRequiredMixin, ListView):
                     ] or decimal_zero
 
                 fuel_records = (
-                    ServiceSessionCreditSale.objects.filter(
+                    ServiceSessionFuelLoad.objects.filter(
                         service_session__in=filtered_queryset
                     )
                     .annotate(period=trunc_fn("service_session__ended_at"))
-                    .values("period", "fuel_inventory__fuel_type")
-                    .annotate(total=Sum("amount"))
+                    .values("period", "inventory__fuel_type")
+                    .annotate(total=Sum("payment_amount"))
                 )
 
                 for record in fuel_records:
                     period = record["period"]
-                    fuel_type = record["fuel_inventory__fuel_type"] or "Combustible"
+                    fuel_type = record["inventory__fuel_type"] or "Combustible"
                     if not period:
                         continue
 
@@ -387,14 +388,23 @@ class HomeView(LoginRequiredMixin, ListView):
                 branch_sessions = annotated_sessions.filter(shift__sucursal=branch)
                 if not branch_sessions.exists():
                     continue
+            for branch in branches:
+                branch_sessions = annotated_sessions.filter(shift__sucursal=branch)
+                if not branch_sessions.exists():
+                    continue
 
-                today = timezone.localdate()
-                start_of_week = today - timezone.timedelta(days=today.weekday())
-                start_of_month = today.replace(day=1)
-                start_of_next_month = (start_of_month + timezone.timedelta(days=32)).replace(
-                    day=1
-                )
-                start_of_year_range = date(today.year - 4, 1, 1)
+                last_session = branch_sessions.order_by("-ended_at").values_list(
+                    "ended_at", flat=True
+                ).first()
+                if not last_session:
+                    continue
+
+                last_session_date = timezone.localtime(last_session).date()
+
+                start_of_week = last_session_date - timezone.timedelta(days=6)
+                start_of_week_range = last_session_date - timezone.timedelta(weeks=11)
+                start_of_year_range = date(last_session_date.year - 3, 1, 1)
+                end_of_range = last_session_date + timezone.timedelta(days=1)
 
                 profit_dashboard.append(
                     {
@@ -406,20 +416,21 @@ class HomeView(LoginRequiredMixin, ListView):
                                 TruncDay,
                                 "%d %b",
                                 start_of_week,
-                                start_of_week + timezone.timedelta(days=7),
+                                end_of_range,
                             ),
                             "week": build_series(
                                 branch_sessions,
                                 TruncWeek,
                                 "%d %b",
-                                start_of_month,
-                                start_of_next_month,
+                                start_of_week_range,
+                                end_of_range,
                             ),
                             "year": build_series(
                                 branch_sessions,
                                 TruncYear,
                                 "%Y",
                                 start_of_year_range,
+                                end_of_range,
                             ),
                         },
                     }
