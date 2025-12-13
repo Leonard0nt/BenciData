@@ -244,8 +244,8 @@ class UserListView(LoginRequiredMixin, ListView):
             "date_joined": user.date_joined,
         }
 
-            for branch_id in branch_ids_for_user:
-                branch_groups_map.setdefault(branch_id, []).append(row_entry)
+        for branch_id in branch_ids_for_user:
+            branch_groups_map.setdefault(branch_id, []).append(row_entry)
 
         if missing_branch_ids:
             for branch in Sucursal.objects.filter(id__in=missing_branch_ids):
