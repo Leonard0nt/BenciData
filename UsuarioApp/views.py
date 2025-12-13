@@ -316,11 +316,7 @@ class UserListView(LoginRequiredMixin, ListView):
             or access.get("is_admin", False)
             or access.get("is_accountant", False)
         )
-        context["show_actions_column"] = not (
-            access.get("is_attendant", False)
-            or access.get("is_head_attendant", False)
-            or access.get("is_accountant", False)
-        )
+        context["show_actions_column"] = context["can_deactivate_users"]
         context["request_user_id"] = getattr(self.request.user, "id", None)
         return context
 
