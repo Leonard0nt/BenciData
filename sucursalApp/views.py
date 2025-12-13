@@ -64,6 +64,7 @@ from .models import (
     MachineFuelInventoryNumeral,
     Nozzle,
     ServiceSessionCreditSale,
+    ServiceSessionFuelSale,
     ServiceSessionFuelLoad,
     ServiceSessionFirefighterPayment,
     ServiceSessionProductLoad,
@@ -2816,6 +2817,12 @@ class ServiceSessionDetailView(OwnerCompanyMixin, DetailView):
                 decimal_zero = Decimal("0")
 
                 fuel_sales_total = decimal_zero
+                fuel_sales_by_type: dict[str, Decimal] = defaultdict(lambda: decimal_zero)
+                numeral_fuel_type_lookup = {
+                    numeral.pk: fuel_inventory.fuel_type
+                    for _, fuel_inventory, numeral in machine_inventory_pairs
+                    if fuel_inventory and numeral
+                }
                 if self.object.close_mode == ServiceSession.CLOSE_MODE_NUMERAL:
                     for form in close_session_formset:
                         cleaned_data = getattr(form, "cleaned_data", {}) or {}
@@ -2842,11 +2849,30 @@ class ServiceSessionDetailView(OwnerCompanyMixin, DetailView):
                         liters_sold = numeral - current_numeral
                         if liters_sold > decimal_zero:
                             fuel_sales_total += liters_sold
+                            fuel_type = (
+                                fuel_inventory.fuel_type if fuel_inventory else None
+                            )
+                            if fuel_type:
+                                fuel_sales_by_type[fuel_type] += liters_sold
                 elif self.object.close_mode == ServiceSession.CLOSE_MODE_PISTOL:
                     fuel_sales_total = sum(
                         dispense_totals_by_numeral.values(), decimal_zero
                     )
-                fuel_sales_total = fuel_sales_total.quantize(Decimal("0.001"))
+                    for fuel_numeral_id, liters_sold in dispense_totals_by_numeral.items():
+                        fuel_type = numeral_fuel_type_lookup.get(fuel_numeral_id)
+                        if fuel_type and liters_sold > decimal_zero:
+                            fuel_sales_by_type[fuel_type] += liters_sold
+
+                fuel_sales_by_type = {
+                    fuel_type: liters.quantize(Decimal("0.001"))
+                    for fuel_type, liters in fuel_sales_by_type.items()
+                }
+                if fuel_sales_by_type:
+                    fuel_sales_total = sum(
+                        fuel_sales_by_type.values(), decimal_zero
+                    ).quantize(Decimal("0.001"))
+                else:
+                    fuel_sales_total = fuel_sales_total.quantize(Decimal("0.001"))
 
                 if close_action == "check":
                     fuel_prices = {}
@@ -3015,6 +3041,19 @@ class ServiceSessionDetailView(OwnerCompanyMixin, DetailView):
                             slot=slot,
                             defaults={"numeral": numeral},
                         )
+                    ServiceSessionFuelSale.objects.filter(
+                        service_session=self.object
+                    ).delete()
+                    ServiceSessionFuelSale.objects.bulk_create(
+                        [
+                            ServiceSessionFuelSale(
+                                service_session=self.object,
+                                fuel_type=fuel_type,
+                                liters_sold=liters_sold,
+                            )
+                            for fuel_type, liters_sold in fuel_sales_by_type.items()
+                        ]
+                    )
                     ServiceSession.objects.filter(
                         shift__sucursal=self.object.shift.sucursal,
                         ended_at__isnull=True,
@@ -3041,6 +3080,7 @@ class ServiceSessionDetailView(OwnerCompanyMixin, DetailView):
                 service_session=self.object,
                 prefix=self.product_load_form_prefix,
             )
+
             if form.is_valid():
                 form.save()
                 messages.success(

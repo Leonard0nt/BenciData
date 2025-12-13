@@ -746,6 +746,34 @@ class ServiceSession(models.Model):
         super().save(*args, **kwargs)
 
 
+class ServiceSessionFuelSale(models.Model):
+    """Registra las ventas de combustible por tipo durante un servicio."""
+
+    service_session = models.ForeignKey(
+        ServiceSession,
+        on_delete=models.CASCADE,
+        related_name="fuel_sales_by_type",
+        verbose_name="Servicio",
+    )
+    fuel_type = models.CharField("Tipo de combustible", max_length=100)
+    liters_sold = models.DecimalField(
+        "Litros vendidos",
+        max_digits=12,
+        decimal_places=3,
+        default=0,
+    )
+    created_at = models.DateTimeField("Fecha de registro", auto_now_add=True)
+
+    class Meta:
+        verbose_name = "Venta de combustible"
+        verbose_name_plural = "Ventas de combustible"
+        unique_together = ("service_session", "fuel_type")
+        ordering = ("-created_at", "fuel_type")
+
+    def __str__(self) -> str:
+        return f"{self.fuel_type} - {self.liters_sold} L (Servicio {self.service_session_id})"
+
+
 class ServiceSessionWithdrawal(models.Model):
     """Registra las tiradas de dinero realizadas durante un servicio."""
 
