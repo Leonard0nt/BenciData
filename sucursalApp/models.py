@@ -351,7 +351,7 @@ class Nozzle(models.Model):
     )
     fuel_numeral = models.ForeignKey(
         MachineFuelInventoryNumeral,
-        on_delete=models.PROTECT,
+        on_delete=models.CASCADE,
         related_name="nozzles",
         verbose_name="Numeral",
         blank=True,

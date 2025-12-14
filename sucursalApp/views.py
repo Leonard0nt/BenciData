@@ -1436,7 +1436,7 @@ class SucursalDeleteView(OwnerCompanyMixin, DeleteView):
         self.object = self.get_object()
         # Detach related entities before deletion to avoid protected references
         # and keep user accounts intact.
-        machines_qs.update(fuel_inventory=None)
+        machines_qs = Machine.objects.filter(island__sucursal=self.object)
         machines_qs.update(fuel_inventory=None)
         for machine in machines_qs:
             machine.fuel_inventories.clear()
