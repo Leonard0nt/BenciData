@@ -1017,7 +1017,7 @@ class ServiceSessionCreditSale(models.Model):
         related_name="credit_sales",
         verbose_name="Servicio",
     )
-    invoice_number = models.CharField("Número de factura", max_length=100)
+    invoice_number = models.CharField("Número de factura", max_length=100, blank=True)
     customer_name = models.CharField("Nombre del cliente", max_length=255)
     fuel_inventory = models.ForeignKey(
         "FuelInventory",

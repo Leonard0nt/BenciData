@@ -7,7 +7,11 @@ from django.utils import timezone
 from django.views.decorators.csrf import csrf_exempt
 import json
 
-from sucursalApp.views import ServiceSessionCreateView, ServiceSessionDetailView
+from sucursalApp.views import (
+    ServiceSessionCreateView,
+    ServiceSessionDetailView,
+    ServiceSessionRecordDeleteView,
+)
 
 urlpatterns = [
     path("admin/", admin.site.urls),
@@ -23,6 +27,11 @@ urlpatterns = [
         "servicios/<int:pk>/",
         ServiceSessionDetailView.as_view(),
         name="service_session_detail",
+    ),
+    path(
+        "servicios/<int:pk>/eliminar/",
+        ServiceSessionRecordDeleteView.as_view(),
+        name="service_session_record_delete",
     ),
     path("sucursales/", include("sucursalApp.urls")),
     path("", include("iotApp.urls")), 

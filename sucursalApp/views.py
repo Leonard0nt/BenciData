@@ -2773,6 +2773,7 @@ class ServiceSessionDetailView(OwnerCompanyMixin, DetailView):
                     "product_loads": product_loads_total,
                 },
                 "is_common_attendant": is_common_attendant,
+                "can_manage_records": not is_common_attendant,
             }
         )
         return context
@@ -3237,3 +3238,74 @@ class ServiceSessionDetailView(OwnerCompanyMixin, DetailView):
 
         context = self.get_context_data(fuel_load_form=form)
         return self.render_to_response(context)
+
+
+class ServiceSessionRecordDeleteView(OwnerCompanyMixin, View):
+    allowed_roles = ["ADMINISTRATOR", "HEAD_ATTENDANT", "ATTENDANT"]
+
+    def post(self, request, *args, **kwargs):
+        service_session = get_object_or_404(ServiceSession, pk=kwargs.get("pk"))
+        profile = getattr(request.user, "profile", None)
+        manager_profile = getattr(service_session.shift, "manager", None)
+
+        if not (
+            profile
+            and (
+                profile.is_admin()
+                or profile.is_head_ATTENDANT()
+                or profile == manager_profile
+            )
+        ):
+            messages.error(
+                request,
+                "Solo el administrador o el bombero encargado pueden eliminar registros del servicio.",
+            )
+            return redirect("service_session_detail", pk=service_session.pk)
+
+        record_type = request.POST.get("record_type")
+        record_id = request.POST.get("record_id")
+
+        record_mapping = {
+            "fuel_load": ServiceSessionFuelLoad,
+            "product_load": ServiceSessionProductLoad,
+            "product_sale": ServiceSessionProductSale,
+            "credit_sale": ServiceSessionCreditSale,
+            "withdrawal": ServiceSessionWithdrawal,
+            "transbank_voucher": ServiceSessionTransbankVoucher,
+            "firefighter_payment": ServiceSessionFirefighterPayment,
+        }
+
+        model = record_mapping.get(record_type)
+        if model is None or not record_id:
+            messages.error(request, "No se pudo identificar el registro a eliminar.")
+            return redirect("service_session_detail", pk=service_session.pk)
+
+        record = (
+            model.objects.select_related().filter(
+                pk=record_id, service_session=service_session
+            )
+        ).first()
+
+        if record is None:
+            messages.error(request, "El registro seleccionado no existe en este servicio.")
+            return redirect("service_session_detail", pk=service_session.pk)
+
+        with transaction.atomic():
+            if record_type == "product_load":
+                BranchProduct.objects.filter(pk=record.product_id).update(
+                    quantity=F("quantity") - record.quantity_added
+                )
+            elif record_type == "product_sale":
+                for item in record.items.all():
+                    BranchProduct.objects.filter(pk=item.product_id).update(
+                        quantity=F("quantity") + item.quantity
+                    )
+            elif record_type == "fuel_load":
+                FuelInventory.objects.filter(pk=record.inventory_id).update(
+                    liters=F("liters") - record.liters_added
+                )
+
+            record.delete()
+
+        messages.success(request, "Registro eliminado correctamente.")
+        return redirect("service_session_detail", pk=service_session.pk)
