@@ -130,12 +130,12 @@
     {% endif %}
 
     <div class="mt-8 border-b border-gray-200">
-      <nav class="-mb-px flex flex-wrap gap-4" aria-label="Tabs">
+      <nav class="-mb-px flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:gap-4" aria-label="Tabs">
         <button
           type="button"
           data-tab-target="tab-sucursal"
           data-tab-group="branch-detail"
-          class="whitespace-nowrap border-b-2 border-indigo-500 px-1 py-3 text-sm font-medium text-indigo-600"
+          class="w-full border-b-2 border-indigo-500 px-1 py-3 text-left text-sm font-medium text-indigo-600 sm:w-auto sm:text-center sm:whitespace-nowrap"
           aria-controls="tab-sucursal"
           aria-selected="true"
         >Sucursal</button>
@@ -143,7 +143,7 @@
           type="button"
           data-tab-target="tab-turnos"
           data-tab-group="branch-detail"
-          class="whitespace-nowrap border-b-2 border-transparent px-1 py-3 text-sm font-medium text-gray-500 hover:border-gray-300 hover:text-gray-700"
+          class="w-full border-b-2 border-transparent px-1 py-3 text-left text-sm font-medium text-gray-500 hover:border-gray-300 hover:text-gray-700 sm:w-auto sm:text-center sm:whitespace-nowrap"
           aria-controls="tab-turnos"
           aria-selected="false"
         >Turnos</button>
@@ -151,7 +151,7 @@
           type="button"
           data-tab-target="tab-productos"
           data-tab-group="branch-detail"
-          class="whitespace-nowrap border-b-2 border-transparent px-1 py-3 text-sm font-medium text-gray-500 hover:border-gray-300 hover:text-gray-700"
+          class="w-full border-b-2 border-transparent px-1 py-3 text-left text-sm font-medium text-gray-500 hover:border-gray-300 hover:text-gray-700 sm:w-auto sm:text-center sm:whitespace-nowrap"
           aria-controls="tab-productos"
           aria-selected="false"
         >Productos</button>
@@ -159,7 +159,7 @@
           type="button"
           data-tab-target="tab-precios"
           data-tab-group="branch-detail"
-          class="whitespace-nowrap border-b-2 border-transparent px-1 py-3 text-sm font-medium text-gray-500 hover:border-gray-300 hover:text-gray-700"
+          class="w-full border-b-2 border-transparent px-1 py-3 text-left text-sm font-medium text-gray-500 hover:border-gray-300 hover:text-gray-700 sm:w-auto sm:text-center sm:whitespace-nowrap"
           aria-controls="tab-precios"
           aria-selected="false"
         >Precios</button>
@@ -167,7 +167,7 @@
           type="button"
           data-tab-target="tab-islas"
           data-tab-group="branch-detail"
-          class="whitespace-nowrap border-b-2 border-transparent px-1 py-3 text-sm font-medium text-gray-500 hover:border-gray-300 hover:text-gray-700"
+          class="w-full border-b-2 border-transparent px-1 py-3 text-left text-sm font-medium text-gray-500 hover:border-gray-300 hover:text-gray-700 sm:w-auto sm:text-center sm:whitespace-nowrap"
           aria-controls="tab-islas"
           aria-selected="false"
         >Islas y equipos</button>
@@ -175,7 +175,7 @@
           type="button"
           data-tab-target="tab-creditos"
           data-tab-group="branch-detail"
-          class="whitespace-nowrap border-b-2 border-transparent px-1 py-3 text-sm font-medium text-gray-500 hover:border-gray-300 hover:text-gray-700"
+          class="w-full border-b-2 border-transparent px-1 py-3 text-left text-sm font-medium text-gray-500 hover:border-gray-300 hover:text-gray-700 sm:w-auto sm:text-center sm:whitespace-nowrap"
           aria-controls="tab-creditos"
           aria-selected="false"
         >Créditos</button>
@@ -183,7 +183,7 @@
           type="button"
           data-tab-target="tab-historial"
           data-tab-group="branch-detail"
-          class="whitespace-nowrap border-b-2 border-transparent px-1 py-3 text-sm font-medium text-gray-500 hover:border-gray-300 hover:text-gray-700"
+          class="w-full border-b-2 border-transparent px-1 py-3 text-left text-sm font-medium text-gray-500 hover:border-gray-300 hover:text-gray-700 sm:w-auto sm:text-center sm:whitespace-nowrap"
           aria-controls="tab-historial"
           aria-selected="false"
         >Historial</button>
@@ -1464,7 +1464,7 @@
 
       {% if branch_credit_sales %}
         <div class="mt-6 overflow-hidden rounded-lg border border-gray-200 bg-white">
-          <table class="min-w-full divide-y divide-gray-200">
+          <table class="w-full table-auto divide-y divide-gray-200">
             <thead class="bg-gray-50">
               <tr class="text-left text-xs font-semibold uppercase tracking-wide text-gray-500">
                 <th scope="col" class="px-4 py-3">N°Documento</th>
@@ -1759,7 +1759,7 @@
                       <h3 class="text-sm font-semibold text-gray-900">Créditos a clientes</h3>
                       {% if record.credit_sales %}
                         <div class="overflow-x-auto rounded-lg border border-gray-200">
-                          <table class="min-w-full divide-y divide-gray-200 text-sm">
+                          <table class="w-full table-auto divide-y divide-gray-200 text-sm">
                             <thead class="bg-gray-50 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">
                               <tr>
                                 <th class="px-4 py-3">Factura</th>
@@ -1801,7 +1801,7 @@
                       <h3 class="text-sm font-semibold text-gray-900">Vouchers Transbank</h3>
                       {% if record.vouchers %}
                         <div class="overflow-x-auto rounded-lg border border-gray-200">
-                          <table class="min-w-full divide-y divide-gray-200 text-sm">
+                          <table class="w-full table-auto divide-y divide-gray-200 text-sm">
                             <thead class="bg-gray-50 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">
                               <tr>
                                 <th class="px-4 py-3">Responsable</th>
@@ -1829,7 +1829,7 @@
                       <h3 class="text-sm font-semibold text-gray-900">Tiradas registradas en el día</h3>
                       {% if record.withdrawals %}
                         <div class="overflow-x-auto rounded-lg border border-gray-200">
-                          <table class="min-w-full divide-y divide-gray-200 text-sm">
+                          <table class="w-full table-auto divide-y divide-gray-200 text-sm">
                             <thead class="bg-gray-50 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">
                               <tr>
                                 <th class="px-4 py-3">Responsable</th>
@@ -1857,7 +1857,7 @@
                       <h3 class="text-sm font-semibold text-gray-900">Pagos a bomberos</h3>
                       {% if record.firefighter_payments %}
                         <div class="overflow-x-auto rounded-lg border border-gray-200">
-                          <table class="min-w-full divide-y divide-gray-200 text-sm">
+                          <table class="w-full table-auto divide-y divide-gray-200 text-sm">
                             <thead class="bg-gray-50 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">
                               <tr>
                                 <th class="px-4 py-3">Bombero</th>
@@ -1885,7 +1885,7 @@
                       <h3 class="text-sm font-semibold text-gray-900">Cargas de combustible</h3>
                       {% if record.fuel_loads %}
                         <div class="overflow-x-auto rounded-lg border border-gray-200">
-                          <table class="min-w-full divide-y divide-gray-200 text-sm">
+                          <table class="w-full table-auto divide-y divide-gray-200 text-sm">
                             <thead class="bg-gray-50 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">
                               <tr>
                                 <th class="px-4 py-3">Estanque</th>
@@ -1919,7 +1919,7 @@
                       <h3 class="text-sm font-semibold text-gray-900">Ingresos de productos</h3>
                       {% if record.product_loads %}
                         <div class="overflow-x-auto rounded-lg border border-gray-200">
-                          <table class="min-w-full divide-y divide-gray-200 text-sm">
+                          <table class="w-full table-auto divide-y divide-gray-200 text-sm">
                             <thead class="bg-gray-50 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">
                               <tr>
                                 <th class="px-4 py-3">Producto</th>
@@ -1951,7 +1951,7 @@
                       <h3 class="text-sm font-semibold text-gray-900">Ventas de productos</h3>
                       {% if record.product_sales %}
                         <div class="overflow-x-auto rounded-lg border border-gray-200">
-                          <table class="min-w-full divide-y divide-gray-200 text-sm">
+                          <table class="w-full table-auto divide-y divide-gray-200 text-sm">
                             <thead class="bg-gray-50 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">
                               <tr>
                                 <th class="px-4 py-3">Venta</th>
