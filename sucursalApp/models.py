@@ -196,7 +196,7 @@ class Machine(models.Model):
     number = models.PositiveIntegerField("Identificador de máquina")
     fuel_inventory = models.ForeignKey(
         "FuelInventory",
-        on_delete=models.SET_NULL,
+        on_delete=models.CASCADE,
         related_name="machines",
         verbose_name="Estanque principal",
         blank=True,
@@ -662,7 +662,7 @@ class ServiceSession(models.Model):
 
     shift = models.ForeignKey(
         Shift,
-        on_delete=models.PROTECT,
+        on_delete=models.CASCADE,
         related_name="service_sessions",
         verbose_name="Turno",
     )
@@ -1021,7 +1021,7 @@ class ServiceSessionCreditSale(models.Model):
     customer_name = models.CharField("Nombre del cliente", max_length=255)
     fuel_inventory = models.ForeignKey(
         "FuelInventory",
-        on_delete=models.PROTECT,
+        on_delete=models.CASCADE,
         related_name="credit_sales",
         verbose_name="Estanque",
     )
@@ -1093,7 +1093,7 @@ class ServiceSessionProductSaleItem(models.Model):
     )
     product = models.ForeignKey(
         "BranchProduct",
-        on_delete=models.PROTECT,
+        on_delete=models.CASCADE,
         related_name="sale_items",
         verbose_name="Producto",
     )
