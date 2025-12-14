@@ -1668,7 +1668,7 @@
                     <ul class="mt-2 space-y-1 text-sm text-gray-700">
                       <li>Encargado: {{ record.session.shift.manager.user_FK.get_full_name|default:record.session.shift.manager.user_FK.username }}</li>
                       {% for attendant in record.attendants %}
-                        <li>Bombero: {{ attendant.user_FK.get_full_name|default:attendant.user_FK.username }}</li>
+                        <li>Bombero: {{ attendant }}</li>
                       {% empty %}
                         <li class="text-gray-500">Sin bomberos registrados.</li>
                       {% endfor %}
@@ -1737,7 +1737,7 @@
                         <ul class="mt-2 space-y-1 text-sm text-gray-700">
                           <li>Encargado: {{ record.session.shift.manager.user_FK.get_full_name|default:record.session.shift.manager.user_FK.username }}</li>
                           {% for attendant in record.attendants %}
-                            <li>Bombero: {{ attendant.user_FK.get_full_name|default:attendant.user_FK.username }}</li>
+                            <li>Bombero: {{ attendant }}</li>
                           {% empty %}
                             <li class="text-gray-500">Sin bomberos registrados.</li>
                           {% endfor %}

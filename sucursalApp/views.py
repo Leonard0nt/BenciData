@@ -622,7 +622,7 @@ class SucursalUpdateView(OwnerCompanyMixin, UpdateView):
                     {
                         "session": session,
                         "shift_schedule": f"{session.shift.start_time:%H:%M} - {session.shift.end_time:%H:%M}",
-                        "attendants": list(session.attendants.all()),
+                        "attendants": session.get_attendant_names(),
                         "credit_sales": credit_sales,
                         "credit_count": len(credit_sales),
                         "credit_total": credit_total,

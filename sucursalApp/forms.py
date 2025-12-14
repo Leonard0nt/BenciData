@@ -881,6 +881,12 @@ class ServiceSessionForm(forms.ModelForm):
 
     def save(self, commit: bool = True):
         instance: ServiceSession = super().save(commit=False)
+        attendants = list(self.cleaned_data.get("attendants") or [])
+        instance.attendants_snapshot = {
+            str(attendant.pk): attendant.user_FK.get_full_name()
+            or attendant.user_FK.username
+            for attendant in attendants
+        }
         if commit:
             instance.save()
             self.save_m2m()

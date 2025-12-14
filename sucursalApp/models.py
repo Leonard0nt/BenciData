@@ -711,6 +711,7 @@ class ServiceSession(models.Model):
         choices=FLOW_MISMATCH_CHOICES,
         default=FLOW_MISMATCH_NONE,
     )
+
     ended_at = models.DateTimeField(
         "Fecha de cierre",
         null=True,
@@ -719,6 +720,13 @@ class ServiceSession(models.Model):
     started_at = models.DateTimeField(
         "Fecha de inicio",
         auto_now_add=True,
+    )
+
+    attendants_snapshot = models.JSONField(
+        "Personal asignado (copia)",
+        default=dict,
+        blank=True,
+        help_text="Copia de los bomberos asignados al inicio del servicio.",
     )
 
     close_mode = models.CharField(
@@ -744,6 +752,33 @@ class ServiceSession(models.Model):
     def save(self, *args, **kwargs):
         self.initial_budget = (self.coins_amount or 0) + (self.cash_amount or 0)
         super().save(*args, **kwargs)
+
+    def get_attendant_names(self) -> list[str]:
+        if self.attendants_snapshot:
+            return list(self.attendants_snapshot.values())
+
+        return [
+            attendant.user_FK.get_full_name() or attendant.user_FK.username
+            for attendant in self.attendants.all()
+        ]
+
+
+@receiver(m2m_changed, sender=ServiceSession.attendants.through)
+def capture_service_attendants_snapshot(
+    sender, instance: ServiceSession, action: str, **kwargs
+) -> None:
+    """Store a snapshot of attendants when they are assigned to the service."""
+
+    if action != "post_add" or instance.attendants_snapshot:
+        return
+
+    attendants = instance.attendants.select_related("user_FK")
+    instance.attendants_snapshot = {
+        str(attendant.pk): attendant.user_FK.get_full_name()
+        or attendant.user_FK.username
+        for attendant in attendants
+    }
+    instance.save(update_fields=["attendants_snapshot"])
 
 
 class ServiceSessionFuelSale(models.Model):
