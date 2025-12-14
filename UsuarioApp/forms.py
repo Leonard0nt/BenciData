@@ -32,6 +32,8 @@ class CustomLoginForm(LoginForm):
 class UserUpdateForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        if "email" in self.fields:
+            self.fields["email"].required = True
         self.helper = FormHelper()
         self.helper.form_tag = False
 
@@ -54,6 +56,21 @@ class UserUpdateForm(forms.ModelForm):
             layout_items.append(name_div)
 
         self.helper.layout = Layout(*layout_items)
+
+    def clean_email(self):
+        email = (self.cleaned_data.get("email") or "").strip()
+
+        if not email:
+            raise ValidationError("El correo electrónico es obligatorio.")
+
+        qs = User.objects.filter(email__iexact=email)
+        if self.instance.pk:
+            qs = qs.exclude(pk=self.instance.pk)
+
+        if qs.exists():
+            raise ValidationError("Ya existe un usuario con este correo electrónico.")
+
+        return email
 
     class Meta:
         model = User

@@ -823,21 +823,35 @@ class UserDeleteView(
         target_name = target_user.get_full_name() or target_user.username
 
         target_profile = getattr(target_user, "profile", None)
-        if target_profile is not None:
-            if target_profile.current_branch_id is not None:
-                target_profile.current_branch = None
-                target_profile.save(update_fields=["current_branch"])
-            SucursalStaff.objects.filter(profile=target_profile).delete()
+        if target_profile is None:
+            target_profile, _ = Profile.objects.get_or_create(user_FK=target_user)
 
-        # Permanently delete the user and related profile/staff links.
+        branch_was_assigned = target_profile.current_branch_id is not None
+        if branch_was_assigned:
+            target_profile.current_branch = None
+
+        SucursalStaff.objects.filter(profile=target_profile).delete()
+
+        target_profile.blocked = True
+        update_fields = ["blocked"]
+
+        if branch_was_assigned:
+            update_fields.append("current_branch")
+
+        target_profile.save(update_fields=update_fields)
+
+        target_user.is_active = False
+        target_user.email = None
+
         try:
-            target_user.delete()
-            messages.success(
-                request,
-                f"El usuario {target_name} fue eliminado correctamente.",
-            )
+            target_user.save(update_fields=["is_active", "email"])
         except Exception:
             messages.error(request, "No fue posible eliminar el usuario.")
+        else:
+            messages.success(
+                request,
+                f"El usuario {target_name} fue eliminado y bloqueado correctamente.",
+            )
         return redirect("User")
 
 
@@ -863,7 +877,10 @@ class UserReactivateView(
             messages.info(request, "El usuario ya se encuentra activo.")
             return redirect("User")
 
+        target_profile, _ = Profile.objects.get_or_create(user_FK=target_user)
         target_user.is_active = True
+        target_profile.blocked = False
+        target_profile.save(update_fields=["blocked"])
         target_user.save(update_fields=["is_active"])
         messages.success(request, f"El usuario {target_user.get_full_name() or target_user.username} ha sido reactivado.")
         return redirect("User")

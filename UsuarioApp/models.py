@@ -103,6 +103,8 @@ class Profile(models.Model):
         verbose_name="Sucursal actual",
     )
 
+    blocked = models.BooleanField(default=False)
+
     rut = models.CharField(
         max_length=12,
         blank=True,
