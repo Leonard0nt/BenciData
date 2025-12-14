@@ -15,13 +15,7 @@
           Iniciado el {{ service_session.started_at|date:"d \d\e F \d\e Y" }} a las {{ service_session.started_at|date:"H:i" }} hrs.
         </p>
       </div>
-      <div class="rounded-lg border border-indigo-100 bg-indigo-50 px-4 py-3 text-sm text-indigo-700 shadow-sm">
-        <p class="text-xs font-semibold uppercase tracking-wide text-indigo-600">Presupuesto inicial</p>
-        <p class="mt-1 text-2xl font-bold text-indigo-900">
-          $ {{ service_session.initial_budget|floatformat:2 }}
-        </p>
-        <p class="mt-2 text-xs text-indigo-700">Monedas: $ {{ service_session.coins_amount|floatformat:2 }} · Efectivo: $ {{ service_session.cash_amount|floatformat:2 }}</p>
-      </div>
+
     </div>
   </section>
 
@@ -1492,76 +1486,80 @@
 
       {% if fuel_inventories %}
         <div class="mt-6 overflow-hidden rounded-lg border border-gray-200">
-          <table class="min-w-full w-full divide-y divide-gray-200">
-            <thead class="bg-gray-50">
-              <tr class="text-left text-xs font-semibold uppercase tracking-wide text-gray-500">
-                <th scope="col" class="px-4 py-3">Tanque</th>
-                <th scope="col" class="px-4 py-3">Tipo de combustible</th>
-                <th scope="col" class="px-4 py-3 text-right">Capacidad total (L)</th>
-                <th scope="col" class="px-4 py-3 text-right">Cantidad actual (L)</th>
-              </tr>
-            </thead>
-            <tbody class="divide-y divide-gray-200 bg-white text-sm">
-              {% for inventory in fuel_inventories %}
-                <tr>
-                  <td class="px-4 py-3 font-medium text-gray-900">{{ inventory.code }}</td>
-                  <td class="px-4 py-3 text-gray-700">{{ inventory.fuel_type }}</td>
-                  <td class="px-4 py-3 text-right text-gray-700">{{ inventory.capacity|floatformat:2 }}</td>
-                  <td class="px-4 py-3 text-right text-gray-900">{{ inventory.liters|floatformat:2 }}</td>
+          <div class="overflow-x-auto">
+            <table class="min-w-full w-full divide-y divide-gray-200">
+              <thead class="bg-gray-50">
+                <tr class="text-left text-xs font-semibold uppercase tracking-wide text-gray-500">
+                  <th scope="col" class="px-4 py-3">Tanque</th>
+                  <th scope="col" class="px-4 py-3">Tipo de combustible</th>
+                  <th scope="col" class="px-4 py-3 text-right">Capacidad total (L)</th>
+                  <th scope="col" class="px-4 py-3 text-right">Cantidad actual (L)</th>
                 </tr>
-              {% endfor %}
-            </tbody>
-          </table>
+              </thead>
+              <tbody class="divide-y divide-gray-200 bg-white text-sm">
+                {% for inventory in fuel_inventories %}
+                  <tr>
+                    <td class="px-4 py-3 font-medium text-gray-900">{{ inventory.code }}</td>
+                    <td class="px-4 py-3 text-gray-700">{{ inventory.fuel_type }}</td>
+                    <td class="px-4 py-3 text-right text-gray-700">{{ inventory.capacity|floatformat:2 }}</td>
+                    <td class="px-4 py-3 text-right text-gray-900">{{ inventory.liters|floatformat:2 }}</td>
+                  </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
         </div>
 
         {% if fuel_loads %}
           <div class="mt-8">
             <h3 class="text-sm font-semibold uppercase tracking-wide text-gray-500">Historial de cargas</h3>
             <div class="mt-3 overflow-hidden rounded-lg border border-gray-200">
-              <table class="min-w-full w-full divide-y divide-gray-200">
-                <thead class="bg-gray-50">
-                <tr class="text-left text-xs font-semibold uppercase tracking-wide text-gray-500">
-                  <th scope="col" class="px-4 py-3">Fecha</th>
-                  <th scope="col" class="px-4 py-3">Tanque</th>
-                  <th scope="col" class="px-4 py-3">Litros cargados</th>
-                  <th scope="col" class="px-4 py-3">Valor pagado</th>
-                  <th scope="col" class="px-4 py-3">Factura</th>
-                  <th scope="col" class="px-4 py-3">Chofer</th>
-                  <th scope="col" class="px-4 py-3">Patente</th>
-                  {% if can_manage_records %}
-                    <th scope="col" class="px-4 py-3 text-right">Acciones</th>
-                  {% endif %}
-                </tr>
-              </thead>
-              <tbody class="divide-y divide-gray-200 bg-white text-sm">
-                {% for fuel_load in fuel_loads %}
-                  <tr>
-                      <td class="px-4 py-3 text-gray-700">{{ fuel_load.date|date:"d/m/Y" }}</td>
-                      <td class="px-4 py-3 font-medium text-gray-900">{{ fuel_load.inventory.code }}</td>
-                      <td class="px-4 py-3 text-gray-900">{{ fuel_load.liters_added|floatformat:2 }} L</td>
-                    <td class="px-4 py-3 text-gray-900">$ {{ fuel_load.payment_amount|floatformat:2 }}</td>
-                    <td class="px-4 py-3 text-gray-700">{{ fuel_load.invoice_number }}</td>
-                    <td class="px-4 py-3 text-gray-700">{{ fuel_load.driver_name }}</td>
-                    <td class="px-4 py-3 text-gray-700">{{ fuel_load.license_plate }}</td>
+              <div class="overflow-x-auto">
+                <table class="min-w-full w-full divide-y divide-gray-200">
+                  <thead class="bg-gray-50">
+                  <tr class="text-left text-xs font-semibold uppercase tracking-wide text-gray-500">
+                    <th scope="col" class="px-4 py-3">Fecha</th>
+                    <th scope="col" class="px-4 py-3">Tanque</th>
+                    <th scope="col" class="px-4 py-3">Litros cargados</th>
+                    <th scope="col" class="px-4 py-3">Valor pagado</th>
+                    <th scope="col" class="px-4 py-3">Factura</th>
+                    <th scope="col" class="px-4 py-3">Chofer</th>
+                    <th scope="col" class="px-4 py-3">Patente</th>
                     {% if can_manage_records %}
-                      <td class="px-4 py-3 text-right text-gray-700">
-                        <form method="post" action="{% url 'service_session_record_delete' service_session.pk %}">
-                          {% csrf_token %}
-                          <input type="hidden" name="record_type" value="fuel_load" />
-                          <input type="hidden" name="record_id" value="{{ fuel_load.pk }}" />
-                          <button
-                            type="submit"
-                            class="inline-flex items-center rounded-md border border-red-200 px-3 py-1 text-xs font-semibold text-red-700 hover:border-red-300 hover:bg-red-50"
-                          >
-                            Eliminar
-                          </button>
-                        </form>
-                      </td>
+                      <th scope="col" class="px-4 py-3 text-right">Acciones</th>
                     {% endif %}
                   </tr>
-                {% endfor %}
-              </tbody>
-              </table>
+                </thead>
+                <tbody class="divide-y divide-gray-200 bg-white text-sm">
+                  {% for fuel_load in fuel_loads %}
+                    <tr>
+                        <td class="px-4 py-3 text-gray-700">{{ fuel_load.date|date:"d/m/Y" }}</td>
+                        <td class="px-4 py-3 font-medium text-gray-900">{{ fuel_load.inventory.code }}</td>
+                        <td class="px-4 py-3 text-gray-900">{{ fuel_load.liters_added|floatformat:2 }} L</td>
+                      <td class="px-4 py-3 text-gray-900">$ {{ fuel_load.payment_amount|floatformat:2 }}</td>
+                      <td class="px-4 py-3 text-gray-700">{{ fuel_load.invoice_number }}</td>
+                      <td class="px-4 py-3 text-gray-700">{{ fuel_load.driver_name }}</td>
+                      <td class="px-4 py-3 text-gray-700">{{ fuel_load.license_plate }}</td>
+                      {% if can_manage_records %}
+                        <td class="px-4 py-3 text-right text-gray-700">
+                          <form method="post" action="{% url 'service_session_record_delete' service_session.pk %}">
+                            {% csrf_token %}
+                            <input type="hidden" name="record_type" value="fuel_load" />
+                            <input type="hidden" name="record_id" value="{{ fuel_load.pk }}" />
+                            <button
+                              type="submit"
+                              class="inline-flex items-center rounded-md border border-red-200 px-3 py-1 text-xs font-semibold text-red-700 hover:border-red-300 hover:bg-red-50"
+                            >
+                              Eliminar
+                            </button>
+                          </form>
+                        </td>
+                      {% endif %}
+                    </tr>
+                  {% endfor %}
+                </tbody>
+                </table>
+              </div>
             </div>
           </div>
         {% endif %}
@@ -1614,65 +1612,129 @@
 
       {% if branch_products %}
         <div class="mt-6 overflow-hidden rounded-lg border border-gray-200">
-          <table class="min-w-full w-full divide-y divide-gray-200">
-            <thead class="bg-gray-50">
-              <tr class="text-left text-xs font-semibold uppercase tracking-wide text-gray-500">
-                <th scope="col" class="px-4 py-3">Producto</th>
-                <th scope="col" class="px-4 py-3">Fecha de llegada</th>
-                <th scope="col" class="px-4 py-3">Número de lote</th>
-                <th scope="col" class="px-4 py-3 text-right">Cantidad disponible</th>
-                <th scope="col" class="px-4 py-3 text-right">Ingresado en turno</th>
-                <th scope="col" class="px-4 py-3 text-right">Valor</th>
-              </tr>
-            </thead>
-            <tbody class="divide-y divide-gray-200 bg-white text-sm">
-              {% for product in branch_products %}
-                <tr>
-                  <td class="px-4 py-3 font-medium text-gray-900">{{ product.product_type }}</td>
-                  <td class="px-4 py-3 text-gray-700">{{ product.arrival_date|date:"d/m/Y" }}</td>
-                  <td class="px-4 py-3 text-gray-700">{{ product.batch_number }}</td>
-                  <td class="px-4 py-3 text-right text-gray-900">{{ product.quantity }}</td>
-                  <td class="px-4 py-3 text-right text-gray-700">{{ product.session_added_quantity|default:0 }}</td>
-                  <td class="px-4 py-3 text-right text-gray-900">$ {{ product.value|floatformat:2 }}</td>
+          <div class="overflow-x-auto">
+            <table class="min-w-full w-full divide-y divide-gray-200">
+              <thead class="bg-gray-50">
+                <tr class="text-left text-xs font-semibold uppercase tracking-wide text-gray-500">
+                  <th scope="col" class="px-4 py-3">Producto</th>
+                  <th scope="col" class="px-4 py-3">Fecha de llegada</th>
+                  <th scope="col" class="px-4 py-3">Número de lote</th>
+                  <th scope="col" class="px-4 py-3 text-right">Cantidad disponible</th>
+                  <th scope="col" class="px-4 py-3 text-right">Ingresado en turno</th>
+                  <th scope="col" class="px-4 py-3 text-right">Valor</th>
                 </tr>
-              {% endfor %}
-            </tbody>
-          </table>
+              </thead>
+              <tbody class="divide-y divide-gray-200 bg-white text-sm">
+                {% for product in branch_products %}
+                  <tr>
+                    <td class="px-4 py-3 font-medium text-gray-900">{{ product.product_type }}</td>
+                    <td class="px-4 py-3 text-gray-700">{{ product.arrival_date|date:"d/m/Y" }}</td>
+                    <td class="px-4 py-3 text-gray-700">{{ product.batch_number }}</td>
+                    <td class="px-4 py-3 text-right text-gray-900">{{ product.quantity }}</td>
+                    <td class="px-4 py-3 text-right text-gray-700">{{ product.session_added_quantity|default:0 }}</td>
+                    <td class="px-4 py-3 text-right text-gray-900">$ {{ product.value|floatformat:2 }}</td>
+                  </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
         </div>
 
         {% if product_loads %}
           <div class="mt-8">
             <h3 class="text-sm font-semibold uppercase tracking-wide text-gray-500">Historial de ingresos</h3>
             <div class="mt-3 overflow-hidden rounded-lg border border-gray-200">
-              <table class="min-w-full w-full divide-y divide-gray-200">
-                <thead class="bg-gray-50">
-                <tr class="text-left text-xs font-semibold uppercase tracking-wide text-gray-500">
-                  <th scope="col" class="px-4 py-3">Fecha</th>
-                  <th scope="col" class="px-4 py-3">Producto</th>
-                  <th scope="col" class="px-4 py-3 text-right">Cantidad</th>
-                  <th scope="col" class="px-4 py-3 text-right">Valor pagado</th>
-                  <th scope="col" class="px-4 py-3">Registrado por</th>
-                  {% if can_manage_records %}
-                    <th scope="col" class="px-4 py-3 text-right">Acciones</th>
-                  {% endif %}
-                </tr>
-              </thead>
-              <tbody class="divide-y divide-gray-200 bg-white text-sm">
-                {% for product_load in product_loads %}
-                  <tr>
-                      <td class="px-4 py-3 text-gray-700">{{ product_load.date|date:"d/m/Y" }}</td>
-                      <td class="px-4 py-3 font-medium text-gray-900">{{ product_load.product.product_type }}</td>
-                      <td class="px-4 py-3 text-right text-gray-900">{{ product_load.quantity_added }}</td>
-                    <td class="px-4 py-3 text-right text-gray-900">$ {{ product_load.payment_amount|floatformat:2 }}</td>
+              <div class="overflow-x-auto">
+                <table class="min-w-full w-full divide-y divide-gray-200">
+                  <thead class="bg-gray-50">
+                  <tr class="text-left text-xs font-semibold uppercase tracking-wide text-gray-500">
+                    <th scope="col" class="px-4 py-3">Fecha</th>
+                    <th scope="col" class="px-4 py-3">Producto</th>
+                    <th scope="col" class="px-4 py-3 text-right">Cantidad</th>
+                    <th scope="col" class="px-4 py-3 text-right">Valor pagado</th>
+                    <th scope="col" class="px-4 py-3">Registrado por</th>
+                    {% if can_manage_records %}
+                      <th scope="col" class="px-4 py-3 text-right">Acciones</th>
+                    {% endif %}
+                  </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-200 bg-white text-sm">
+                  {% for product_load in product_loads %}
+                    <tr>
+                        <td class="px-4 py-3 text-gray-700">{{ product_load.date|date:"d/m/Y" }}</td>
+                        <td class="px-4 py-3 font-medium text-gray-900">{{ product_load.product.product_type }}</td>
+                        <td class="px-4 py-3 text-right text-gray-900">{{ product_load.quantity_added }}</td>
+                      <td class="px-4 py-3 text-right text-gray-900">$ {{ product_load.payment_amount|floatformat:2 }}</td>
+                      <td class="px-4 py-3 text-gray-700">
+                        {{ product_load.responsible.user_FK.get_full_name|default:product_load.responsible.user_FK.username }}
+                      </td>
+                      {% if can_manage_records %}
+                        <td class="px-4 py-3 text-right text-gray-700">
+                          <form method="post" action="{% url 'service_session_record_delete' service_session.pk %}">
+                            {% csrf_token %}
+                            <input type="hidden" name="record_type" value="product_load" />
+                            <input type="hidden" name="record_id" value="{{ product_load.pk }}" />
+                            <button
+                              type="submit"
+                              class="inline-flex items-center rounded-md border border-red-200 px-3 py-1 text-xs font-semibold text-red-700 hover:border-red-300 hover:bg-red-50"
+                            >
+                              Eliminar
+                            </button>
+                          </form>
+                        </td>
+                      {% endif %}
+                    </tr>
+                  {% endfor %}
+                </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        {% endif %}
+
+        {% if product_sales %}
+          <div class="mt-8">
+            <h3 class="text-sm font-semibold uppercase tracking-wide text-gray-500">Historial de ventas</h3>
+            <div class="mt-3 overflow-hidden rounded-lg border border-gray-200">
+              <div class="overflow-x-auto">
+                <table class="min-w-full w-full divide-y divide-gray-200">
+                  <thead class="bg-gray-50">
+                  <tr class="text-left text-xs font-semibold uppercase tracking-wide text-gray-500">
+                    <th scope="col" class="px-4 py-3">Fecha</th>
+                    <th scope="col" class="px-4 py-3">Productos vendidos</th>
+                    <th scope="col" class="px-4 py-3 text-right">Valor de venta</th>
+                    <th scope="col" class="px-4 py-3">Registrado por</th>
+                    {% if can_manage_records %}
+                      <th scope="col" class="px-4 py-3 text-right">Acciones</th>
+                    {% endif %}
+                  </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-200 bg-white text-sm">
+                  {% for sale in product_sales %}
+                    <tr>
+                        <td class="px-4 py-3 text-gray-700">{{ sale.sold_at|date:"d/m/Y H:i" }}</td>
+                        <td class="px-4 py-3 text-gray-700">
+                          <ul class="list-disc space-y-1 pl-4">
+                            {% for item in sale.items.all %}
+                              <li>
+                                <span class="font-medium text-gray-900">{{ item.product.product_type }}</span>
+                                <span class="text-gray-600">- {{ item.quantity }} u.</span>
+                              </li>
+                            {% empty %}
+                              <li class="text-gray-500">Sin productos registrados</li>
+                            {% endfor %}
+                          </ul>
+                        </td>
+                    <td class="px-4 py-3 text-right text-gray-900">$ {{ sale.total_value|floatformat:2 }}</td>
                     <td class="px-4 py-3 text-gray-700">
-                      {{ product_load.responsible.user_FK.get_full_name|default:product_load.responsible.user_FK.username }}
+                      {{ sale.responsible.user_FK.get_full_name|default:sale.responsible.user_FK.username }}
                     </td>
                     {% if can_manage_records %}
                       <td class="px-4 py-3 text-right text-gray-700">
                         <form method="post" action="{% url 'service_session_record_delete' service_session.pk %}">
                           {% csrf_token %}
-                          <input type="hidden" name="record_type" value="product_load" />
-                          <input type="hidden" name="record_id" value="{{ product_load.pk }}" />
+                          <input type="hidden" name="record_type" value="product_sale" />
+                          <input type="hidden" name="record_id" value="{{ sale.pk }}" />
                           <button
                             type="submit"
                             class="inline-flex items-center rounded-md border border-red-200 px-3 py-1 text-xs font-semibold text-red-700 hover:border-red-300 hover:bg-red-50"
@@ -1685,66 +1747,8 @@
                   </tr>
                 {% endfor %}
               </tbody>
-              </table>
-            </div>
-          </div>
-        {% endif %}
-
-        {% if product_sales %}
-          <div class="mt-8">
-            <h3 class="text-sm font-semibold uppercase tracking-wide text-gray-500">Historial de ventas</h3>
-            <div class="mt-3 overflow-hidden rounded-lg border border-gray-200">
-              <table class="min-w-full w-full divide-y divide-gray-200">
-                <thead class="bg-gray-50">
-                <tr class="text-left text-xs font-semibold uppercase tracking-wide text-gray-500">
-                  <th scope="col" class="px-4 py-3">Fecha</th>
-                  <th scope="col" class="px-4 py-3">Productos vendidos</th>
-                  <th scope="col" class="px-4 py-3 text-right">Valor de venta</th>
-                  <th scope="col" class="px-4 py-3">Registrado por</th>
-                  {% if can_manage_records %}
-                    <th scope="col" class="px-4 py-3 text-right">Acciones</th>
-                  {% endif %}
-                </tr>
-              </thead>
-              <tbody class="divide-y divide-gray-200 bg-white text-sm">
-                {% for sale in product_sales %}
-                  <tr>
-                      <td class="px-4 py-3 text-gray-700">{{ sale.sold_at|date:"d/m/Y H:i" }}</td>
-                      <td class="px-4 py-3 text-gray-700">
-                        <ul class="list-disc space-y-1 pl-4">
-                          {% for item in sale.items.all %}
-                            <li>
-                              <span class="font-medium text-gray-900">{{ item.product.product_type }}</span>
-                              <span class="text-gray-600">- {{ item.quantity }} u.</span>
-                            </li>
-                          {% empty %}
-                            <li class="text-gray-500">Sin productos registrados</li>
-                          {% endfor %}
-                        </ul>
-                      </td>
-                  <td class="px-4 py-3 text-right text-gray-900">$ {{ sale.total_value|floatformat:2 }}</td>
-                  <td class="px-4 py-3 text-gray-700">
-                    {{ sale.responsible.user_FK.get_full_name|default:sale.responsible.user_FK.username }}
-                  </td>
-                  {% if can_manage_records %}
-                    <td class="px-4 py-3 text-right text-gray-700">
-                      <form method="post" action="{% url 'service_session_record_delete' service_session.pk %}">
-                        {% csrf_token %}
-                        <input type="hidden" name="record_type" value="product_sale" />
-                        <input type="hidden" name="record_id" value="{{ sale.pk }}" />
-                        <button
-                          type="submit"
-                          class="inline-flex items-center rounded-md border border-red-200 px-3 py-1 text-xs font-semibold text-red-700 hover:border-red-300 hover:bg-red-50"
-                        >
-                          Eliminar
-                        </button>
-                      </form>
-                    </td>
-                  {% endif %}
-                </tr>
-              {% endfor %}
-            </tbody>
-              </table>
+                </table>
+              </div>
             </div>
           </div>
         {% endif %}

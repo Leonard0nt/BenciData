@@ -2666,6 +2666,7 @@ class ServiceSessionDetailView(OwnerCompanyMixin, DetailView):
             - fuel_payments_total
             - firefighter_payments_total
             - product_loads_total
+            - credit_sales_total
         )
 
         firefighter_payment_form = kwargs.get("firefighter_payment_form")
