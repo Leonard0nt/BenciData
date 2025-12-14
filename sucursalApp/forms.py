@@ -913,6 +913,19 @@ class FuelInventoryForm(forms.ModelForm):
             ),
         }
 
+    def clean(self):
+        cleaned_data = super().clean()
+        capacity = cleaned_data.get("capacity")
+        liters = cleaned_data.get("liters")
+
+        if capacity is not None and liters is not None and liters > capacity:
+            self.add_error(
+                "liters",
+                "El litraje disponible no puede superar la capacidad total del estanque.",
+            )
+
+        return cleaned_data
+
 
 class FuelPriceForm(forms.ModelForm):
     def __init__(
