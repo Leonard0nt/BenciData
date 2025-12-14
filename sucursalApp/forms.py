@@ -92,7 +92,9 @@ class SucursalForm(forms.ModelForm):
     def __init__(self, *args, company: Optional["homeApp.models.Company"] = None, **kwargs):
         self.company = company
         super().__init__(*args, **kwargs)
-        base_queryset = Profile.objects.select_related("position_FK", "user_FK")
+        base_queryset = Profile.objects.select_related("position_FK", "user_FK").filter(
+            blocked=False
+        )
 
         # Most staff assignments should be limited to the company's profiles, but
         # administrators must be selectable globally so any system administrator
@@ -214,7 +216,9 @@ class BranchStaffForm(forms.Form):
         self.company = company or getattr(instance, "company", None)
         self.allow_admin_assignment = allow_admin_assignment
 
-        base_queryset = Profile.objects.select_related("position_FK", "user_FK")
+        base_queryset = Profile.objects.select_related("position_FK", "user_FK").filter(
+            blocked=False
+        )
         company_queryset = base_queryset
         if self.company is not None:
             company_queryset = company_queryset.filter(company_rut=self.company.rut)

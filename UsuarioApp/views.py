@@ -110,7 +110,13 @@ class UserListView(LoginRequiredMixin, ListView):
     def get_queryset(self):
         access = self._get_access_scope()
 
-        queryset = super().get_queryset().select_related("profile").order_by("-id")
+        queryset = (
+            super()
+            .get_queryset()
+            .select_related("profile")
+            .exclude(profile__blocked=True)
+            .order_by("-id")
+        )
         search_query = self.request.GET.get("search")
 
         if search_query:
