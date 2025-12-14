@@ -1434,11 +1434,22 @@ class SucursalDeleteView(OwnerCompanyMixin, DeleteView):
 
     def delete(self, request, *args, **kwargs):
         self.object = self.get_object()
+        # Detach related entities before deletion to avoid protected references
+        # and keep user accounts intact.
+        machines_qs = Machine.objects.filter(island__sucursal=self.object)
+        machines_qs.update(fuel_inventory=None)
+        for machine in machines_qs:
+            machine.fuel_inventories.clear()
+
+        # Remove branch assignment from user profiles without deleting them.
+        from UsuarioApp.models import Profile
+
+        Profile.objects.filter(current_branch=self.object).update(current_branch=None)
+
         sucursal_name = self.object.name
         response = super().delete(request, *args, **kwargs)
         messages.success(request, f"Sucursal '{sucursal_name}' eliminada con éxito.")
         return response
-
 class BranchAccessMixin(OwnerCompanyMixin):
     branch_url_kwarg = "branch_pk"
     allowed_roles = ["OWNER", "ADMINISTRATOR"]

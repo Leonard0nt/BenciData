@@ -196,7 +196,7 @@ class Machine(models.Model):
     number = models.PositiveIntegerField("Identificador de máquina")
     fuel_inventory = models.ForeignKey(
         "FuelInventory",
-        on_delete=models.PROTECT,
+        on_delete=models.SET_NULL,
         related_name="machines",
         verbose_name="Estanque principal",
         blank=True,
