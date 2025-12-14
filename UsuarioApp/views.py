@@ -841,8 +841,9 @@ class UserDeleteView(
         target_profile.save(update_fields=update_fields)
 
         target_user.is_active = False
-        target_user.email = None
-
+        # Django's default User.email field does not allow NULL values, so assign
+        # an empty string instead of None to avoid IntegrityError on save.
+        target_user.email = ""
         try:
             target_user.save(update_fields=["is_active", "email"])
         except Exception:
