@@ -6,12 +6,15 @@ from django.http import JsonResponse, HttpResponseBadRequest, HttpResponseNotAll
 from django.utils import timezone
 from django.views.decorators.csrf import csrf_exempt
 import json
+from utils.hashids import HashidConverter
 
 from sucursalApp.views import (
     ServiceSessionCreateView,
     ServiceSessionDetailView,
     ServiceSessionRecordDeleteView,
 )
+
+register_converter(HashidConverter, "hashid")
 
 urlpatterns = [
     path("admin/", admin.site.urls),
@@ -24,12 +27,12 @@ urlpatterns = [
         name="service_session_start",
     ),
     path(
-        "servicios/<int:pk>/",
+        "servicios/<hashid:pk>/",
         ServiceSessionDetailView.as_view(),
         name="service_session_detail",
     ),
     path(
-        "servicios/<int:pk>/eliminar/",
+        "servicios/<hashid:pk>/eliminar/",
         ServiceSessionRecordDeleteView.as_view(),
         name="service_session_record_delete",
     ),

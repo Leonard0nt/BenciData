@@ -13,55 +13,35 @@ services:
     env_file:
       - .env
     environment:
-      # En caso de que falten en .env, puedes sobreescribir aquí:
-      DB_HOST: db
-      DB_PORT: 5432
-
-      # Superuser auto (opcional)
       DJANGO_SUPERUSER_EMAIL: leopoldowall9@gmail.com
       DJANGO_SUPERUSER_PASSWORD: 123qaz***
       DJANGO_SUPERUSER_USERNAME: Dueño
-    depends_on:
-      - db
     networks:
       - bencidata_network
     ports:
-      - "8000:8000"   # opcional, para entrar directo a Django
-
-  db:
-    image: postgres:15
-    container_name: bencidata_postgres
-    environment:
-      POSTGRES_DB: ${DB_NAME}          # p.ej. bencidata
-      POSTGRES_USER: ${DB_USER}        # p.ej. bencidata
-      POSTGRES_PASSWORD: ${DB_PASSWORD}
-    ports:
-      - "5432:5432"
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-      - ./postgres-init:/docker-entrypoint-initdb.d
-    networks:
-      - bencidata_network
+      - "8000:8000"
 
   nginx:
     image: nginx:latest
     container_name: bencidata_nginx
     ports:
       - "80:80"
+      - "443:443"
     volumes:
       - ./nginx/conf.d:/etc/nginx/conf.d
       - static_volume:/app/staticfiles
       - media_volume:/app/media
+      - /etc/letsencrypt:/etc/letsencrypt:ro
     depends_on:
       - django
     networks:
       - bencidata_network
 
 volumes:
-  postgres_data:
   static_volume:
   media_volume:
 
 networks:
   bencidata_network:
     driver: bridge
+

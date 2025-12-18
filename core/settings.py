@@ -33,6 +33,13 @@ ALLOWED_HOSTS = (
     else []
 )
 
+DJANGO_HASHIDS_SALT = env("HASHIDS_SALT", default=SECRET_KEY)
+DJANGO_HASHIDS_MIN_LENGTH = env.int("HASHIDS_MIN_LENGTH", default=8)
+
+CSRF_TRUSTED_ORIGINS = [
+    "https://bencidata.cl",
+    "https://www.bencidata.cl",
+]
 
 
 # Application definition

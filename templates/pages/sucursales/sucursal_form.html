@@ -130,12 +130,12 @@
     {% endif %}
 
     <div class="mt-8 border-b border-gray-200">
-      <nav class="-mb-px flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:gap-4" aria-label="Tabs">
+      <nav class="-mb-px flex flex-wrap gap-4" aria-label="Tabs">
         <button
           type="button"
           data-tab-target="tab-sucursal"
           data-tab-group="branch-detail"
-          class="w-full border-b-2 border-indigo-500 px-1 py-3 text-left text-sm font-medium text-indigo-600 sm:w-auto sm:text-center sm:whitespace-nowrap"
+          class="whitespace-nowrap border-b-2 border-indigo-500 px-1 py-3 text-sm font-medium text-indigo-600"
           aria-controls="tab-sucursal"
           aria-selected="true"
         >Sucursal</button>
@@ -143,7 +143,7 @@
           type="button"
           data-tab-target="tab-turnos"
           data-tab-group="branch-detail"
-          class="w-full border-b-2 border-transparent px-1 py-3 text-left text-sm font-medium text-gray-500 hover:border-gray-300 hover:text-gray-700 sm:w-auto sm:text-center sm:whitespace-nowrap"
+          class="whitespace-nowrap border-b-2 border-transparent px-1 py-3 text-sm font-medium text-gray-500 hover:border-gray-300 hover:text-gray-700"
           aria-controls="tab-turnos"
           aria-selected="false"
         >Turnos</button>
@@ -151,7 +151,7 @@
           type="button"
           data-tab-target="tab-productos"
           data-tab-group="branch-detail"
-          class="w-full border-b-2 border-transparent px-1 py-3 text-left text-sm font-medium text-gray-500 hover:border-gray-300 hover:text-gray-700 sm:w-auto sm:text-center sm:whitespace-nowrap"
+          class="whitespace-nowrap border-b-2 border-transparent px-1 py-3 text-sm font-medium text-gray-500 hover:border-gray-300 hover:text-gray-700"
           aria-controls="tab-productos"
           aria-selected="false"
         >Productos</button>
@@ -159,7 +159,7 @@
           type="button"
           data-tab-target="tab-precios"
           data-tab-group="branch-detail"
-          class="w-full border-b-2 border-transparent px-1 py-3 text-left text-sm font-medium text-gray-500 hover:border-gray-300 hover:text-gray-700 sm:w-auto sm:text-center sm:whitespace-nowrap"
+          class="whitespace-nowrap border-b-2 border-transparent px-1 py-3 text-sm font-medium text-gray-500 hover:border-gray-300 hover:text-gray-700"
           aria-controls="tab-precios"
           aria-selected="false"
         >Precios</button>
@@ -167,7 +167,7 @@
           type="button"
           data-tab-target="tab-islas"
           data-tab-group="branch-detail"
-          class="w-full border-b-2 border-transparent px-1 py-3 text-left text-sm font-medium text-gray-500 hover:border-gray-300 hover:text-gray-700 sm:w-auto sm:text-center sm:whitespace-nowrap"
+          class="whitespace-nowrap border-b-2 border-transparent px-1 py-3 text-sm font-medium text-gray-500 hover:border-gray-300 hover:text-gray-700"
           aria-controls="tab-islas"
           aria-selected="false"
         >Islas y equipos</button>
@@ -175,7 +175,7 @@
           type="button"
           data-tab-target="tab-creditos"
           data-tab-group="branch-detail"
-          class="w-full border-b-2 border-transparent px-1 py-3 text-left text-sm font-medium text-gray-500 hover:border-gray-300 hover:text-gray-700 sm:w-auto sm:text-center sm:whitespace-nowrap"
+          class="whitespace-nowrap border-b-2 border-transparent px-1 py-3 text-sm font-medium text-gray-500 hover:border-gray-300 hover:text-gray-700"
           aria-controls="tab-creditos"
           aria-selected="false"
         >Créditos</button>
@@ -183,7 +183,7 @@
           type="button"
           data-tab-target="tab-historial"
           data-tab-group="branch-detail"
-          class="w-full border-b-2 border-transparent px-1 py-3 text-left text-sm font-medium text-gray-500 hover:border-gray-300 hover:text-gray-700 sm:w-auto sm:text-center sm:whitespace-nowrap"
+          class="whitespace-nowrap border-b-2 border-transparent px-1 py-3 text-sm font-medium text-gray-500 hover:border-gray-300 hover:text-gray-700"
           aria-controls="tab-historial"
           aria-selected="false"
         >Historial</button>
@@ -1464,7 +1464,7 @@
 
       {% if branch_credit_sales %}
         <div class="mt-6 overflow-hidden rounded-lg border border-gray-200 bg-white">
-          <table class="w-full min-w-[720px] table-auto divide-y divide-gray-200">
+          <table class="min-w-full divide-y divide-gray-200">
             <thead class="bg-gray-50">
               <tr class="text-left text-xs font-semibold uppercase tracking-wide text-gray-500">
                 <th scope="col" class="px-4 py-3">N°Documento</th>
@@ -1537,9 +1537,9 @@
       <div class="flex flex-wrap items-center justify-between gap-4">
             <!-- Filtros de historial -->
     <div class="mt-4 rounded-lg bg-gray-50 p-4">
-      <form method="get" class="grid w-full gap-4 sm:grid-cols-2 lg:grid-cols-4 items-end"></form>
+      <form method="get" class="flex flex-wrap items-end gap-4">
         <!-- Año -->
-        <div class="min-w-0">
+        <div>
           <label for="history_year" class="block text-xs font-medium text-gray-600">
             Año
           </label>
@@ -1561,14 +1561,14 @@
         </div>
 
         <!-- Mes -->
-        <div class="min-w-0">
+        <div>
           <label for="history_month" class="block text-xs font-medium text-gray-600">
             Mes
           </label>
           <select
             id="history_month"
             name="month"
-            class="mt-1 block w-full rounded-md border-gray-300 text-sm shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+            class="mt-1 block w-32 rounded-md border-gray-300 text-sm shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
           >
             <option value="">Todos</option>
             {% for m in history_months %}
@@ -1583,7 +1583,7 @@
         </div>
 
         <!-- Turno (código) -->
-        <div class="min-w-0">
+        <div>
           <label for="history_shift" class="block text-xs font-medium text-gray-600">
             Turno
           </label>
@@ -1598,7 +1598,7 @@
         </div>
 
         <!-- Botones -->
-        <div class="flex flex-wrap gap-2 sm:justify-end">
+        <div class="flex gap-2">
           <button
             type="submit"
             class="inline-flex items-center rounded-md bg-indigo-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-700"
@@ -1759,7 +1759,7 @@
                       <h3 class="text-sm font-semibold text-gray-900">Créditos a clientes</h3>
                       {% if record.credit_sales %}
                         <div class="overflow-x-auto rounded-lg border border-gray-200">
-                          <table class="w-full table-auto divide-y divide-gray-200 text-sm">
+                          <table class="min-w-full divide-y divide-gray-200 text-sm">
                             <thead class="bg-gray-50 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">
                               <tr>
                                 <th class="px-4 py-3">Factura</th>
@@ -1801,7 +1801,7 @@
                       <h3 class="text-sm font-semibold text-gray-900">Vouchers Transbank</h3>
                       {% if record.vouchers %}
                         <div class="overflow-x-auto rounded-lg border border-gray-200">
-                          <table class="w-full table-auto divide-y divide-gray-200 text-sm">
+                          <table class="min-w-full divide-y divide-gray-200 text-sm">
                             <thead class="bg-gray-50 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">
                               <tr>
                                 <th class="px-4 py-3">Responsable</th>
@@ -1829,7 +1829,7 @@
                       <h3 class="text-sm font-semibold text-gray-900">Tiradas registradas en el día</h3>
                       {% if record.withdrawals %}
                         <div class="overflow-x-auto rounded-lg border border-gray-200">
-                          <table class="w-full table-auto divide-y divide-gray-200 text-sm">
+                          <table class="min-w-full divide-y divide-gray-200 text-sm">
                             <thead class="bg-gray-50 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">
                               <tr>
                                 <th class="px-4 py-3">Responsable</th>
@@ -1857,7 +1857,7 @@
                       <h3 class="text-sm font-semibold text-gray-900">Pagos a bomberos</h3>
                       {% if record.firefighter_payments %}
                         <div class="overflow-x-auto rounded-lg border border-gray-200">
-                          <table class="w-full table-auto divide-y divide-gray-200 text-sm">
+                          <table class="min-w-full divide-y divide-gray-200 text-sm">
                             <thead class="bg-gray-50 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">
                               <tr>
                                 <th class="px-4 py-3">Bombero</th>
@@ -1885,7 +1885,7 @@
                       <h3 class="text-sm font-semibold text-gray-900">Cargas de combustible</h3>
                       {% if record.fuel_loads %}
                         <div class="overflow-x-auto rounded-lg border border-gray-200">
-                          <table class="w-full table-auto divide-y divide-gray-200 text-sm">
+                          <table class="min-w-full divide-y divide-gray-200 text-sm">
                             <thead class="bg-gray-50 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">
                               <tr>
                                 <th class="px-4 py-3">Estanque</th>
@@ -1919,7 +1919,7 @@
                       <h3 class="text-sm font-semibold text-gray-900">Ingresos de productos</h3>
                       {% if record.product_loads %}
                         <div class="overflow-x-auto rounded-lg border border-gray-200">
-                          <table class="w-full table-auto divide-y divide-gray-200 text-sm">
+                          <table class="min-w-full divide-y divide-gray-200 text-sm">
                             <thead class="bg-gray-50 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">
                               <tr>
                                 <th class="px-4 py-3">Producto</th>
@@ -1951,7 +1951,7 @@
                       <h3 class="text-sm font-semibold text-gray-900">Ventas de productos</h3>
                       {% if record.product_sales %}
                         <div class="overflow-x-auto rounded-lg border border-gray-200">
-                          <table class="w-full table-auto divide-y divide-gray-200 text-sm">
+                          <table class="min-w-full divide-y divide-gray-200 text-sm">
                             <thead class="bg-gray-50 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">
                               <tr>
                                 <th class="px-4 py-3">Venta</th>
@@ -2033,14 +2033,12 @@
   <form method="post" class="space-y-6">
     {% csrf_token %}
     {% for field in form %}
-      {% if field.name != 'administrators' and field.name != 'accountants' and field.name != 'firefighters' %}
-        <div>
-          <label class="block text-sm font-medium text-gray-700 mb-1" for="{{ field.id_for_label }}">{{ field.label }}</label>
-          {{ field }}
-          {% if field.help_text %}<p class="mt-1 text-sm text-gray-500">{{ field.help_text }}</p>{% endif %}
-          {% for error in field.errors %}<p class="mt-1 text-sm text-red-600">{{ error }}</p>{% endfor %}
-        </div>
-      {% endif %}
+      <div>
+        <label class="block text-sm font-medium text-gray-700 mb-1" for="{{ field.id_for_label }}">{{ field.label }}</label>
+        {{ field }}
+        {% if field.help_text %}<p class="mt-1 text-sm text-gray-500">{{ field.help_text }}</p>{% endif %}
+        {% for error in field.errors %}<p class="mt-1 text-sm text-red-600">{{ error }}</p>{% endfor %}
+      </div>
     {% endfor %}
     {% if form.non_field_errors %}
       {% for error in form.non_field_errors %}<p class="text-sm text-red-600">{{ error }}</p>{% endfor %}

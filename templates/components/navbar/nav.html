@@ -33,8 +33,8 @@
           {% endif %}
         {% endif %}
 
-        {% if not user.profile.is_owner %}
-          {% if user.profile.is_admin or user.profile.is_head_ATTENDANT or user.profile.position_FK.permission_code == 'HEAD_ATTENDANT' or has_active_service_assigned %}
+        {% if not user.profile.is_owner and not user.prfile.is_admin %}
+          {% if user.profile.is_head_ATTENDANT or user.profile.position_FK.permission_code == 'HEAD_ATTENDANT' or has_active_service_assigned %}
             <li>
               {% url 'service_session_start' as service_session_start_url %}
               {% with service_session_target=service_session_link|default:service_session_start_url %}

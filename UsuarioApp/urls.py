@@ -4,22 +4,22 @@ from UsuarioApp import views
 urlpatterns = [
     path("usuarios/", views.UserListView.as_view(), name="User"),
     path(
-        "usuarios/<int:pk>/editar/",
+        "usuarios/<hashid:pk>/editar/",
         views.UserUpdateView.as_view(),
         name="UserEdit",
     ),
     path(
-        "usuarios/<int:pk>/eliminar/",
+        "usuarios/<hashid:pk>/eliminar/",
         views.UserDeleteView.as_view(),
         name="UserDelete",
     ),
     path(
-        "usuarios/<int:pk>/desactivar/",
+        "usuarios/<hashid:pk>/desactivar/",
         views.UserDeactivateView.as_view(),
         name="UserDeactivate",
     ),
     path(
-        "usuarios/<int:pk>/reactivar/",
+        "usuarios/<hashid:pk>/reactivar/",
         views.UserReactivateView.as_view(),
         name="UserReactivate",
     ),

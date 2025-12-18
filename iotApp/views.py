@@ -80,6 +80,8 @@ def recibir_datos_proxy(request):
             codigo_identificador=uid
         ).select_related("user_FK").first()
 
+        if not firefighter:
+            return JsonResponse({"status": "error", "message": "UID no asociado a ningún bombero"},status=400)
         if fuel_numeral:
             with transaction.atomic():
                 MachineFuelInventoryNumeral.objects.filter(pk=fuel_numeral.pk).update(
@@ -113,3 +115,4 @@ def recibir_datos_proxy(request):
             "received_at": timezone.now().isoformat(),
         }
     )
+

@@ -621,12 +621,13 @@ class ShiftForm(forms.ModelForm):
         super().__init__(*args, **kwargs)
         branch = self.sucursal or self.initial.get("sucursal") or self.instance.sucursal
         queryset = Profile.objects.select_related("user_FK", "position_FK")
+        current_manager = getattr(self.instance, "manager_id", None)
         if branch:
             queryset = queryset.filter(sucursal_staff__sucursal=branch).distinct()
         manager_queryset = queryset.filter(
-            Q(position_FK__permission_code__in=["ATTENDANT", "HEAD_ATTENDANT"])
+            Q(position_FK__permission_code__in=["ATTENDANT", "HEAD_ATTENDANT"]),
+            is_partime=True,
         )
-        current_manager = getattr(self.instance, "manager_id", None)
         if current_manager:
             manager_queryset = (manager_queryset | queryset.filter(pk=current_manager)).distinct()
         self.fields["manager"].queryset = manager_queryset.order_by(

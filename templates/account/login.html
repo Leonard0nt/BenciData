@@ -9,6 +9,20 @@
 {% endblock %}
 
 {% block content %}
+<style>
+    .trust{
+  margin: 18px 0 0;
+  font-size: 12px;
+  color: var(--muted);
+  text-align:center;
+}
+
+.footer{
+  margin: 10px 0 0;
+  font-size: 12px;
+  color: #9ca3af;
+  text-align:
+</style>
 <div class="flex min-h-fullScreen mt-7 gap-x-1 flex-row justify-center py-auto px-2">
   <div
     class="panel-izquierdo hidden md:flex mt-1 sm:max-w-[480px] bg-white rounded-md flex-col items-center justify-center">
@@ -55,6 +69,7 @@
       {% element hr %}
       {% endelement %}
       {% element h2 %}
+
       <div
         class="flex w-full justify-center rounded-md bg-gradient-to-br px-3 py-1.5 text-sm font-semibold leading-6 text-white shadow-sm hover:bg-gradient-to-br focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600">
         {% element button href=request_login_code_url tags='prominent,login,secondary' %}
@@ -73,6 +88,8 @@
       </div>
             {% url 'account_reset_password' as reset_url %}
       <a href="{{ reset_url }}" class="text-indigo-500 text-sm">¿Olvidaste tu contraseña?</a>
+      <p class="trust mt-auto">Acceso seguro · Infraestructura en la nube · Datos protegidos</p>
+        <p class="footer">© 2025 BenciData · Todos los derechos reservados</p>
       <script>
         document.addEventListener("DOMContentLoaded", () => {
           const toggle = document.getElementById("show-password");
