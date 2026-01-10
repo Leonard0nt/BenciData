@@ -46,6 +46,7 @@ services:
       - "443:443"
     volumes:
       - ./nginx/conf.d:/etc/nginx/conf.d
+      - ./nginx/docker-entrypoint.d:/docker-entrypoint.d:ro
       - static_volume:/app/staticfiles
       - media_volume:/app/media
       - /etc/letsencrypt:/etc/letsencrypt:ro
