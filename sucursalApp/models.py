@@ -612,44 +612,6 @@ def ensure_attendants_are_branch_staff(
     elif action == "post_clear":
         _cleanup_branch_attendants(instance.sucursal)
 
-@receiver(m2m_changed, sender=Shift.attendants.through)
-def ensure_attendants_are_branch_staff(
-    sender,
-    instance: Shift,
-    action: str,
-    pk_set,
-    **_,
-) -> None:
-    """Ensure attendants belong to the branch staff when added to a shift."""
-
-    if action != "post_add" or not pk_set:
-        return
-
-    from UsuarioApp.models import Profile
-
-    attendants = Profile.objects.filter(pk__in=pk_set).select_related("position_FK")
-
-    for attendant in attendants:
-        role = "ATTENDANT"
-        if attendant.position_FK and attendant.position_FK.permission_code in (
-            "ATTENDANT",
-            "HEAD_ATTENDANT",
-        ):
-            role = attendant.position_FK.permission_code
-
-        assignment, created = SucursalStaff.objects.get_or_create(
-            sucursal=instance.sucursal,
-            profile=attendant,
-            defaults={"role": role},
-        )
-
-        if not created and (
-            assignment.role is None
-            or assignment.role in ("ATTENDANT", "HEAD_ATTENDANT")
-        ) and assignment.role != role:
-            assignment.role = role
-            assignment.save(update_fields=["role"])
-
 class ServiceSession(models.Model):
     """Representa el inicio de un servicio para un turno específico."""
 

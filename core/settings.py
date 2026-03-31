@@ -136,6 +136,8 @@ MFA_FORMS = {
     "deactivate_totp": "allauth.mfa.forms.DeactivateTOTPForm",
 }
 
+IOT_SECRET_TOKEN = env("IOT_SECRET_TOKEN")  # en el .env
+
 SITE_ID = 1
 
 # -------------------------
@@ -226,7 +228,21 @@ ACCOUNT_EMAIL_CONFIRMATION_EXPIRE_DAYS = 3
 
 ACCOUNT_LOGOUT_ON_GET = True
 
-SESSION_COOKIE_AGE = 60 * 60 * 24 * 365
+
+# Sesión expira tras 8 horas de inactividad (apropiado para turnos de trabajo)
+SESSION_COOKIE_AGE = 60 * 60 * 8  # 8 horas
+
+# La sesión se renueva con cada request — el contador se reinicia con actividad
+SESSION_SAVE_EVERY_REQUEST = True
+
+# La cookie desaparece al cerrar el navegador (capa extra de protección)
+SESSION_EXPIRE_AT_BROWSER_CLOSE = True
+
+# Solo enviar la cookie por HTTPS (ya tienen nginx con SSL)
+SESSION_COOKIE_SECURE = True
+
+# Evita que JavaScript lea la cookie (protección contra XSS)
+SESSION_COOKIE_HTTPONLY = True  # Django lo pone en True por defecto, pero vale explicitarlo
 
 LOGIN_URL = "account_login"
 

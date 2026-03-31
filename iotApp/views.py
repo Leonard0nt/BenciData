@@ -17,8 +17,12 @@ from sucursalApp.models import MachineFuelInventoryNumeral, Nozzle, ServiceSessi
 # Si creaste el modelo:
 from .models import DispenseEvent
 
+from django.views.decorators.csrf import csrf_exempt
+from .auth import iot_token_required
 
-@csrf_exempt  # Arduino no manda CSRF, así que lo desactivamos SOLO aquí
+@csrf_exempt
+@iot_token_required
+
 def recibir_datos_proxy(request):
     if request.method != "POST":
         return HttpResponseNotAllowed(["POST"], "Solo se permite POST")
@@ -40,6 +44,8 @@ def recibir_datos_proxy(request):
         return HttpResponseBadRequest("Faltan campos 'uid' o 'litros'")
     try:
         litros_decimal = Decimal(str(litros))
+        if litros_decimal <= 0:
+            return HttpResponseBadRequest("El valor de 'litros' debe ser positivo")
     except Exception:
         return HttpResponseBadRequest("El valor de 'litros' no es válido")
 
@@ -89,7 +95,7 @@ def recibir_datos_proxy(request):
                 )
                 fuel_numeral.refresh_from_db(fields=["numeral"])
     except Exception as exc:  # pragma: no cover - defensive logging
-        print("⚠️ Error procesando datos IoT:", exc)
+        return JsonResponse({"status": "error", "message": "Error interno"}, status=500)
 
 
     # 4) Guardar en BD (si tienes el modelo)
