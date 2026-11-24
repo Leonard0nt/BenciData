@@ -56,7 +56,12 @@ with transaction.atomic():
         sucursal=branch, code="DEMO-AM",
         defaults={"manager": profile, "start_time": time(8), "end_time": time(16)},
     )
-    session, _ = ServiceSession.objects.get_or_create(shift=shift, ended_at=None)
+    # Conserva el turno ficticio abierto y las lecturas que ya recibió.
+    session, _ = ServiceSession.objects.update_or_create(
+        shift=shift,
+        ended_at=None,
+        defaults={"close_mode": ServiceSession.CLOSE_MODE_PISTOL},
+    )
     session.attendants.add(profile)
     tank, _ = FuelInventory.objects.get_or_create(
         sucursal=branch, code="DEMO-DSL",
