@@ -473,26 +473,6 @@
         </div>
       </div>
 
-      <div class="mt-6 rounded-lg border border-gray-200 bg-gray-50 p-4">
-        <h3 class="text-sm font-semibold text-gray-900">Combustible despachado (IoT)</h3>
-        <dl class="mt-2 grid gap-2 text-sm sm:grid-cols-2">
-          <div>
-            <dt class="text-gray-600">Litros despachados</dt>
-            <dd class="font-semibold">{{ iot_dispatch_summary.liters|floatformat:"-3g" }} L</dd>
-          </div>
-          <div>
-            <dt class="text-gray-600">Importe estimado al precio vigente</dt>
-            <dd class="font-semibold">
-              {% if iot_dispatch_summary.has_missing_prices %}
-                Falta identificar el combustible o configurar su precio
-              {% else %}
-                $ {{ iot_dispatch_summary.estimated_amount|floatformat:"0g" }}
-              {% endif %}
-            </dd>
-          </div>
-        </dl>
-      </div>
-
       <div class="mt-6 grid gap-6 lg:grid-cols-2">
         <div class="rounded-lg border border-emerald-100 bg-emerald-50/60 p-4">
           <div class="flex items-center justify-between">
@@ -517,9 +497,30 @@
               <dd class="font-semibold">$ {{ turn_profit_components.product_sales|floatformat:0 }}</dd>
             </div>
             <div class="flex items-center justify-between border-t border-emerald-100 pt-3 text-base font-semibold">
-              <dt>Ganancias del turno</dt>
+              <dt>Ganancias según caja</dt>
               <dd class="text-xl">$ {{ turn_profit|floatformat:0 }}</dd>
             </div>
+          </dl>
+          <dl class="mt-4 space-y-3 border-t border-emerald-100 pt-3 text-sm text-emerald-900">
+            <div class="flex flex-wrap justify-between gap-2">
+              <dt>
+                Venta estimada de combustible (IoT)
+                <span class="block text-xs">{{ iot_dispatch_summary.liters|floatformat:"-3g" }} L al precio vigente</span>
+              </dt>
+              <dd class="font-semibold">
+                {% if iot_dispatch_summary.has_missing_prices %}
+                  Falta identificar el combustible o configurar su precio
+                {% else %}
+                  $ {{ iot_dispatch_summary.estimated_amount|floatformat:"0g" }}
+                {% endif %}
+              </dd>
+            </div>
+            {% if not iot_dispatch_summary.has_missing_prices %}
+              <div class="flex flex-wrap justify-between gap-2 border-t border-emerald-100 pt-3 text-base font-semibold">
+                <dt>Total estimado de ventas (combustible y productos)</dt>
+                <dd>$ {{ estimated_sales_total|floatformat:"0g" }}</dd>
+              </div>
+            {% endif %}
           </dl>
         </div>
 {% if not is_common_attendant %}

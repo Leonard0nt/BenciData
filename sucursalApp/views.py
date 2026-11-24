@@ -2653,6 +2653,13 @@ class ServiceSessionDetailView(OwnerCompanyMixin, DetailView):
             (getattr(sale, "total_value", decimal_zero) or decimal_zero)
             for sale in product_sales
         )
+        iot_dispatch_summary = self._summarize_iot_dispatches(branch, iot_dispense_events)
+        estimated_fuel_sales = iot_dispatch_summary["estimated_amount"]
+        estimated_sales_total = (
+            estimated_fuel_sales + product_sales_total
+            if estimated_fuel_sales is not None
+            else None
+        )
         fuel_payments_total = sum(
             (fuel_load.payment_amount or decimal_zero) for fuel_load in fuel_loads
         )
@@ -2743,9 +2750,8 @@ class ServiceSessionDetailView(OwnerCompanyMixin, DetailView):
                 "credit_sales": credit_sales,
                 "service_date": self.object.started_at.date(),
                 "iot_dispense_events": iot_dispense_events,
-                "iot_dispatch_summary": self._summarize_iot_dispatches(
-                    branch, iot_dispense_events
-                ),
+                "iot_dispatch_summary": iot_dispatch_summary,
+                "estimated_sales_total": estimated_sales_total,
                 "withdrawals": withdrawals,
                 "withdraw_form": withdraw_form,
                 "withdraw_responsible": current_profile,
