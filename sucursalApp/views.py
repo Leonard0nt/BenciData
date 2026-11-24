@@ -2462,6 +2462,36 @@ class ServiceSessionDetailView(OwnerCompanyMixin, DetailView):
             grouped_pairs.append((current_machine, current_items))
 
         return grouped_pairs
+    @staticmethod
+    def _summarize_iot_dispatches(branch, events):
+        liters_by_fuel = defaultdict(Decimal)
+        for event in events:
+            numeral = event.fuel_numeral
+            if numeral is None and event.nozzle:
+                numeral = event.nozzle.fuel_numeral
+            fuel_type = numeral.fuel_inventory.fuel_type if numeral else None
+            liters_by_fuel[fuel_type] += Decimal(str(event.litros))
+
+        prices = {}
+        if liters_by_fuel:
+            for entry in FuelPrice.objects.filter(sucursal=branch):
+                prices.setdefault(entry.fuel_type, entry.price)
+
+        # Valora los despachos al precio vigente de la sucursal.
+        has_missing_prices = any(fuel not in prices for fuel in liters_by_fuel)
+        estimated_amount = None
+        if not has_missing_prices:
+            estimated_amount = sum(
+                (liters * prices[fuel] for fuel, liters in liters_by_fuel.items()),
+                Decimal("0"),
+            )
+
+        return {
+            "liters": sum(liters_by_fuel.values(), Decimal("0")),
+            "estimated_amount": estimated_amount,
+            "has_missing_prices": has_missing_prices,
+        }
+
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         current_profile = getattr(self.request.user, "profile", None)
@@ -2713,6 +2743,9 @@ class ServiceSessionDetailView(OwnerCompanyMixin, DetailView):
                 "credit_sales": credit_sales,
                 "service_date": self.object.started_at.date(),
                 "iot_dispense_events": iot_dispense_events,
+                "iot_dispatch_summary": self._summarize_iot_dispatches(
+                    branch, iot_dispense_events
+                ),
                 "withdrawals": withdrawals,
                 "withdraw_form": withdraw_form,
                 "withdraw_responsible": current_profile,

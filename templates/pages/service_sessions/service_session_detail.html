@@ -473,6 +473,26 @@
         </div>
       </div>
 
+      <div class="mt-6 rounded-lg border border-gray-200 bg-gray-50 p-4">
+        <h3 class="text-sm font-semibold text-gray-900">Combustible despachado (IoT)</h3>
+        <dl class="mt-2 grid gap-2 text-sm sm:grid-cols-2">
+          <div>
+            <dt class="text-gray-600">Litros despachados</dt>
+            <dd class="font-semibold">{{ iot_dispatch_summary.liters|floatformat:"-3g" }} L</dd>
+          </div>
+          <div>
+            <dt class="text-gray-600">Importe estimado al precio vigente</dt>
+            <dd class="font-semibold">
+              {% if iot_dispatch_summary.has_missing_prices %}
+                Falta identificar el combustible o configurar su precio
+              {% else %}
+                $ {{ iot_dispatch_summary.estimated_amount|floatformat:"0g" }}
+              {% endif %}
+            </dd>
+          </div>
+        </dl>
+      </div>
+
       <div class="mt-6 grid gap-6 lg:grid-cols-2">
         <div class="rounded-lg border border-emerald-100 bg-emerald-50/60 p-4">
           <div class="flex items-center justify-between">
@@ -493,7 +513,7 @@
               <dd class="font-semibold">$ {{ turn_profit_components.withdrawals|floatformat:0 }}</dd>
             </div>
             <div class="flex items-center justify-between">
-              <dt>Ventas registradas</dt>
+              <dt>Ventas de productos</dt>
               <dd class="font-semibold">$ {{ turn_profit_components.product_sales|floatformat:0 }}</dd>
             </div>
             <div class="flex items-center justify-between border-t border-emerald-100 pt-3 text-base font-semibold">
