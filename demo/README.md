@@ -22,13 +22,13 @@ Cuando PostgreSQL esté listo, carga los datos ficticios y arranca Django.
 export DB_NAME=bencidata_demo DB_USER=bencidata DB_PASSWORD=bencidata
 export DB_HOST=127.0.0.1 DB_PORT=55432
 export DEBUG=True ALLOWED_HOSTS=localhost,127.0.0.1
-export IOT_SECRET_TOKEN=demo-local-token BENCIDATA_DEMO_PASSWORD='Demo-local-2026!'
+export IOT_SECRET_TOKEN=demo-local-token
 python manage.py migrate --settings=demo.settings
 python manage.py shell --settings=demo.settings < demo/seed.py
 python manage.py runserver 127.0.0.1:58000 --settings=demo.settings
 ```
 
-Abre http://127.0.0.1:58000 en el navegador del mismo equipo. Inicia sesión como `operador@bencidata.demo` con la contraseña que definiste y abre **Inicio de servicio**. El script de carga también imprime la ruta directa del turno.
+Abre http://127.0.0.1:58000 en el navegador del mismo equipo. La demo abre directamente con el perfil asignado a esta rama. El panel inicial muestra las opciones de ese perfil. El script de carga también imprime la ruta directa del turno.
 
 Desde otra terminal situada en la raíz del repositorio, envía lecturas al mismo endpoint que usa la pistola:
 
