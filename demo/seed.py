@@ -36,8 +36,14 @@ def enable_login(user, email):
 
 
 with transaction.atomic():
+    positions = {}
+    for code, label in PERMISOS:
+        positions[code], _ = Position.objects.get_or_create(
+            permission_code=code, defaults={"user_position": label}
+        )
+
     owner, _ = User.objects.get_or_create(username="bencidata-demo-owner")
-    role = Position.objects.get(permission_code="OWNER")
+    role = positions["OWNER"]
     owner_profile, _ = Profile.objects.get_or_create(
         user_FK=owner, defaults={"position_FK": role}
     )
@@ -56,7 +62,7 @@ with transaction.atomic():
     profile, _ = Profile.objects.get_or_create(
         user_FK=operator,
         defaults={
-            "position_FK": Position.objects.get(permission_code="HEAD_ATTENDANT"),
+            "position_FK": positions["HEAD_ATTENDANT"],
             "current_branch": branch,
             "codigo_identificador": "DEMO-NFC-01",
         },
@@ -92,7 +98,7 @@ with transaction.atomic():
         demo_profile, _ = Profile.objects.get_or_create(
             user_FK=demo_user,
             defaults={
-                "position_FK": Position.objects.get(permission_code=role_code),
+                "position_FK": positions[role_code],
                 "current_branch": branch,
             },
         )
