@@ -1,13 +1,14 @@
 """Carga una estación ficticia con `python manage.py shell < demo/seed.py`."""
 
-import os
 from datetime import time
 from decimal import Decimal
 
-from allauth.account.models import EmailAddress
 from django.contrib.auth.models import User
 from django.db import transaction
 from django.urls import reverse
+
+from demo.access import DEMO_ACCOUNTS, DEMO_ROLE, DEMO_USERNAME
+from UsuarioApp.choices import PERMISOS
 
 from sucursalApp.models import (
     FuelInventory, FuelPrice, Island, Machine, MachineFuelInventoryNumeral, Nozzle,
@@ -15,12 +16,24 @@ from sucursalApp.models import (
 )
 from UsuarioApp.models import Position, Profile
 
+role_label = dict(PERMISOS)[DEMO_ROLE]
+
+
+def prepare_demo_user(user, email):
+    user.email = email
+    user.set_unusable_password()
+    user.save(update_fields=["email", "password"])
+
+
 with transaction.atomic():
-    owner, created = User.objects.get_or_create(
-        username="bencidata-demo-owner",
-        defaults={"is_staff": True, "is_superuser": True},
-    )
-    role = Position.objects.get(permission_code="OWNER")
+    positions = {}
+    for code, label in PERMISOS:
+        positions[code], _ = Position.objects.get_or_create(
+            permission_code=code, defaults={"user_position": label}
+        )
+
+    owner, _ = User.objects.get_or_create(username=DEMO_ACCOUNTS["OWNER"])
+    role = positions["OWNER"]
     owner_profile, _ = Profile.objects.get_or_create(
         user_FK=owner, defaults={"position_FK": role}
     )
@@ -33,18 +46,13 @@ with transaction.atomic():
     )
     email = "operador@bencidata.demo"
     operator, _ = User.objects.get_or_create(
-        username="operador-demo",
+        username=DEMO_ACCOUNTS["HEAD_ATTENDANT"],
         defaults={"email": email, "first_name": "Alex", "last_name": "Demo"},
-    )
-    operator.set_password(os.environ["BENCIDATA_DEMO_PASSWORD"])
-    operator.save(update_fields=["password"])
-    EmailAddress.objects.get_or_create(
-        user=operator, email=email, defaults={"verified": True, "primary": True}
     )
     profile, _ = Profile.objects.get_or_create(
         user_FK=operator,
         defaults={
-            "position_FK": Position.objects.get(permission_code="HEAD_ATTENDANT"),
+            "position_FK": positions["HEAD_ATTENDANT"],
             "current_branch": branch,
             "codigo_identificador": "DEMO-NFC-01",
         },
@@ -62,6 +70,34 @@ with transaction.atomic():
         ended_at=None,
         defaults={"close_mode": ServiceSession.CLOSE_MODE_PISTOL},
     )
+    if DEMO_ROLE == "OWNER":
+        prepare_demo_user(owner, "dueno@bencidata.demo")
+    elif DEMO_ROLE == "HEAD_ATTENDANT":
+        prepare_demo_user(operator, email)
+    else:
+        role_email = {
+            "ADMINISTRATOR": "administrador@bencidata.demo",
+            "ACCOUNTANT": "secretaria@bencidata.demo",
+            "ATTENDANT": "bombero@bencidata.demo",
+        }[DEMO_ROLE]
+        demo_user, _ = User.objects.get_or_create(
+            username=DEMO_USERNAME,
+            defaults={"first_name": role_label, "last_name": "Demo"},
+        )
+        prepare_demo_user(demo_user, role_email)
+        demo_profile, _ = Profile.objects.get_or_create(
+            user_FK=demo_user,
+            defaults={
+                "position_FK": positions[DEMO_ROLE],
+                "current_branch": branch,
+            },
+        )
+        SucursalStaff.objects.get_or_create(
+            sucursal=branch, profile=demo_profile, defaults={"role": DEMO_ROLE}
+        )
+        if DEMO_ROLE == "ATTENDANT":
+            session.attendants.add(demo_profile)
+
     session.attendants.add(profile)
     tank, _ = FuelInventory.objects.get_or_create(
         sucursal=branch, code="DEMO-DSL",
