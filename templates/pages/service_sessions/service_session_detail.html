@@ -501,27 +501,6 @@
               <dd class="text-xl">$ {{ turn_profit|floatformat:0 }}</dd>
             </div>
           </dl>
-          <dl class="mt-4 space-y-3 border-t border-emerald-100 pt-3 text-sm text-emerald-900">
-            <div class="flex flex-wrap justify-between gap-2">
-              <dt>
-                Venta estimada de combustible (IoT)
-                <span class="block text-xs">{{ iot_dispatch_summary.liters|floatformat:"-3g" }} L al precio vigente</span>
-              </dt>
-              <dd class="font-semibold">
-                {% if iot_dispatch_summary.has_missing_prices %}
-                  Falta identificar el combustible o configurar su precio
-                {% else %}
-                  $ {{ iot_dispatch_summary.estimated_amount|floatformat:"0g" }}
-                {% endif %}
-              </dd>
-            </div>
-            {% if not iot_dispatch_summary.has_missing_prices %}
-              <div class="flex flex-wrap justify-between gap-2 border-t border-emerald-100 pt-3 text-base font-semibold">
-                <dt>Total estimado de ventas (combustible y productos)</dt>
-                <dd>$ {{ estimated_sales_total|floatformat:"0g" }}</dd>
-              </div>
-            {% endif %}
-          </dl>
         </div>
 {% if not is_common_attendant %}
         <div class="rounded-lg border border-amber-100 bg-amber-50/60 p-4">
