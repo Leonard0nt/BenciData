@@ -1,6 +1,6 @@
 # BenciData · Demo de Dueño
 
-Esta rama prepara una empresa y una sucursal ficticias con diésel a **$927/L**, una pistola simulada y un turno activo en modo pistola. La cuenta de acceso usa el perfil **Dueño** y sus permisos reales.
+Esta rama prepara una empresa y una sucursal ficticias con diésel a **$927/L**, una pistola simulada y un turno activo en modo pistola. La pantalla abre directamente con el perfil **Dueño** y sus permisos reales.
 
 ## Desplegar con Docker Compose
 
@@ -12,17 +12,15 @@ cd bencidata-dueno
 cp demo/deploy.env.example .env
 ```
 
-Edita `.env` y define valores propios para `DEMO_DB_PASSWORD`, `DEMO_SECRET_KEY`, `IOT_SECRET_TOKEN` y `BENCIDATA_DEMO_PASSWORD`. Puedes generar un valor distinto para cada variable con `openssl rand -hex 32`. Mantén el archivo fuera de Git.
+Edita `.env` y define valores propios para `DEMO_DB_PASSWORD`, `DEMO_SECRET_KEY` e `IOT_SECRET_TOKEN`. Puedes generar un valor distinto para cada variable con `openssl rand -hex 32`. Mantén el archivo fuera de Git.
 
 ```sh
 docker compose -p bencidata-dueno -f compose.demo.yml up --build -d
 docker compose -p bencidata-dueno -f compose.demo.yml logs -f app
 ```
 
-Cuando Gunicorn esté escuchando, abre [http://127.0.0.1:58001](http://127.0.0.1:58001). Pulsa Ctrl+C para salir de los logs.
+Cuando Gunicorn esté escuchando, abre [http://127.0.0.1:58001](http://127.0.0.1:58001). La demo abre sin pedir usuario ni contraseña. Pulsa Ctrl+C para salir de los logs.
 
-- **Correo** `dueno@bencidata.demo`
-- **Contraseña** el valor de `BENCIDATA_DEMO_PASSWORD` que pusiste en `.env`
 - **Recorrido** Configura la empresa y administra la sucursal, los equipos, los precios y el personal desde Sucursales y Usuarios.
 
 ## Simular dos despachos
@@ -38,6 +36,6 @@ Los dos despachos suman **35,25 L**. Cada ejecución registra una lectura adicio
 
 ## Acceso desde otro equipo
 
-El puerto queda ligado a localhost. En un servidor, publica la demo mediante un proxy inverso HTTPS con acceso restringido. Haz que el proxy envíe al puerto 58001 el `Host` original y fije `X-Forwarded-Proto: https`. Configura `DEMO_ALLOWED_HOSTS` con tu dominio, `BENCIDATA_DEMO_CSRF_ORIGINS` con su origen HTTPS y `BENCIDATA_DEMO_HTTPS=1` en `.env`, y vuelve a ejecutar `up`.
+El puerto queda ligado a localhost. Cada visitante tiene los permisos del perfil de esta rama sobre los mismos datos ficticios. En un servidor, publica la demo mediante un proxy inverso HTTPS con acceso restringido. Haz que el proxy envíe al puerto 58001 el `Host` original y fije `X-Forwarded-Proto: https`. Configura `DEMO_ALLOWED_HOSTS` con tu dominio, `BENCIDATA_DEMO_CSRF_ORIGINS` con su origen HTTPS y `BENCIDATA_DEMO_HTTPS=1` en `.env`, y vuelve a ejecutar `up`.
 
 Para detenerla conservando sus datos, ejecuta `docker compose -p bencidata-dueno -f compose.demo.yml down`.
