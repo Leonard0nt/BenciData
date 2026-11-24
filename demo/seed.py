@@ -10,7 +10,7 @@ from django.db import transaction
 from django.urls import reverse
 
 from sucursalApp.models import (
-    FuelInventory, Island, Machine, MachineFuelInventoryNumeral, Nozzle,
+    FuelInventory, FuelPrice, Island, Machine, MachineFuelInventoryNumeral, Nozzle,
     ServiceSession, Shift, Sucursal, SucursalStaff,
 )
 from UsuarioApp.models import Position, Profile
@@ -62,6 +62,11 @@ with transaction.atomic():
         sucursal=branch, code="DEMO-DSL",
         defaults={"fuel_type": "Diesel", "capacity": 5000, "liters": 2800},
     )
+    diesel_price = Decimal("927.00")
+    prices = FuelPrice.objects.filter(sucursal=branch, fuel_type=tank.fuel_type)
+    if prices.values_list("price", flat=True).first() != diesel_price:
+        prices.create(sucursal=branch, fuel_type=tank.fuel_type, price=diesel_price)
+
     island, _ = Island.objects.get_or_create(sucursal=branch, number=1)
     machine, _ = Machine.objects.get_or_create(
         island=island, number=1, defaults={"fuel_inventory": tank}
