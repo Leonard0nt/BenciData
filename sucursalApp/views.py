@@ -1,7 +1,6 @@
 from collections import defaultdict
 from decimal import Decimal, ROUND_HALF_UP
 import calendar
-import csv
 from io import BytesIO
 from openpyxl import Workbook
 from openpyxl.utils import get_column_letter
@@ -13,6 +12,7 @@ from urllib.parse import urlencode
 from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin
+from django.core.exceptions import PermissionDenied
 from django.core.paginator import Paginator
 from django.db import transaction
 from django.db.models import DecimalField, F, Prefetch, QuerySet, Sum, Value
@@ -1008,11 +1008,7 @@ class ServiceSessionSummaryExportView(OwnerCompanyMixin, View):
     allowed_roles = ["OWNER", "ADMINISTRATOR", "ACCOUNTANT", "HEAD_ATTENDANT"]
 
     def get(self, request, branch_pk, pk, *args, **kwargs):
-        profile = request.user.profile
-
-        # Validar que la sucursal está dentro del alcance del usuario
-        managed_branch_ids = set(self.get_managed_branch_ids())
-        if managed_branch_ids and branch_pk not in managed_branch_ids:
+        if branch_pk not in self.get_managed_branch_ids():
             raise PermissionDenied("No tienes permisos para esta sucursal.")
 
         # Obtenemos la sesión del servicio SOLO de esa sucursal
@@ -1045,10 +1041,6 @@ class ServiceSessionSummaryExportView(OwnerCompanyMixin, View):
         firefighter_payments = list(session.firefighter_payments.all())
 
         # === Cálculos igual que en el historial ===
-        product_sale_items_total = sum(
-            (item.quantity for sale in product_sales for item in sale.items.all()),
-            0,
-        )
         product_sale_value_total = sum(
             (
                 item.quantity * item.product.value

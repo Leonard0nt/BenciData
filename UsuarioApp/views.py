@@ -11,7 +11,6 @@ from django.views.generic import ListView, View
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.auth.models import User
 from crispy_forms.helper import FormHelper
-from django.contrib.auth import update_session_auth_hash
 from django.shortcuts import get_object_or_404, redirect, render
 from django.db.models import Q
 from typing import Any

@@ -6,7 +6,7 @@ from django.urls import reverse
 from UsuarioApp.models import Position, Profile
 from homeApp.models import Company
 
-from .models import Island, Machine, Nozzle, Sucursal
+from .models import FuelInventory, Island, Machine, MachineFuelInventoryNumeral, Nozzle, Sucursal
 
 
 class SucursalRelatedViewsTests(TestCase):
@@ -51,6 +51,10 @@ class SucursalRelatedViewsTests(TestCase):
             email="branch@example.com",
         )
 
+        self.tank = FuelInventory.objects.create(
+            sucursal=self.branch, code="DSL", fuel_type="Diesel",
+            capacity=1000, liters=500,
+        )
         self.client.force_login(self.owner_user)
 
     def test_owner_can_create_related_entities(self):
@@ -74,8 +78,6 @@ class SucursalRelatedViewsTests(TestCase):
             {
                 "island": island.pk,
                 "number": 1,
-                "initial_numeral": "10.00",
-                "final_numeral": "20.00",
                 "fuel_type": "Gasolina 93",
                 "description": "Máquina 1",
             },
@@ -131,9 +133,8 @@ class SucursalRelatedViewsTests(TestCase):
         machine_data = {
             machine_form["island"].html_name: island.pk,
             machine_form["number"].html_name: 3,
-            machine_form["initial_numeral"].html_name: "100.00",
-            machine_form["final_numeral"].html_name: "150.00",
-            machine_form["fuel_type"].html_name: "Gasolina 97",
+            machine_form["fuel_inventories"].html_name: [self.tank.pk],
+            machine_form[f"numeral_{self.tank.pk}_1"].html_name: "100.00",
             machine_form["description"].html_name: "Máquina inline",
         }
         machine_create_url = reverse(
@@ -154,7 +155,8 @@ class SucursalRelatedViewsTests(TestCase):
         nozzle_data = {
             nozzle_form["machine"].html_name: machine.pk,
             nozzle_form["number"].html_name: 9,
-            nozzle_form["fuel_type"].html_name: "Diesel",
+            nozzle_form["fuel_numeral"].html_name: machine.fuel_numerals.get().pk,
+            nozzle_form["code"].html_name: "N9",
             nozzle_form["description"].html_name: "Pistola inline",
         }
         nozzle_create_url = reverse("sucursal_nozzle_create", args=[machine.pk])
@@ -176,13 +178,14 @@ class SucursalRelatedViewsTests(TestCase):
         machine = Machine.objects.create(
             island=island,
             number=2,
-            initial_numeral=0,
-            final_numeral=0,
-            fuel_type="93",
             description="Máquina original",
+        )
+        numeral = MachineFuelInventoryNumeral.objects.create(
+            machine=machine, fuel_inventory=self.tank, numeral=100,
         )
         nozzle = Nozzle.objects.create(
             machine=machine,
+            fuel_numeral=numeral,
             number=2,
             fuel_type="93",
             description="Pistola original",
@@ -213,9 +216,8 @@ class SucursalRelatedViewsTests(TestCase):
             {
                 "island": island.pk,
                 "number": 4,
-                "initial_numeral": "30.00",
-                "final_numeral": "40.00",
-                "fuel_type": "95",
+                "fuel_inventories": [self.tank.pk],
+                f"numeral_{self.tank.pk}_1": "100.00",
                 "description": "Máquina editada",
             },
         )
@@ -226,14 +228,15 @@ class SucursalRelatedViewsTests(TestCase):
         )
         machine.refresh_from_db()
         self.assertEqual(machine.number, 4)
-        self.assertEqual(machine.fuel_type, "95")
+        self.assertEqual(machine.description, "Máquina editada")
 
         response = self.client.post(
             reverse("sucursal_nozzle_update", args=[nozzle.pk]),
             {
                 "machine": machine.pk,
                 "number": 5,
-                "fuel_type": "Diesel",
+                "fuel_numeral": numeral.pk,
+                "code": "N5",
                 "description": "Pistola editada",
             },
         )

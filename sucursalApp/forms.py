@@ -2,7 +2,7 @@ from typing import Optional
 
 
 from decimal import Decimal, InvalidOperation
-from typing import Iterable, Optional
+from typing import Iterable
 from itertools import chain
 
 from django import forms
@@ -12,6 +12,7 @@ from django.forms.boundfield import BoundField
 from django.db import transaction
 from django.db.models import F, Q, Count
 
+from homeApp.models import Company
 from UsuarioApp.models import Profile
 
 
@@ -89,7 +90,7 @@ class SucursalForm(forms.ModelForm):
             "email": forms.EmailInput(attrs={"class": "w-full border rounded p-2"}),
         }
 
-    def __init__(self, *args, company: Optional["homeApp.models.Company"] = None, **kwargs):
+    def __init__(self, *args, company: Optional[Company] = None, **kwargs):
         self.company = company
         super().__init__(*args, **kwargs)
         base_queryset = Profile.objects.select_related("position_FK", "user_FK").filter(
@@ -206,7 +207,7 @@ class BranchStaffForm(forms.Form):
     def __init__(
         self,
         *args,
-        company: Optional["homeApp.models.Company"] = None,
+        company: Optional[Company] = None,
         instance: Optional[Sucursal] = None,
         allow_admin_assignment: bool = True,
         **kwargs,
@@ -315,7 +316,7 @@ class BranchUserLinkForm(forms.Form):
         self,
         *args,
         branch: Sucursal,
-        company: Optional["homeApp.models.Company"] = None,
+        company: Optional[Company] = None,
         **kwargs,
     ):
         self.branch = branch

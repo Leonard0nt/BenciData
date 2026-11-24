@@ -109,12 +109,11 @@ class UserManagementTestMixin:
             "owner_user",
             self.owner_position,
         )
-        company = Company.objects.create(
-            rut="12.345.678-5",
-            business_name="Gas Station SA",
-            tax_address="Av. Principal 123",
-            profile=owner_profile,
-        )
+        company = owner_profile.company
+        company.rut = "12.345.678-5"
+        company.business_name = "Gas Station SA"
+        company.tax_address = "Av. Principal 123"
+        company.save()
         owner_profile.company_rut = company.rut
         owner_profile.save(update_fields=["company_rut"])
         return company, owner_user, owner_profile

@@ -1,124 +1,106 @@
-from django.shortcuts import render
-from decimal import Decimal
 import json
-# Create your views here.
-from django.views.decorators.csrf import csrf_exempt
-from django.http import JsonResponse, HttpResponseBadRequest, HttpResponseNotAllowed
-from django.utils import timezone
-from django.db import transaction
-from django.db.models import F, Q
-from django.http import HttpResponseBadRequest, HttpResponseNotAllowed, JsonResponse
-from django.shortcuts import render
-import json
-from django.views.decorators.csrf import csrf_exempt
+from decimal import Decimal, InvalidOperation
 
-from UsuarioApp.models import Profile
+from django.db import transaction
+from django.db.models import F
+from django.http import HttpResponseBadRequest, JsonResponse
+from django.views.decorators.csrf import csrf_exempt
+from django.views.decorators.http import require_POST
+
 from sucursalApp.models import MachineFuelInventoryNumeral, Nozzle, ServiceSession
-# Si creaste el modelo:
+from UsuarioApp.models import Profile
+
+from .auth import iot_token_required
 from .models import DispenseEvent
 
-from django.views.decorators.csrf import csrf_exempt
-from .auth import iot_token_required
+
+def find_nozzle(identifier):
+    if identifier is None:
+        return None
+
+    nozzles = Nozzle.objects.select_related("machine__island")
+    nozzle = nozzles.filter(code=identifier).first()
+    if nozzle is not None:
+        return nozzle
+
+    # Los equipos antiguos pueden enviar el número en vez del código.
+    try:
+        number = int(identifier)
+    except ValueError:
+        return None
+    return nozzles.filter(number=number).first()
+
 
 @csrf_exempt
 @iot_token_required
-
+@require_POST
 def recibir_datos_proxy(request):
-    if request.method != "POST":
-        return HttpResponseNotAllowed(["POST"], "Solo se permite POST")
-
-    # 1) Parsear JSON del body
     try:
-        data = json.loads(request.body.decode("utf-8"))
-    except json.JSONDecodeError:
+        data = json.loads(request.body)
+    except (UnicodeDecodeError, ValueError):
         return HttpResponseBadRequest("JSON inválido")
+    if not isinstance(data, dict):
+        return HttpResponseBadRequest("Se esperaba un objeto JSON")
 
-    # 2) Leer campos enviados por el Arduino
-    uid = data.get("uid")              # Ej: "4 8C 8D B2 2B 64 81"
-    litros = data.get("litros")        # Ej: 12.34
-    pistola = data.get("pistola")      # Ej: 1 o "N1"
-    timestamp = data.get("timestamp")  # Ej: millis, epoch, ISO, etc.
+    uid = data.get("uid")
+    if not isinstance(uid, str) or not uid.strip() or len(uid) > 100:
+        return HttpResponseBadRequest("El UID no es válido")
 
-    # 3) Validar mínimos
-    if not uid or litros is None:
-        return HttpResponseBadRequest("Faltan campos 'uid' o 'litros'")
     try:
-        litros_decimal = Decimal(str(litros))
-        if litros_decimal <= 0:
-            return HttpResponseBadRequest("El valor de 'litros' debe ser positivo")
-    except Exception:
+        liters = Decimal(str(data.get("litros")))
+    except InvalidOperation:
         return HttpResponseBadRequest("El valor de 'litros' no es válido")
+    if not liters.is_finite() or not 0 < liters < Decimal("1000000000"):
+        return HttpResponseBadRequest("El valor de 'litros' está fuera de rango")
 
-    nozzle = None
-    fuel_numeral = None
-    firefighter = None
-    service_session = None
-    pistola_number = None
-    pistola_str = None
+    identifier = data.get("pistola")
+    timestamp = data.get("timestamp")
+    nozzle_code = str(identifier) if identifier is not None else None
+    device_timestamp = str(timestamp) if timestamp is not None else None
+    if len(nozzle_code or "") > 50 or len(device_timestamp or "") > 100:
+        return HttpResponseBadRequest("Identificador o marca de tiempo demasiado largos")
 
-    if pistola is not None:
-        pistola_str = str(pistola)
-        try:
-            pistola_number = int(pistola_str)
-        except (TypeError, ValueError):
-            pistola_number = None
-    try:
-        nozzle = (
-            Nozzle.objects.select_related(
-                "machine__island__sucursal", "fuel_numeral__fuel_inventory"
+    operator = Profile.objects.filter(codigo_identificador=uid).first()
+    if operator is None:
+        return JsonResponse(
+            {"status": "error", "message": "UID no asociado a ningún bombero"},
+            status=400,
+        )
+
+    nozzle = find_nozzle(nozzle_code)
+    session = None
+    if nozzle is not None:
+        session = (
+            ServiceSession.objects.filter(
+                shift__sucursal_id=nozzle.machine.island.sucursal_id,
+                ended_at__isnull=True,
             )
-            .filter(Q(code=pistola_str) | Q(number=pistola_number))
+            .order_by("-started_at", "-pk")
             .first()
         )
-        fuel_numeral = getattr(nozzle, "fuel_numeral", None)
 
-        if nozzle and nozzle.machine and nozzle.machine.island:
-            branch_id = nozzle.machine.island.sucursal_id
-            service_session = (
-                ServiceSession.objects.filter(
-                    shift__sucursal_id=branch_id, ended_at__isnull=True
-                )
-                .order_by("-started_at")
-                .first()
+    numeral_id = nozzle.fuel_numeral_id if nozzle else None
+    # El descuento y la lectura deben guardarse juntos.
+    with transaction.atomic():
+        if numeral_id is not None:
+            MachineFuelInventoryNumeral.objects.filter(pk=numeral_id).update(
+                numeral=F("numeral") - liters
             )
+        event = DispenseEvent.objects.create(
+            uid=uid,
+            litros=float(liters),
+            nozzle=nozzle,
+            fuel_numeral_id=numeral_id,
+            firefighter=operator,
+            service_session=session,
+            pistola=nozzle_code,
+            timestamp_arduino=device_timestamp,
+        )
 
-        firefighter = Profile.objects.filter(
-            codigo_identificador=uid
-        ).select_related("user_FK").first()
-
-        if not firefighter:
-            return JsonResponse({"status": "error", "message": "UID no asociado a ningún bombero"},status=400)
-        if fuel_numeral:
-            with transaction.atomic():
-                MachineFuelInventoryNumeral.objects.filter(pk=fuel_numeral.pk).update(
-                    numeral=F("numeral") - litros_decimal
-                )
-                fuel_numeral.refresh_from_db(fields=["numeral"])
-    except Exception as exc:  # pragma: no cover - defensive logging
-        return JsonResponse({"status": "error", "message": "Error interno"}, status=500)
-
-
-    # 4) Guardar en BD (si tienes el modelo)
-    event = DispenseEvent.objects.create(
-        uid=uid,
-        litros=float(litros_decimal),
-        nozzle=nozzle,
-        fuel_numeral=fuel_numeral,
-        firefighter=firefighter,
-        service_session=service_session,
-        pistola=pistola_str,
-        timestamp_arduino=str(timestamp) if timestamp is not None else None,
-    )
-
-    # 5) Puedes loguear en consola también
-    print("✅ Evento IoT recibido:", data)
-
-    # 6) Respuesta al Arduino
     return JsonResponse(
         {
             "status": "ok",
-            "event_id": event.id,
-            "received_at": timezone.now().isoformat(),
+            "event_id": event.pk,
+            "received_at": event.created_at.isoformat(),
         }
     )
-

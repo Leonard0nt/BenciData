@@ -1,18 +1,15 @@
-from django.contrib import admin
-from django.urls import path, include,register_converter
 from django.conf import settings
 from django.conf.urls.static import static
-from django.http import JsonResponse, HttpResponseBadRequest, HttpResponseNotAllowed
-from django.utils import timezone
-from django.views.decorators.csrf import csrf_exempt
-import json
-from utils.hashids import HashidConverter
+from django.contrib import admin
+from django.urls import include, path, register_converter
 
 from sucursalApp.views import (
     ServiceSessionCreateView,
     ServiceSessionDetailView,
     ServiceSessionRecordDeleteView,
 )
+
+from utils.hashids import HashidConverter
 
 register_converter(HashidConverter, "hashid")
 
@@ -37,7 +34,7 @@ urlpatterns = [
         name="service_session_record_delete",
     ),
     path("sucursales/", include("sucursalApp.urls")),
-    path("", include("iotApp.urls")), 
+    path("", include("iotApp.urls")),
 ]
 
 if settings.DEBUG:

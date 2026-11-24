@@ -9,8 +9,6 @@ from django.db.models.signals import m2m_changed
 from django.dispatch import receiver
 
 from UsuarioApp.choices import PERMISOS
-from django.db.models.signals import m2m_changed
-from django.dispatch import receiver
 
 class Sucursal(models.Model):
     """Representa una sucursal perteneciente a una empresa."""

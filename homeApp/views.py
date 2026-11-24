@@ -10,7 +10,6 @@ from django.contrib.auth.models import User
 from django.db.models import Q
 from django.db.models import (
     DecimalField,
-    ExpressionWrapper,
     F,
     OuterRef,
     Subquery,
@@ -145,10 +144,6 @@ class HomeView(LoginRequiredMixin, ListView):
             last_activity__gte=recent_activity_cutoff
         ).values_list("user_FK_id", flat=True)
         context["active_users"] = active_users
-
-        is_company_admin = bool(
-            profile and (profile.is_owner() or profile.is_admin())
-        )
 
         fuel_dashboard: list[dict] = []
 

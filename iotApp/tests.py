@@ -1,11 +1,9 @@
-from django.test import TestCase
-
 from decimal import Decimal
 import json
 from datetime import time
 
 from django.contrib.auth.models import User
-from django.test import TestCase
+from django.test import TestCase, override_settings
 from django.urls import reverse
 
 from homeApp.models import Company
@@ -23,6 +21,7 @@ from UsuarioApp.models import Position, Profile
 from .models import DispenseEvent
 
 
+@override_settings(IOT_SECRET_TOKEN="token-de-prueba")
 class RecibirDatosProxyTests(TestCase):
     def setUp(self):
         self.head_position = Position.objects.create(
@@ -99,6 +98,7 @@ class RecibirDatosProxyTests(TestCase):
             reverse("recibir_datos_proxy"),
             data=json.dumps(payload),
             content_type="application/json",
+            HTTP_X_IOT_TOKEN="token-de-prueba",
         )
 
         self.assertEqual(response.status_code, 200)
@@ -116,7 +116,20 @@ class RecibirDatosProxyTests(TestCase):
         self.assertEqual(event.service_session, self.service_session)
         self.assertEqual(event.timestamp_arduino, payload["timestamp"])
 
-# Create your tests here.
         self.numeral.refresh_from_db()
         self.assertEqual(self.numeral.numeral, Decimal("89.50"))
-# Create your tests here.
+
+    def test_rejects_invalid_liters_without_changing_the_numeral(self):
+        for liters in ("NaN", "Infinity", "0", "-5"):
+            with self.subTest(liters=liters):
+                response = self.client.post(
+                    reverse("recibir_datos_proxy"),
+                    {"uid": "UID-12345", "pistola": "N1", "litros": liters},
+                    content_type="application/json",
+                    HTTP_X_IOT_TOKEN="token-de-prueba",
+                )
+                self.assertEqual(response.status_code, 400)
+
+        self.assertFalse(DispenseEvent.objects.exists())
+        self.numeral.refresh_from_db()
+        self.assertEqual(self.numeral.numeral, Decimal("100.00"))
