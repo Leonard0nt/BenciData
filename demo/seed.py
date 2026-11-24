@@ -3,11 +3,14 @@
 import os
 from datetime import time
 from decimal import Decimal
+from pathlib import Path
 
 from allauth.account.models import EmailAddress
 from django.contrib.auth.models import User
 from django.db import transaction
 from django.urls import reverse
+
+from UsuarioApp.choices import PERMISOS
 
 from sucursalApp.models import (
     FuelInventory, FuelPrice, Island, Machine, MachineFuelInventoryNumeral, Nozzle,
@@ -15,11 +18,25 @@ from sucursalApp.models import (
 )
 from UsuarioApp.models import Position, Profile
 
-with transaction.atomic():
-    owner, created = User.objects.get_or_create(
-        username="bencidata-demo-owner",
-        defaults={"is_staff": True, "is_superuser": True},
+role_file = Path("demo/profile.txt")
+role_code = role_file.read_text().strip() if role_file.exists() else "HEAD_ATTENDANT"
+role_label = dict(PERMISOS)[role_code]
+password = os.environ["BENCIDATA_DEMO_PASSWORD"]
+
+
+def enable_login(user, email):
+    if user.email != email:
+        user.email = email
+    if not user.check_password(password):
+        user.set_password(password)
+    user.save(update_fields=["email", "password"])
+    EmailAddress.objects.update_or_create(
+        user=user, email=email, defaults={"verified": True, "primary": True}
     )
+
+
+with transaction.atomic():
+    owner, _ = User.objects.get_or_create(username="bencidata-demo-owner")
     role = Position.objects.get(permission_code="OWNER")
     owner_profile, _ = Profile.objects.get_or_create(
         user_FK=owner, defaults={"position_FK": role}
@@ -35,11 +52,6 @@ with transaction.atomic():
     operator, _ = User.objects.get_or_create(
         username="operador-demo",
         defaults={"email": email, "first_name": "Alex", "last_name": "Demo"},
-    )
-    operator.set_password(os.environ["BENCIDATA_DEMO_PASSWORD"])
-    operator.save(update_fields=["password"])
-    EmailAddress.objects.get_or_create(
-        user=operator, email=email, defaults={"verified": True, "primary": True}
     )
     profile, _ = Profile.objects.get_or_create(
         user_FK=operator,
@@ -62,6 +74,34 @@ with transaction.atomic():
         ended_at=None,
         defaults={"close_mode": ServiceSession.CLOSE_MODE_PISTOL},
     )
+    if role_code == "OWNER":
+        enable_login(owner, "dueno@bencidata.demo")
+    elif role_code == "HEAD_ATTENDANT":
+        enable_login(operator, email)
+    else:
+        role_email = {
+            "ADMINISTRATOR": "administrador@bencidata.demo",
+            "ACCOUNTANT": "secretaria@bencidata.demo",
+            "ATTENDANT": "bombero@bencidata.demo",
+        }[role_code]
+        demo_user, _ = User.objects.get_or_create(
+            username=role_email.split("@")[0] + "-demo",
+            defaults={"first_name": role_label, "last_name": "Demo"},
+        )
+        enable_login(demo_user, role_email)
+        demo_profile, _ = Profile.objects.get_or_create(
+            user_FK=demo_user,
+            defaults={
+                "position_FK": Position.objects.get(permission_code=role_code),
+                "current_branch": branch,
+            },
+        )
+        SucursalStaff.objects.get_or_create(
+            sucursal=branch, profile=demo_profile, defaults={"role": role_code}
+        )
+        if role_code == "ATTENDANT":
+            session.attendants.add(demo_profile)
+
     session.attendants.add(profile)
     tank, _ = FuelInventory.objects.get_or_create(
         sucursal=branch, code="DEMO-DSL",

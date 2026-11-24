@@ -1,0 +1,56 @@
+services:
+  db:
+    image: postgres:15
+    environment:
+      POSTGRES_DB: bencidata_demo
+      POSTGRES_USER: bencidata
+      POSTGRES_PASSWORD: ${DEMO_DB_PASSWORD:?Define DEMO_DB_PASSWORD}
+    volumes:
+      - postgres:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD", "pg_isready", "-h", "127.0.0.1", "-U", "bencidata", "-d", "bencidata_demo"]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+    restart: unless-stopped
+
+  app:
+    build:
+      context: .
+      dockerfile: demo/Dockerfile
+    environment:
+      DB_NAME: bencidata_demo
+      DB_USER: bencidata
+      DB_PASSWORD: ${DEMO_DB_PASSWORD:?Define DEMO_DB_PASSWORD}
+      DB_HOST: db
+      DB_PORT: "5432"
+      SECRET_KEY: ${DEMO_SECRET_KEY:?Define DEMO_SECRET_KEY}
+      IOT_SECRET_TOKEN: ${IOT_SECRET_TOKEN:?Define IOT_SECRET_TOKEN}
+      BENCIDATA_DEMO_PASSWORD: ${BENCIDATA_DEMO_PASSWORD:?Define BENCIDATA_DEMO_PASSWORD}
+      ALLOWED_HOSTS: ${DEMO_ALLOWED_HOSTS:-localhost,127.0.0.1}
+      BENCIDATA_DEMO_HTTPS: ${BENCIDATA_DEMO_HTTPS:-0}
+      BENCIDATA_DEMO_CSRF_ORIGINS: ${BENCIDATA_DEMO_CSRF_ORIGINS:-}
+    volumes:
+      - static:/app/staticfiles
+      - media:/app/media
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+
+  web:
+    image: nginx:alpine
+    ports:
+      - "127.0.0.1:${DEMO_PORT:-58000}:80"
+    volumes:
+      - ./demo/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+      - static:/srv/static:ro
+      - media:/srv/media:ro
+    depends_on:
+      - app
+    restart: unless-stopped
+
+volumes:
+  postgres:
+  static:
+  media:
