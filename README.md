@@ -14,7 +14,7 @@ Los perfiles disponibles son **Dueño**, **Administrador**, **Secretario(a)**, *
 
 ## Ejecutar en local
 
-Necesitas **Python 3.12** y **PostgreSQL**. Puedes usar una instancia existente o crear una base local con Docker. Los bloques están escritos para una terminal Bash.
+Necesitas **Python 3.12** y **PostgreSQL**. Puedes usar una instancia existente o crear una base local con Docker.
 
 ```bash
 git clone https://github.com/Leonard0nt/BenciData.git
